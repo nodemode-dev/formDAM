@@ -120,10 +120,11 @@ select.field-input { appearance: none; padding-right: 22px; background-image: li
 .ed-grid { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
 .ed-handle { fill: #fff; cursor: nwse-resize; }
 .ed-spot { fill: rgba(255, 255, 255, 0.18); stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.ed-stroke { stroke: rgba(255, 255, 255, 0.22); }
 .ed-text { font-family: system-ui, sans-serif; }
 .ed-side { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3); padding: var(--space-3); overflow-y: auto; border-radius: 14px; }
 .ed-tabs { align-self: stretch; justify-content: space-between; }
-.ed-tabs button { padding: 4px 8px; }
+.ed-tabs button { padding: 4px 6px; white-space: nowrap; }
 .ed-pane { display: flex; flex-direction: column; gap: var(--space-3); }
 .ed-section { display: flex; flex-direction: column; gap: 6px; }
 .ed-sec-title { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }

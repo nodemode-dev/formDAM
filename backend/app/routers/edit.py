@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from ..db import ex, q1
 from ..dedup.visual import ffmpeg_path
-from ..services import decode, editsvc, libraryfs, thumbs
+from ..services import cleanup, decode, editsvc, libraryfs, thumbs
 from .guard import ensure_visible
 from .render import clear_cached, source_of
 
@@ -92,7 +92,8 @@ def _store(media_id: int, state: Dict[str, Any]) -> Dict[str, Any]:
 @router.get("/media/{media_id}/edits")
 def get_edits(media_id: int, request: Request):
     _row(media_id, request)
-    return {"state": editsvc.edits_of(media_id), "filters": list(editsvc.FILTERS)}
+    cleanup.warm()
+    return {"state": editsvc.edits_of(media_id), "filters": list(editsvc.FILTERS), "cleanup": cleanup.ready()}
 
 
 @router.put("/media/{media_id}/edits")

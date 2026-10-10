@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### services/cleanup.py + editsvc _retouch strokes · Clean Up object removal
+- refers-to: cleanup.ready/_engine/warm/_key/inpaint/_inpaint/_run, MEMO; editsvc._retouch points strokes & cleanup call; edit.get_edits warm + cleanup flag
+- kind: rationale + replaced code
+- logged: zip v1.23.0 · 2026-10-10
+
+Clean Up runs LaMa (opencv/inpainting_lama, Apache-2.0, 512 by 512 ONNX, image 0..1 RGB & a 0/1 mask in, 0..255 RGB out) on each brushed region rather than the whole frame: the mask is grown slightly, every connected component gets a square crop about 2.2 times its box plus 32 px so the model sees enough surroundings, the crop is scaled to 512, filled, scaled back & feathered in by a blurred mask, so pixels outside the brush are untouched. Strokes are polylines of normalised points w/ a brush radius; single clicks stay circles, so earlier edit states still render. CPU timing here: about 14 s cold (session load) & 6 s warm for one region, so opening the editor warms the session in a thread & the last six results are memoised by a hash of a strided image sample plus the exact mask, which makes tab switches & export re-renders of the same strokes free. Without the model file or onnxruntime the old OpenCV Telea fill is used. Replaced: `out = cv2.inpaint(...)` as the only fill is now the fallback.
 ### services/rawdev.py + decode raw_opts + editsvc _lens + edit raw-info · RAW develop and lens corrections
 - refers-to: rawdev._xy/_matrix/multipliers/as_shot/params/develop; decode._raw_full opts branch, open_image raw_opts; editsvc.render_still raw opts, _lens, _geometry lens call; edit.py _base raw key, raw_info, PASTE_KEYS raw & lens
 - kind: rationale + replaced code

@@ -42,6 +42,9 @@ fetch_model clip_vocab.json "$CLIP_BASE/vocab.json" \
   5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363
 fetch_model clip_merges.txt "$CLIP_BASE/merges.txt" \
   9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a
+fetch_model inpainting_lama_2025jan.onnx \
+  https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx \
+  7df918ac3921d3daf0aae1d219776cf0dc4e4935f035af81841b40adcf74fdf2
 
 say "Building the frontend"
 cd frontend

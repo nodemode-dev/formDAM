@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### editor Clean Up tab, RAW Develop, Lens Corrections & Live Photo Effect
+- refers-to: editor.ts EditState retouch points, retouchPane (Remove Last, Clear All), strokeNode, overlay pointerdown retouch branch, tab label Clean Up; RAW Develop & Lens Corrections sections; Live Photo Effect select; parity.css .ed-stroke
+- kind: rationale
+- logged: zip v1.23.0 · 2026-10-10
+
+The Retouch tab is now Clean Up: a click still drops a circle, a drag paints a stroke whose polyline grows in place (one node, its points attribute updated, points thinned under 0.3 percent of the frame & capped at 1500) & the preview is requested once on release, so the photo never re-renders mid-stroke. Strokes under three points collapse to a click. RAW Develop shows only for RAW files: choosing Custom (Kelvin) seeds the temperature & tint sliders from the shot's own values (raw-info), which stay hidden otherwise so the panel does not jump on open. Lens Corrections apply to every photo. Live Photo Effect appears only when the item has a paired video.
 ### library sort menu + stack and memory tile entries · gaps found by the independent grade audit
 - refers-to: library.ts sort menu (First added, Name Z to A, Smallest first, Recently viewed); store.ts SortOrder viewed; organize.ts tileEntries Make Stack Top, Remove from Stack; curate.ts registerCurate Remove from Memory
 - kind: rationale

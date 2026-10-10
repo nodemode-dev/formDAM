@@ -36,6 +36,7 @@ set CLIP_BASE=https://huggingface.co/onnx-community/CLIP-ViT-B-32-laion2B-s34B-b
 if not exist models\clip_vit_b32_laion2b_int8.onnx curl -fSL -o models\clip_vit_b32_laion2b_int8.onnx %CLIP_BASE%/onnx/model_quantized.onnx
 if not exist models\clip_vocab.json curl -fSL -o models\clip_vocab.json %CLIP_BASE%/vocab.json
 if not exist models\clip_merges.txt curl -fSL -o models\clip_merges.txt %CLIP_BASE%/merges.txt
+if not exist models\inpainting_lama_2025jan.onnx curl -fSL -o models\inpainting_lama_2025jan.onnx https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx
 
 echo.
 echo ^>^> Setting up the interface...

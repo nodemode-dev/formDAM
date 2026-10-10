@@ -259,12 +259,25 @@ def _retouch(img: Image.Image, spots: List[Dict[str, Any]]) -> Image.Image:
     mask = np.zeros((h, w), dtype=np.uint8)
     for spot in spots[:400]:
         try:
-            cx, cy, r = float(spot["x"]) * w, float(spot["y"]) * h, max(1.0, float(spot.get("r", 0.02)) * short)
-        except (KeyError, TypeError, ValueError):
+            r = max(1.0, float(spot.get("r", 0.02)) * short)
+            if spot.get("points"):
+                pts = np.array([[float(p[0]) * w, float(p[1]) * h] for p in spot["points"][:2000]], dtype=np.int32)
+                if len(pts) == 1:
+                    cv2.circle(mask, (int(pts[0][0]), int(pts[0][1])), int(r), 255, -1)
+                else:
+                    cv2.polylines(mask, [pts], False, 255, thickness=max(1, int(r * 2)), lineType=cv2.LINE_AA)
+                continue
+            cx, cy = float(spot["x"]) * w, float(spot["y"]) * h
+        except (KeyError, TypeError, ValueError, IndexError):
             continue
         cv2.circle(mask, (int(cx), int(cy)), int(r), 255, -1)
     if not mask.any():
         return img
+    from . import cleanup
+
+    filled = cleanup.inpaint(a, mask)
+    if filled is not None:
+        return Image.fromarray(filled)
     radius = max(3, int(short * 0.01))
     out = cv2.inpaint(cv2.cvtColor(a, cv2.COLOR_RGB2BGR), mask, radius, cv2.INPAINT_TELEA)
     return Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))

@@ -22,7 +22,7 @@ interface EditState {
   levels?: { black?: number; white?: number; gamma?: number };
   curves?: { rgb?: number[][] };
   geometry?: { rotate?: number; flipH?: boolean; flipV?: boolean; straighten?: number; crop?: { x: number; y: number; w: number; h: number } };
-  retouch?: Array<{ x: number; y: number; r: number }>;
+  retouch?: Array<{ x: number; y: number; r: number; points?: Array<[number, number]> }>;
   markup?: Array<{ type: string; points: number[][]; color: string; width: number; text?: string; size?: number }>;
 }
 
@@ -421,10 +421,13 @@ export function openEditor(item: Media): void {
     slider("Straighten", -45, 45, () => Number(geo().straighten ?? 0) / 100, (v) => { geo().straighten = Math.round(v * 100 * 10) / 10; }));
 
   const retouchPane = h("div", { class: "ed-pane hidden" });
-  const clearSpots = h("button", { class: "btn", type: "button" }, "Clear Spots");
+  const clearSpots = h("button", { class: "btn", type: "button" }, "Clear All");
   clearSpots.addEventListener("click", () => { commit(); delete s.retouch; drawOverlay(); requestPreview(0); });
-  retouchPane.append(h("p", { class: "field-hint" }, "Click a blemish, wire or stray object to remove it. The fill comes from the surrounding pixels."),
-    slider("Brush Size", 50, 800, () => brush * 100 * 100 / 100, (v) => { brush = v / 100; }), clearSpots);
+  const undoSpot = h("button", { class: "btn", type: "button" }, "Remove Last");
+  undoSpot.addEventListener("click", () => { if (s.retouch?.length) { commit(); s.retouch.pop(); if (!s.retouch.length) delete s.retouch; drawOverlay(); requestPreview(0); } });
+  const cleanupHint = h("p", { class: "field-hint" }, "Click a blemish, or brush over a person, wire or object to remove it. The fill comes from the surrounding pixels.");
+  retouchPane.append(cleanupHint,
+    slider("Brush Size", 50, 800, () => brush * 100 * 100 / 100, (v) => { brush = v / 100; }), h("div", { class: "row-gap" }, undoSpot, clearSpots));
 
   const markupPane = h("div", { class: "ed-pane hidden" });
   const toolRow = h("div", { class: "seg" });
@@ -446,7 +449,7 @@ export function openEditor(item: Media): void {
 
   const PANES: Record<Tab, HTMLElement> = { adjust, filters: filterPane, crop: cropPane, retouch: retouchPane, markup: markupPane };
   panes.append(...Object.values(PANES));
-  for (const [key, label] of [["adjust", "Adjust"], ["filters", "Filters"], ["crop", "Crop"], ["retouch", "Retouch"], ["markup", "Markup"]] as const) {
+  for (const [key, label] of [["adjust", "Adjust"], ["filters", "Filters"], ["crop", "Crop"], ["retouch", "Clean Up"], ["markup", "Markup"]] as const) {
     const btn = h("button", { type: "button", class: key === tab ? "active" : "" }, label);
     btn.addEventListener("click", () => {
       tab = key;
@@ -478,12 +481,18 @@ export function openEditor(item: Media): void {
     } else if (tab === "retouch") {
       const short = Math.min(natural.w, natural.h);
       for (const spot of s.retouch ?? []) {
-        nodes.push(svgEl("ellipse", { class: "ed-spot", cx: spot.x, cy: spot.y, rx: (spot.r * short) / natural.w, ry: (spot.r * short) / natural.h }));
+        nodes.push(spot.points && spot.points.length > 1 ? strokeNode(spot) : svgEl("ellipse", { class: "ed-spot", cx: spot.x, cy: spot.y, rx: (spot.r * short) / natural.w, ry: (spot.r * short) / natural.h }));
       }
     } else if (tab === "markup") {
       for (const shape of s.markup ?? []) nodes.push(shapeNode(shape));
     }
     overlay.replaceChildren(...nodes);
+  }
+
+  function strokeNode(spot: NonNullable<EditState["retouch"]>[number]): SVGElement {
+    const short = Math.min(natural.w, natural.h);
+    const sw = (spot.r * 2 * short) / Math.max(natural.w, natural.h);
+    return svgEl("polyline", { class: "ed-stroke", "stroke-width": sw, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round", points: (spot.points ?? []).map(([x, y]) => `${x},${y}`).join(" ") });
   }
 
   function shapeNode(shape: NonNullable<EditState["markup"]>[number]): SVGElement {
@@ -528,9 +537,28 @@ export function openEditor(item: Media): void {
     const start = pointFrom(event);
     if (tab === "retouch") {
       commit();
-      s.retouch = [...(s.retouch ?? []), { x: Math.round(start[0] * 1e4) / 1e4, y: Math.round(start[1] * 1e4) / 1e4, r: brush }];
+      const round = (p: [number, number]): [number, number] => [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4];
+      const spot = { x: round(start)[0], y: round(start)[1], r: brush, points: [round(start)] };
+      s.retouch = [...(s.retouch ?? []), spot];
       drawOverlay();
-      requestPreview(0);
+      const line = strokeNode(spot);
+      overlay.append(line);
+      const move = (ev: PointerEvent) => {
+        const pt = round(pointFrom(ev));
+        const last = spot.points[spot.points.length - 1];
+        if (Math.hypot(pt[0] - last[0], pt[1] - last[1]) < 0.003 || spot.points.length >= 1500) return;
+        spot.points.push(pt);
+        line.setAttribute("points", spot.points.map(([x, y]) => `${x},${y}`).join(" "));
+      };
+      const up = () => {
+        overlay.removeEventListener("pointermove", move);
+        overlay.removeEventListener("pointerup", up);
+        if (spot.points.length < 3) delete (spot as { points?: unknown }).points;
+        drawOverlay();
+        requestPreview(0);
+      };
+      overlay.addEventListener("pointermove", move);
+      overlay.addEventListener("pointerup", up);
       return;
     }
     if (tab === "markup") {
