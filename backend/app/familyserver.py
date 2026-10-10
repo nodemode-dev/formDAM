@@ -35,47 +35,48 @@ async def guard(request: Request, call_next):
     return response
 
 
-def _sealed(payload: bytes, path: str) -> Response:
-    return Response(familynet.seal(payload, path), media_type="application/octet-stream")
+def _sealed(payload: bytes, request: Request) -> Response:
+    aad = familynet.bound(request.url.path, request.headers.get("x-fam-nonce", ""))
+    return Response(familynet.seal(payload, aad), media_type="application/octet-stream")
 
 
 @app.get("/f/hello")
-def hello():
+def hello(request: Request):
     from .services.syncsvc import device_id, device_name
 
-    return _sealed(json.dumps({"dev": device_id(), "name": device_name()}).encode(), "/f/hello")
+    return _sealed(json.dumps({"dev": device_id(), "name": device_name()}).encode(), request)
 
 
 @app.get("/f/journal")
-def journal():
-    return _sealed(json.dumps(familynet.journal_listing()).encode(), "/f/journal")
+def journal(request: Request):
+    return _sealed(json.dumps(familynet.journal_listing()).encode(), request)
 
 
 @app.get("/f/journal/{name}")
-def journal_file(name: str):
+def journal_file(name: str, request: Request):
     path = familynet.serve_path("journal", name)
     if path is None:
         return _deny()
     with open(path, "rb") as handle:
-        return _sealed(handle.read(), f"/f/journal/{name}")
+        return _sealed(handle.read(), request)
 
 
 @app.get("/f/object/{name}")
-def object_file(name: str):
+def object_file(name: str, request: Request):
     path = familynet.serve_path("object", name)
     if path is None:
         return _deny()
     with open(path, "rb") as handle:
-        return _sealed(handle.read(), f"/f/object/{name}")
+        return _sealed(handle.read(), request)
 
 
 @app.get("/f/edit/{name}")
-def edit_file(name: str):
+def edit_file(name: str, request: Request):
     path = familynet.serve_path("edit", name)
     if path is None:
         return _deny()
     with open(path, "rb") as handle:
-        return _sealed(handle.read(), f"/f/edit/{name}")
+        return _sealed(handle.read(), request)
 
 
 def running() -> bool:

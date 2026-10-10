@@ -29,6 +29,8 @@ SAFE_EDIT = re.compile(r"^[\w.-]{1,120}$")
 _lock = threading.Lock()
 _peers: Dict[str, Dict[str, Any]] = {}
 _nonces: Dict[str, float] = {}
+_tried: Dict[Tuple[str, str], float] = {}
+CONFIRM_EVERY_S = 60
 _threads: Dict[str, threading.Thread] = {}
 _stop = threading.Event()
 
@@ -129,6 +131,10 @@ def unseal(blob: bytes, path: str) -> bytes:
     return AESGCM(_derive(b"enc")).decrypt(blob[:12], blob[12:], path.encode())
 
 
+def bound(path: str, nonce: str) -> str:
+    return f"{path}\n{nonce}"
+
+
 def _request(peer: Dict[str, Any], path: str, timeout: float = 30.0) -> bytes:
     from .syncsvc import device_id
 
@@ -137,7 +143,15 @@ def _request(peer: Dict[str, Any], path: str, timeout: float = 30.0) -> bytes:
         "x-fam-device": device_id(), "x-fam-ts": ts, "x-fam-nonce": nonce, "x-fam-sig": sign("GET", path, ts, nonce, device_id())})
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(req, timeout=timeout) as res:
-        return unseal(res.read(), path)
+        return unseal(res.read(), bound(path, nonce))
+
+
+def _confirm(ip: str, port: int, dev: str) -> Optional[Dict[str, Any]]:
+    try:
+        info = json.loads(_request({"ip": ip, "port": port}, "/f/hello", timeout=8).decode())
+    except Exception:
+        return None
+    return info if str(info.get("dev") or "") == dev else None
 
 
 def _beacon_payload() -> bytes:
@@ -163,10 +177,22 @@ def _accept_beacon(data: bytes, ip: str) -> None:
         if not hmac.compare_digest(want, mac):
             return
         name = unseal(bytes.fromhex(str(msg.get("name") or "")), "/beacon").decode()[:60]
+        port_n = int(port)
     except Exception:
         return
+    now = time.time()
     with _lock:
-        _peers[dev] = {"dev": dev, "ip": ip, "port": int(port), "seen": time.time(), "name": name, "manual": False}
+        known = _peers.get(dev)
+        if known is not None and known["ip"] == ip and known["port"] == port_n:
+            known["seen"] = now
+            return
+        if now - _tried.get((dev, ip), 0.0) < CONFIRM_EVERY_S:
+            return
+        _tried[(dev, ip)] = now
+    if _confirm(ip, port_n, dev) is None:
+        return
+    with _lock:
+        _peers[dev] = {"dev": dev, "ip": ip, "port": port_n, "seen": now, "name": name, "manual": False}
 
 
 def add_manual(address: str) -> Dict[str, Any]:
@@ -181,7 +207,9 @@ def add_manual(address: str) -> Dict[str, Any]:
         raise ValueError("Only addresses on your local network can be added")
     peer = {"ip": ip, "port": int(port)}
     info = json.loads(_request(peer, "/f/hello", timeout=8).decode())
-    if not SAFE_DEV.match(str(info.get("dev") or "")):
+    from .syncsvc import device_id
+
+    if not SAFE_DEV.match(str(info.get("dev") or "")) or info["dev"] == device_id():
         raise ValueError("That device did not answer as a DAM family member")
     with _lock:
         _peers[info["dev"]] = {"dev": info["dev"], "ip": ip, "port": int(port), "seen": time.time(), "name": str(info.get("name") or "")[:60], "manual": True}
@@ -272,6 +300,8 @@ def stop_discovery() -> None:
 
 
 def fetch(state: Dict[str, Any]) -> Dict[str, int]:
+    from .syncsvc import device_id
+
     counts = {"peers": 0, "files": 0, "objects": 0, "errors": 0}
     base = os.path.join(mirror(), "DAM Sync")
     for peer in peers():
@@ -279,7 +309,7 @@ def fetch(state: Dict[str, Any]) -> Dict[str, int]:
             listing = json.loads(_request(peer, "/f/journal").decode())
             counts["peers"] += 1
             dev = str(listing.get("dev") or "")
-            if not SAFE_DEV.match(dev):
+            if not SAFE_DEV.match(dev) or dev != peer.get("dev") or dev == device_id():
                 continue
             folder = os.path.join(base, "journal", dev)
             os.makedirs(folder, exist_ok=True)
