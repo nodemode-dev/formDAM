@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### sharing.ts familyCard · Shared Library with a share key
+- refers-to: sharing.familyCard, FamilyState, FamilyPeer, mountSharedPage refresh; parity.css .pkg-pw-row inputs
+- kind: rationale + replaced code
+- logged: zip v1.24.0 · 2026-10-10
+
+The family card replaces the folder card: an On switch (off by default, refused with a reason until a key exists), the Family ID, the key hidden until Show Key, New Key and paste-a-key (both disabled while on, so the key cannot change under a running family), the port, add a device by address, the members found with when each last synced, and the last pass. Errors land in a reserved line; peers are keyed by device id and only their time text is patched.
 ### ui/components/packages.ts + sharing.ts, albums.ts, libmanage.ts edits · encrypted packages in the window
 - refers-to: packages.packageFlow, sentPanel, openPackageFlow, notesFlow, mountPackageList, waitJob, seg; sharing.shareEntries, mountSharedPage packages section & Open Package, registerSharing tile entry; albums.mountAlbumDetail shareBtn & notesBtn; libmanage.registerLibraryDrops zip routing; parity.css .field-error, .pkg-*
 - kind: rationale + replaced code

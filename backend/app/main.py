@@ -37,10 +37,16 @@ async def lifespan(app: FastAPI):
     curate.ensure_memories()
     _reclassify_screenshots()
     upgrade_thumbs.run_async()
+    from . import familyserver
     from .services import syncsvc
+    try:
+        familyserver.sync_state()
+    except Exception:
+        pass
     housekeeping.register(syncsvc.ensure)
     syncsvc.ensure()
     yield
+    familyserver.stop()
 
 
 def _reclassify_screenshots() -> None:

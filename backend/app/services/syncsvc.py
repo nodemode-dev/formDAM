@@ -45,8 +45,16 @@ def _key(channel: str, name: str) -> str:
 
 
 def config(channel: str) -> Dict[str, Any]:
-    folder = setting_get(_key(channel, "folder")) or ""
-    return {"channel": channel, "folder": folder, "enabled": bool(folder) and setting_get(_key(channel, "enabled")) == "1",
+    if channel == "shared":
+        from . import familynet
+
+        fam = familynet.settings()
+        folder = familynet.mirror() if fam["has_key"] else ""
+        enabled = fam["enabled"]
+    else:
+        folder = setting_get(_key(channel, "folder")) or ""
+        enabled = bool(folder) and setting_get(_key(channel, "enabled")) == "1"
+    return {"channel": channel, "folder": folder, "enabled": enabled,
             "last_push": float(setting_get(_key(channel, "push_ts")) or 0), "last_pull": float(setting_get(_key(channel, "pull_ts")) or 0),
             **_status.get(channel, {})}
 
@@ -70,6 +78,10 @@ def configure(channel: str, folder: Optional[str], enabled: bool) -> Dict[str, A
 
 
 def _base(channel: str) -> str:
+    if channel == "shared":
+        from . import familynet
+
+        return os.path.join(familynet.mirror(), ROOT)
     return os.path.join(setting_get(_key(channel, "folder")) or "", ROOT)
 
 
@@ -508,9 +520,15 @@ def run_once() -> None:
             _status[channel] = {"error": "The sync folder is not reachable", "ts": time.time()}
             continue
         try:
+            fetched: Dict[str, Any] = {}
+            if channel == "shared":
+                from . import familynet
+
+                os.makedirs(_base(channel), exist_ok=True)
+                familynet.fetch(fetched)
             pulled = pull(channel)
             pushed = push(channel)
-            _status[channel] = {"error": None, "ts": time.time(), "pushed": pushed, "pulled": pulled}
+            _status[channel] = {"error": None, "ts": time.time(), "pushed": pushed, "pulled": pulled, "fetched": fetched}
         except Exception as exc:
             _status[channel] = {"error": str(exc)[:200], "ts": time.time()}
 

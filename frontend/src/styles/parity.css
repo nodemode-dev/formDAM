@@ -48,7 +48,7 @@
 .share-kind { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
 .field-error { min-height: 1.3em; margin: 0; font-size: 12.5px; color: var(--danger, #ff5a52); }
 .pkg-pw-row { align-items: flex-end; }
-.pkg-pw-row .field { flex: 1 1 auto; }
+.pkg-pw-row .field, .pkg-pw-row > .field-input { flex: 1 1 auto; }
 .pkg-path { font-size: 12px; color: var(--text-muted); word-break: break-all; }
 .pkg-password { font: 600 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; padding: 8px 10px; border-radius: 10px; background: var(--glass-bg-2); user-select: all; }
 .pkg-lede { max-width: 720px; margin: 0 0 var(--space-3); }

@@ -65,7 +65,7 @@ pyinstaller --clean --noconfirm --onedir --name dam-backend \
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
   --collect-all ImageCaptureCore --collect-all Quartz \
   --hidden-import objc --hidden-import Foundation --hidden-import AppKit --hidden-import PyObjCTools.AppHelper \
-  --hidden-import app.macshare --collect-all pyzipper --collect-all Cryptodome \
+  --hidden-import app.macshare --hidden-import app.familyserver --collect-all pyzipper --collect-all Cryptodome \
   --exclude-module pymobiledevice3 \
   --hidden-import app.main \
   --add-data "../frontend/dist:frontend_dist" \

@@ -5,7 +5,7 @@ import type { CtxEntry } from "../contextmenu.js";
 import { openContextMenu } from "../contextmenu.js";
 import { h } from "../dom.js";
 import { iconEl } from "../icons.js";
-import { setText } from "../keyed.js";
+import { patchList, setText } from "../keyed.js";
 import { promptText } from "../prompt.js";
 import { toast } from "../toast.js";
 import { tileHooks } from "./grid.js";
@@ -28,7 +28,7 @@ async function moveLibrary(ids: number[], shared: boolean): Promise<void> {
     const res = await api<{ changed: number; skipped: number }>("/media/shared-library", { method: "POST", body: JSON.stringify({ ids, shared }) });
     invalidateMedia();
     const sync = await api<SyncState>("/sync").catch(() => null);
-    const off = shared && !sync?.channels.shared.enabled ? ". Set up the Shared Library folder on the Sharing page so others receive them" : "";
+    const off = shared && !sync?.channels.shared.enabled ? ". Turn on the Shared Library on the Sharing page so family members on your network receive them" : "";
     toast(`${countFmt(res.changed)} moved to the ${shared ? "Shared" : "Personal"} Library${res.skipped ? `, ${countFmt(res.skipped)} skipped (private, hidden, already there or added by someone else)` : ""}${off}`);
   } catch (err) {
     toast((err as Error).message, "error");
@@ -90,6 +90,83 @@ function syncCard(channel: "personal" | "shared", heading: string, hint: string,
   return { el, paint };
 }
 
+interface FamilyPeer { dev: string; name: string; ip: string; port: number; seen: number; synced?: number; manual: boolean }
+interface FamilyState { enabled: boolean; has_key: boolean; port: number; family_id: string; running: boolean; peers: FamilyPeer[]; status: SyncChannel }
+
+function familyCard(): { el: HTMLElement; paint: (f: FamilyState) => void } {
+  const enabled = h("input", { type: "checkbox" }) as HTMLInputElement;
+  const fid = h("p", { class: "field-hint" }, "");
+  const keyBox = h("div", { class: "pkg-password hidden" }, "");
+  const showKey = h("button", { class: "btn", type: "button" }, "Show Key");
+  const newKey = h("button", { class: "btn", type: "button" }, "New Key");
+  const paste = h("input", { class: "field-input", type: "text", placeholder: "Paste a key from another family member", spellcheck: "false", autocomplete: "off" }) as HTMLInputElement;
+  const usePaste = h("button", { class: "btn", type: "button" }, "Use Key");
+  const port = h("input", { class: "field-input compact", type: "number", min: "1024", max: "65535" }) as HTMLInputElement;
+  const address = h("input", { class: "field-input", type: "text", placeholder: "192.168.1.20:8792", spellcheck: "false" }) as HTMLInputElement;
+  const addPeer = h("button", { class: "btn", type: "button" }, "Add Device");
+  const peers = h("div", { class: "share-activity" });
+  const status = h("p", { class: "field-hint" }, "");
+  const error = h("p", { class: "field-error" }, "");
+  for (const input of [paste, port, address]) input.addEventListener("keydown", (event) => event.stopPropagation());
+  const el = h("div", { class: "share-settings glass-panel" },
+    h("div", { class: "sync-head" }, h("b", {}, "Shared Library")),
+    h("p", { class: "field-hint" }, "A second library shared with family, only over your local network and only between DAM apps that hold the same share key. Nothing goes through a cloud or the internet: each app answers its family members directly, every request is signed with the key and every reply is encrypted with it. Off until you turn it on. Move photos in from the photo menu; everyone sees, edits & deletes them, and only the person who added a photo can move it back to Personal."),
+    h("label", { class: "field-check" }, enabled, "On (this computer takes part)"), fid, keyBox,
+    h("div", { class: "row-gap" }, showKey, newKey),
+    h("div", { class: "row-gap pkg-pw-row" }, paste, usePaste),
+    h("div", { class: "row-gap pkg-pw-row" }, h("label", { class: "field" }, h("span", { class: "field-label" }, "Port"), port)),
+    h("div", { class: "row-gap pkg-pw-row" }, address, addPeer), peers, status, error);
+  const fail = (err: unknown) => setText(error, (err as { detail?: string }).detail ?? (err as Error).message);
+  const reload = async () => paint(await api<FamilyState>("/family"));
+  enabled.addEventListener("change", async () => {
+    setText(error, "");
+    try { paint(await api<FamilyState>("/family", { method: "PUT", body: JSON.stringify({ enabled: enabled.checked }) })); } catch (err) { fail(err); void reload(); }
+  });
+  port.addEventListener("change", async () => {
+    setText(error, "");
+    try { paint(await api<FamilyState>("/family", { method: "PUT", body: JSON.stringify({ port: Number(port.value) }) })); } catch (err) { fail(err); void reload(); }
+  });
+  showKey.addEventListener("click", async () => {
+    if (!keyBox.classList.contains("hidden")) { keyBox.classList.add("hidden"); setText(showKey, "Show Key"); return; }
+    const res = await api<{ key: string }>("/family/key");
+    setText(keyBox, res.key || "No key yet");
+    keyBox.classList.remove("hidden");
+    setText(showKey, "Hide Key");
+  });
+  const setKey = async (key: string | null) => {
+    setText(error, "");
+    try {
+      const res = await api<{ key: string }>("/family/key", { method: "POST", body: JSON.stringify(key ? { key } : {}) });
+      setText(keyBox, res.key);
+      keyBox.classList.remove("hidden");
+      setText(showKey, "Hide Key");
+      paste.value = "";
+      await reload();
+    } catch (err) { fail(err); }
+  };
+  newKey.addEventListener("click", () => void setKey(null));
+  usePaste.addEventListener("click", () => { if (paste.value.trim()) void setKey(paste.value.trim()); });
+  addPeer.addEventListener("click", async () => {
+    setText(error, "");
+    try { await api("/family/peers", { method: "POST", body: JSON.stringify({ address: address.value.trim() }) }); address.value = ""; await reload(); } catch (err) { fail(err); }
+  });
+  function paint(f: FamilyState): void {
+    enabled.checked = f.enabled;
+    if (document.activeElement !== port) port.value = String(f.port);
+    setText(fid, f.has_key ? `Family ID ${f.family_id}: every member sees the same ID when they hold the same key. Share the key in person or by a channel you trust.` : "No share key yet: create one here, or paste the key another family member shows you.");
+    for (const b of [newKey, usePaste]) b.toggleAttribute("disabled", f.enabled);
+    paste.toggleAttribute("disabled", f.enabled);
+    patchList(peers, f.peers, (p) => p.dev, (p) => h("div", { class: "share-act" }, h("b", {}, p.name || "DAM"), ` · ${p.ip}:${p.port}`, h("span", { class: "list-sub" }, "")),
+      (node, p) => setText(node.lastElementChild as HTMLElement, ` · ${p.synced ? `synced ${fullStamp(p.synced)}` : `seen ${fullStamp(p.seen)}`}`));
+    const s = f.status;
+    let line = f.enabled ? (f.peers.length ? "Waiting for the first pass" : "Looking for family members on this network") : "Off";
+    if (f.enabled && s.error) line = `Problem: ${s.error}`;
+    else if (f.enabled && s.ts && s.pulled) line = `Last pass ${fullStamp(s.ts)}: received ${countFmt(s.pulled.imported)} new & ${countFmt(s.pulled.applied)} changes from ${countFmt(f.peers.length)} member${f.peers.length === 1 ? "" : "s"}`;
+    setText(status, line);
+  }
+  return { el, paint };
+}
+
 export function mountSharedPage(host: HTMLElement): () => void {
   const packagesBox = h("div", {});
   const openInput = h("input", { type: "file", accept: ".zip,application/zip", class: "hidden" }) as HTMLInputElement;
@@ -103,8 +180,8 @@ export function mountSharedPage(host: HTMLElement): () => void {
   const deviceName = h("input", { class: "field-input compact", type: "text", maxlength: "60" }) as HTMLInputElement;
   let paintSync: (s: SyncState) => void = () => undefined;
   const personal = syncCard("personal", "Sync This Library", "Keeps this library the same on your other computers through a folder they all see: iCloud Drive, Dropbox, OneDrive, Syncthing, a NAS or an external drive. Originals (with Live Photo videos), edits, trims, favorites, ratings, keywords, captions, locations, plain albums & deletions sync; people, smart albums, stacks & memories stay per computer. Private, hidden & vaulted items are never written to the folder, and making a synced photo private, hidden or vaulted removes its file from the folder & hides it on the other computers.", (s) => paintSync(s));
-  const family = syncCard("shared", "Shared Library", "A second library shared with family through a folder you all can reach; anyone who can write to that folder takes part. Move photos into it from the photo menu; everyone sees, edits & deletes them. Only the person who added a photo can move it back to their Personal Library, which removes it from everyone else's.", (s) => paintSync(s));
-  paintSync = (s) => { personal.paint(s); family.paint(s); if (document.activeElement !== deviceName) deviceName.value = s.device.name; };
+  const family = familyCard();
+  paintSync = (s) => { personal.paint(s); if (document.activeElement !== deviceName) deviceName.value = s.device.name; };
   deviceName.addEventListener("change", () => void api<SyncState>("/sync/device", { method: "PUT", body: JSON.stringify({ name: deviceName.value || "This computer" }) }).then(paintSync));
   const pad = h("div", { class: "view-pad" },
     h("div", { class: "section-head" }, h("h2", {}, "Encrypted Packages"), h("span", { class: "head-spacer" }), openBtn, openInput),
@@ -118,9 +195,10 @@ export function mountSharedPage(host: HTMLElement): () => void {
   const unmountPackages = mountPackageList(packagesBox);
 
   async function refresh(): Promise<void> {
-    const sync = await api<SyncState>("/sync");
+    const [sync, fam] = await Promise.all([api<SyncState>("/sync"), api<FamilyState>("/family")]);
     if (!alive) return;
     paintSync(sync);
+    family.paint(fam);
   }
   void refresh();
   const timer = window.setInterval(() => void refresh(), 15000);
