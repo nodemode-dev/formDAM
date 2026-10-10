@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import socket
 import tempfile
@@ -15,8 +16,11 @@ CHANNELS = ("personal", "shared")
 ROOT = "DAM Sync"
 INTERVAL_S = 60
 FIELDS = ("favorite", "rating", "label", "rejected", "title", "caption", "alt_text", "edit_json", "hidden", "trashed_ts",
-          "created_ts", "lat", "lon", "location_hidden", "shared_lib")
+          "created_ts", "lat", "lon", "location_hidden", "shared_lib", "trim_in", "trim_out")
 SYNCABLE = "m.private=0 AND m.live_of IS NULL"
+SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+EXT_RE = re.compile(r"^\.[a-z0-9]{1,6}$")
+JOURNAL_RE = re.compile(r"^(\.?)(\d{8})\.jsonl(\.icloud)?$")
 
 _lock = threading.Lock()
 _thread: Optional[threading.Thread] = None
@@ -69,12 +73,35 @@ def _base(channel: str) -> str:
     return os.path.join(setting_get(_key(channel, "folder")) or "", ROOT)
 
 
-def _object_path(base: str, sha: str, ext: str) -> str:
-    return os.path.join(base, "objects", sha[:2], sha + ext.lower())
+def _object_path(base: str, sha: str, ext: str) -> Optional[str]:
+    sha = str(sha or "").lower()
+    ext = os.path.splitext(os.path.basename(str(ext or "")))[1].lower() or str(ext or "").lower()
+    if not SHA_RE.match(sha) or not EXT_RE.match(ext):
+        return None
+    return os.path.join(base, "objects", sha[:2], sha + ext)
 
 
 def _scope(channel: str) -> str:
-    return SYNCABLE + (" AND (m.shared_lib=1 OR m.shared_origin IS NOT NULL)" if channel == "shared" else "")
+    return "m.live_of IS NULL" + (" AND (m.shared_lib=1 OR m.shared_origin IS NOT NULL)" if channel == "shared" else "")
+
+
+def _secret(row) -> bool:
+    return bool(row["private"] or row["hidden"] or (not row["trashed_ts"] and _vaulted(row["id"])))
+
+
+def _retract(base: str, row) -> Optional[Dict[str, Any]]:
+    path = _object_path(base, row["sha256"], os.path.splitext(row["name"])[1])
+    if not path or not os.path.isfile(path):
+        return None
+    video = _live_row(row["id"])
+    extra = _object_path(base, video["sha256"], os.path.splitext(video["name"])[1]) if video is not None else None
+    for doomed in (path, extra):
+        try:
+            if doomed:
+                os.unlink(doomed)
+        except OSError:
+            pass
+    return {"op": "retract", "sha": row["sha256"], "size": row["size"], "ts": row["meta_ts"]}
 
 
 def _carries_object(channel: str, row) -> bool:
@@ -85,8 +112,44 @@ def _record(row) -> Dict[str, Any]:
     fields = {k: row[k] for k in FIELDS}
     fields["keywords"] = [r["name"] for r in q("""SELECT k.name FROM media_keywords mk JOIN keywords k ON k.id=mk.keyword_id
                                                  WHERE mk.media_id=? ORDER BY k.name""", (row["id"],))]
-    return {"op": "media", "sha": row["sha256"], "size": row["size"], "name": row["name"], "kind": row["kind"],
-            "ts": row["meta_ts"], "origin": row["shared_origin"] or device_id(), "fields": fields}
+    rec = {"op": "media", "sha": row["sha256"], "size": row["size"], "name": row["name"], "kind": row["kind"],
+           "ts": row["meta_ts"], "origin": row["shared_origin"] or device_id(), "fields": fields}
+    if row["live_video_id"]:
+        video = q1("SELECT sha256, size, name FROM media WHERE id=?", (row["live_video_id"],))
+        if video:
+            rec["live"] = {"sha": video["sha256"], "size": video["size"], "name": video["name"]}
+    return rec
+
+
+def _live_row(media_id: int):
+    row = q1("SELECT live_video_id FROM media WHERE id=?", (media_id,))
+    return q1("SELECT * FROM media WHERE id=?", (row["live_video_id"],)) if row and row["live_video_id"] else None
+
+
+def _attach_live(base: str, photo_id: int, live: Dict[str, Any]) -> bool:
+    if not SHA_RE.match(str(live.get("sha") or "")):
+        return True
+    if q1("SELECT live_video_id FROM media WHERE id=?", (photo_id,))["live_video_id"]:
+        return True
+    video = q1("SELECT id FROM media WHERE sha256=? AND size=?", (live["sha"], live.get("size")))
+    if video is None:
+        src = _object_path(base, live["sha"], os.path.splitext(str(live.get("name") or ""))[1])
+        if src is None:
+            return True
+        if not os.path.isfile(src):
+            return False
+        stage = tempfile.mkdtemp(prefix="dam-sync-")
+        try:
+            local = os.path.join(stage, os.path.basename(str(live.get("name") or "")) or os.path.basename(src))
+            shutil.copy2(src, local)
+            result = libraryfs.import_one(local, move=True)
+        finally:
+            shutil.rmtree(stage, ignore_errors=True)
+        if not result.get("media_id"):
+            return True
+        video = {"id": result["media_id"]}
+    libraryfs.link_live(photo_id, video["id"])
+    return True
 
 
 def _vaulted(media_id: int) -> bool:
@@ -98,6 +161,8 @@ def _vaulted(media_id: int) -> bool:
 def _put_object(base: str, row) -> bool:
     src = libraryfs.abs_path(row["rel_path"])
     dest = _object_path(base, row["sha256"], os.path.splitext(row["name"])[1])
+    if dest is None:
+        return False
     if os.path.isfile(dest):
         return True
     if not os.path.isfile(src):
@@ -132,14 +197,23 @@ def push(channel: str) -> Dict[str, int]:
     started = time.time()
     rows = q(f"SELECT m.* FROM media m WHERE {_scope(channel)} AND (m.meta_ts > ? OR ?) ORDER BY m.meta_ts", (since, int(first)))
     records: List[Dict[str, Any]] = []
-    counts = {"media": 0, "objects": 0, "albums": 0}
+    counts = {"media": 0, "objects": 0, "albums": 0, "retracted": 0}
     for row in rows:
-        if _vaulted(row["id"]) or (first and not _carries_object(channel, row)):
+        if _secret(row):
+            gone = None if first else _retract(base, row)
+            if gone:
+                records.append(gone)
+                counts["retracted"] += 1
+            continue
+        if first and not _carries_object(channel, row):
             continue
         if _carries_object(channel, row):
             if not _put_object(base, row):
                 continue
             counts["objects"] += 1
+            video = _live_row(row["id"])
+            if video is not None:
+                _put_object(base, video)
         _put_edit(base, row["edit_json"])
         records.append(_record(row))
         counts["media"] += 1
@@ -205,7 +279,23 @@ def _keywords(media_id: int, names: List[str]) -> None:
         ex("INSERT OR IGNORE INTO media_keywords(media_id, keyword_id) VALUES(?,?)", (media_id, kid))
 
 
+def _apply_retract(rec: Dict[str, Any]) -> bool:
+    if not SHA_RE.match(str(rec.get("sha") or "")):
+        return True
+    row = q1("SELECT * FROM media WHERE sha256=? AND size=?", (rec["sha"], rec.get("size")))
+    if row is None or row["private"] or row["hidden"] or _vaulted(row["id"]):
+        return True
+    ex("UPDATE media SET hidden=1, meta_ts=? WHERE id=?", (rec.get("ts") or time.time(), row["id"]))
+    from .. import vaultcrypt
+
+    vaultcrypt.reconcile(row["id"])
+    _touched.append(row["id"])
+    return True
+
+
 def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
+    if not SHA_RE.match(str(rec.get("sha") or "")):
+        return True
     row = q1("SELECT * FROM media WHERE sha256=? AND size=?", (rec["sha"], rec["size"]))
     fields = rec.get("fields") or {}
     if row is None:
@@ -213,7 +303,9 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
             return True
         if channel == "shared" and not fields.get("shared_lib"):
             return True
-        src = _object_path(base, rec["sha"], os.path.splitext(rec["name"])[1])
+        src = _object_path(base, rec["sha"], os.path.splitext(str(rec.get("name") or ""))[1])
+        if src is None:
+            return True
         if not os.path.isfile(src):
             return False
         stage = tempfile.mkdtemp(prefix="dam-sync-")
@@ -226,11 +318,18 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
         media_id = result.get("media_id")
         if not media_id:
             return True
+        row = q1("SELECT * FROM media WHERE id=?", (media_id,))
+        if result.get("status") != "imported" or row is None or row["private"] or row["hidden"] or _vaulted(media_id):
+            return True
         ex("UPDATE media SET meta_ts=0, shared_origin=? WHERE id=?", (rec.get("origin") if channel == "shared" or fields.get("shared_lib") else None, media_id))
         row = q1("SELECT * FROM media WHERE id=?", (media_id,))
         _imported.append(media_id)
-    elif row["private"] or _vaulted(row["id"]):
+    elif _secret(row):
         return True
+    elif channel == "shared" and not row["shared_lib"] and not row["shared_origin"]:
+        return True
+    if isinstance(rec.get("live"), dict) and not fields.get("trashed_ts") and not _attach_live(base, row["id"], rec["live"]):
+        return False
     if channel == "shared" and not fields.get("shared_lib"):
         if not row["shared_lib"] or float(rec.get("ts") or 0) <= float(row["meta_ts"] or 0):
             return True
@@ -239,6 +338,9 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
         elif not row["trashed_ts"]:
             ex("UPDATE media SET shared_lib=0, trashed_ts=?, trash_reason=?, meta_ts=? WHERE id=?",
                (time.time(), "Removed from the Shared Library", rec["ts"], row["id"]))
+            from .. import vaultcrypt
+
+            vaultcrypt.reconcile(row["id"])
         _touched.append(row["id"])
         return True
     if float(rec.get("ts") or 0) <= float(row["meta_ts"] or 0):
@@ -253,6 +355,10 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
        values + [rec["ts"], edit, rec["ts"], row["id"]])
     _keywords(row["id"], fields.get("keywords") or [])
     ex("UPDATE media SET meta_ts=? WHERE id=?", (rec["ts"], row["id"]))
+    if bool(fields.get("trashed_ts")) != bool(row["trashed_ts"]):
+        from .. import vaultcrypt
+
+        vaultcrypt.reconcile(row["id"])
     _touched.append(row["id"])
     return True
 
@@ -317,12 +423,24 @@ def pull(channel: str) -> Dict[str, int]:
             continue
         ckey = _key(channel, "cursor_" + dev)
         seq, line = _cursor(setting_get(ckey))
-        files = sorted(f for f in os.listdir(os.path.join(journal, dev)) if f.endswith(".jsonl"))
+        found: Dict[int, Tuple[str, bool]] = {}
+        for fname in os.listdir(os.path.join(journal, dev)):
+            hit = JOURNAL_RE.match(fname)
+            if hit:
+                placeholder = bool(hit.group(1) or hit.group(3))
+                num = int(hit.group(2))
+                if num not in found or found[num][1]:
+                    found[num] = (fname, placeholder)
         blocked = False
-        for name in files:
-            fseq = int(name.split(".")[0])
-            if fseq < seq:
+        expected = max(seq, 1)
+        for fseq in sorted(found):
+            if fseq < expected:
                 continue
+            name, placeholder = found[fseq]
+            if fseq != expected or placeholder:
+                counts["waiting"] += 1
+                break
+            expected += 1
             with open(os.path.join(journal, dev, name), encoding="utf-8") as handle:
                 lines = handle.read().splitlines()
             start = line if fseq == seq else 0
@@ -331,7 +449,18 @@ def pull(channel: str) -> Dict[str, int]:
                     rec = json.loads(lines[i])
                 except ValueError:
                     continue
-                ok = _apply_media(channel, base, rec) if rec.get("op") == "media" else _apply_album(rec) if rec.get("op") == "album" and channel == "personal" else True
+                op = rec.get("op") if isinstance(rec, dict) else None
+                try:
+                    if op == "media":
+                        ok = _apply_media(channel, base, rec)
+                    elif op == "retract":
+                        ok = _apply_retract(rec)
+                    elif op == "album" and channel == "personal":
+                        ok = _apply_album(rec)
+                    else:
+                        ok = True
+                except (KeyError, TypeError, ValueError):
+                    ok = True
                 if not ok:
                     counts["waiting"] += 1
                     setting_set(ckey, f"{fseq}:{i}")
@@ -423,8 +552,10 @@ def set_shared(ids: List[int], shared: bool) -> int:
     changed = 0
     me = device_id()
     for media_id in ids:
-        row = q1("SELECT id, private, shared_lib FROM media WHERE id=?", (media_id,))
-        if row is None or row["private"] or _vaulted(media_id) or bool(row["shared_lib"]) == shared:
+        row = q1("SELECT id, private, hidden, shared_lib, shared_origin FROM media WHERE id=?", (media_id,))
+        if row is None or row["private"] or row["hidden"] or _vaulted(media_id) or bool(row["shared_lib"]) == shared:
+            continue
+        if not shared and row["shared_origin"] and row["shared_origin"] != me:
             continue
         ex("UPDATE media SET shared_lib=?, shared_origin=COALESCE(shared_origin, ?) WHERE id=?", (int(shared), me, media_id))
         changed += 1

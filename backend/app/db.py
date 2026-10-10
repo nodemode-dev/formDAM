@@ -152,7 +152,7 @@ MEDIA_V5_COLUMNS = (
 
 SYNC_STAMP = "(julianday('now') - 2440587.5) * 86400.0"
 SYNC_MEDIA_COLUMNS = ("favorite, rating, label, rejected, title, caption, alt_text, edit_json, hidden, trashed_ts, "
-                      "created_ts, lat, lon, location_hidden, shared_lib")
+                      "created_ts, lat, lon, location_hidden, shared_lib, private, trim_in, trim_out")
 
 MIGRATIONS = {
     10: [
