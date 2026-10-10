@@ -43,7 +43,7 @@ Run on a Mac from the repo root: it fetches the face models, builds the UI, free
 | --- | --- | --- |
 | `DAM_LIBRARY` | `<repo>/library` | Library root (originals, cache, vault, `dam.db`) |
 | `DAM_MODELS` | `backend/models` | Face model directory |
-| `DAM_FACE_THRESHOLD` | `0.42` | Cosine threshold for person clustering |
+| `DAM_FACE_THRESHOLD` | `0.55` | Cosine threshold for person clustering (also adjustable in People) |
 | `DAM_TRASH_DAYS` | `30` | Days before trash auto-purges |
 
 The older `DAMP_*` spellings are still read when the `DAM_*` one is unset.

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from .. import jobs
 from ..db import setting_get, setting_set
-from ..services import idevicesvc, libraryfs, ocrsvc, thumbs
+from ..services import followon, idevicesvc, libraryfs, thumbs
 
 router = APIRouter()
 
@@ -54,6 +54,7 @@ def start_import(body: ImportIn):
                 counts["duplicates"] += 1
             else:
                 counts["skipped"] += 1
+        followon.start_after_import(counts)
 
     return {"job_id": jobs.start("import", run)}
 
@@ -95,8 +96,7 @@ async def import_upload(files: List[UploadFile] = File(...)):
                 counts["duplicates"] += 1
             else:
                 counts["skipped"] += 1
-    if counts["imported"] and ocrsvc.engine_name():
-        jobs.start("ocr", ocrsvc.scan_job)
+    followon.start_after_import(counts)
     return {"counts": counts}
 
 
@@ -182,6 +182,7 @@ def idevice_import(body: IDeviceImportIn):
 
     def run(state: Dict[str, Any]) -> None:
         idevicesvc.run_import(body.serial, state, keys=body.keys, gen=body.gen, delete_after=body.delete_after)
+        followon.start_after_import(state.get("counts") or {})
 
     return {"job_id": jobs.start("idevice-import", run)}
 

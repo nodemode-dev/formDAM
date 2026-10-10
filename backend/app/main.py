@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .config import VERSION, cache_dir, originals_dir
-from . import upgrade_thumbs
+from . import mediacodecs, upgrade_thumbs
 from .db import init_db, q, ex, setting_get, setting_set
 from .services import classify
 from .routers import albums, dedup, importer, mediaapi, people, system, trash
@@ -20,6 +20,9 @@ async def lifespan(app: FastAPI):
     from . import vaultcrypt
     vaultcrypt.startup()
     trash.purge_expired()
+    from .services import housekeeping
+    housekeeping.register(trash.purge_expired)
+    housekeeping.start()
     _reclassify_screenshots()
     upgrade_thumbs.run_async()
     yield
@@ -37,6 +40,7 @@ def _reclassify_screenshots() -> None:
     setting_set("classify_ver", "2")
 
 
+mediacodecs.register()
 app = FastAPI(title="DAM", version=VERSION, lifespan=lifespan)
 app.middleware("http")(local_only_guard)
 

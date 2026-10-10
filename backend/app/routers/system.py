@@ -76,8 +76,8 @@ class OcrScanIn(BaseModel):
 
 @router.post("/ocr/scan", status_code=202)
 def ocr_scan(body: OcrScanIn | None = None):
-    if not ocrsvc.tesseract_path():
-        raise HTTPException(409, detail="tesseract is not on PATH (brew install tesseract)")
+    if not ocrsvc.engine_name():
+        raise HTTPException(409, detail="No text engine: the bundled model is missing & tesseract is not on PATH")
     active = jobs.running("ocr")
     if active:
         return {"job_id": active["id"]}

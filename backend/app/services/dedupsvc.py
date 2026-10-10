@@ -168,6 +168,36 @@ def list_sets() -> List[Dict[str, Any]]:
     return [s for s in sets if s["members"]]
 
 
+CARRY_MAX = ("favorite", "rating")
+CARRY_FILL = ("title", "caption", "alt_text", "lat", "lon")
+
+
+def carry_to_keeper(media_id: int, keeper_id: int) -> None:
+    columns = {row["name"] for row in q("PRAGMA table_info(media)")}
+    src = q1("SELECT * FROM media WHERE id=?", (media_id,))
+    dst = q1("SELECT * FROM media WHERE id=?", (keeper_id,))
+    if src is None or dst is None:
+        return
+    for col in CARRY_MAX:
+        if col in columns and (src[col] or 0) > (dst[col] or 0):
+            ex(f"UPDATE media SET {col}=? WHERE id=?", (src[col], keeper_id))
+    for col in CARRY_FILL:
+        if col in columns and src[col] not in (None, "") and dst[col] in (None, ""):
+            ex(f"UPDATE media SET {col}=? WHERE id=?", (src[col], keeper_id))
+    now_ts = time.time()
+    for row in q("SELECT album_id FROM album_items WHERE media_id=?", (media_id,)):
+        ex("INSERT OR IGNORE INTO album_items(album_id, media_id, position, added_ts) VALUES(?,?,0,?)", (row["album_id"], keeper_id, now_ts))
+    ex("INSERT OR IGNORE INTO media_keywords(media_id, keyword_id) SELECT ?, keyword_id FROM media_keywords WHERE media_id=?", (keeper_id, media_id))
+    private = q1(
+        "SELECT COUNT(*) AS n FROM album_items ai JOIN albums a ON a.id=ai.album_id WHERE ai.media_id=? AND a.is_private=1",
+        (keeper_id,),
+    )["n"]
+    if bool(private) != bool(dst["private"]):
+        ex("UPDATE media SET private=? WHERE id=?", (1 if private else 0, keeper_id))
+        from .. import vaultcrypt
+        vaultcrypt.reconcile(keeper_id)
+
+
 def resolve(set_id: int, keep_media_id: Optional[int] = None) -> Dict[str, Any]:
     row = q1("SELECT * FROM dup_sets WHERE id=?", (set_id,))
     if row is None:
@@ -181,6 +211,7 @@ def resolve(set_id: int, keep_media_id: Optional[int] = None) -> Dict[str, Any]:
     for media_id in pool:
         target = q1("SELECT trashed_ts FROM media WHERE id=?", (media_id,))
         if target and target["trashed_ts"] is None:
+            carry_to_keeper(media_id, keeper)
             ex("UPDATE media SET trashed_ts=?, trash_reason=? WHERE id=?", (stamp, f"duplicate:{set_id}", media_id))
             trashed += 1
     ex("UPDATE dup_sets SET resolved_ts=?, keeper_media_id=? WHERE id=?", (stamp, keeper, set_id))

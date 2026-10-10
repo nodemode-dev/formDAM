@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.21.2) · 2026-09-18
+### app/mediacodecs.py + main.py + services/followon.py + services/housekeeping.py + dedupsvc carry_to_keeper · parity phase 1 fixes
+- refers-to: mediacodecs.register (called once beside the FastAPI app); routers/system.py ocr_scan gate; routers/importer.py start_import run tail, import_upload tail, idevice_import run; services/dedupsvc.py carry_to_keeper + resolve loop; main.py lifespan housekeeping block; requirements*.txt pillow-heif pin
+- kind: rationale + removed code
+- logged: zip v1.22.0 · 2026-10-10
+
+HEIC: pillow-heif was installed & frozen into the Mac build but never registered, so Pillow refused every HEIC (no size, file-time date, 404 thumbnail, skipped by faces, OCR & duplicates). mediacodecs.register() calls register_heif_opener() once per process; the module name avoids shadowing the stdlib codecs. The call sits after the import block so ruff E402 stays clean. OCR: the scan endpoint required tesseract even when RapidOCR was the engine; it now asks ocrsvc.engine_name(). Removed from ocr_scan: `if not ocrsvc.tesseract_path(): raise HTTPException(409, detail="tesseract is not on PATH (brew install tesseract)")`. Removed from import_upload: `if counts["imported"] and ocrsvc.engine_name(): jobs.start("ocr", ocrsvc.scan_job)`, replaced by followon.start_after_import, which every import path (folder, menu bar, drop, iPhone) now calls; it starts OCR & the face scan when their engines are ready & not already running, so new photos are read & grouped w/o a button, as Photos does. Duplicates: resolve now carries favorite & rating (max), title, caption, alt text & location (fill if empty), album membership & keywords to the keeper before trashing the others, & re-derives the keeper's private flag (+ vault reconcile) when it inherits a private album; faces are not moved bc their boxes belong to the other file. Purge: Recently Deleted expired only at engine start; housekeeping runs registered tasks every 6 h on a daemon thread & resets its sqlite connection per pass.
 ### app/db.py + oc_install · catalogs older than Live Photos crashed the engine at startup
 - refers-to: app/db.py :: SCHEMA (idx_media_live_of removed), init_db (no version row starts at 1); oc_install :: fetch_model curl
 - kind: rationale + removed code
