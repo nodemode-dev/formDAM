@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.21.2) · 2026-10-10
+### routers/curate.py memory_from_prompt + curatesvc._pick near-duplicate rule + routers/library.py disk metadata · describe a memory, rate files on disk
+- refers-to: curate.memory_from_prompt (/memories/prompt); curatesvc._pick last-shot comparison; library._sidecar_record, disk_meta (/disk/meta), disk_browse rating & label
+- kind: rationale + replaced code
+- logged: zip v1.22.0 · 2026-10-10
+
+Describe a Memory runs the description as a full text search w/ the visual scope (CLIP, places, dates, people, keywords) & builds a memory from the hits through the same picker, so "dogs at the beach" or "Tokyo in May 2025" works offline w/o a generative model. The picker's burst guard used to drop any image under 2 s after the previous one, which also dropped different photos sharing a file-time date; it now drops only when the dimensions & camera model also match. Replaced: `if last is not None and r["created_ts"] - last < 2 and r["kind"] == "image": continue`. Browse Disk reads each file's XMP sidecar for rating & label & writes them back (0-5, X reject, 6-9 labels, keywords merged) the way Bridge rates files that are not in a catalog; a file that is also in the library gets the same values in the catalog.
 ### app/libraries.py + routers/library.py + db.connect path check + referenced imports · library switcher, repair, consolidate, disk browsing
 - refers-to: libraries.config_dir/current/listing/remember/forget; library.py /library, /library/switch, /library/forget, /library/repair (repair_job), /library/import-orphans, /library/consolidate, /disk/browse, /disk/thumb, /disk/file; db.connect (per-thread path check); libraryfs.import_one reference arg + consolidate; importer.ImportIn.reference + upload ids; vaultcrypt._protect consolidate-first; trash._purge_row keeps referenced files; desktop_entry library default from the registry; main.py router tuple
 - kind: rationale

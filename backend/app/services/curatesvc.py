@@ -75,10 +75,11 @@ def _pick(rows: List[Any], limit: int = MEMORY_MAX) -> List[int]:
     chosen.sort(key=lambda r: r["created_ts"])
     ids, last = [], None
     for r in chosen:
-        if last is not None and r["created_ts"] - last < 2 and r["kind"] == "image":
+        if (last is not None and r["kind"] == "image" and r["created_ts"] - last["created_ts"] < 2
+                and (r["width"], r["height"], r["model"]) == (last["width"], last["height"], last["model"])):
             continue
         ids.append(r["id"])
-        last = r["created_ts"]
+        last = r
     return ids
 
 

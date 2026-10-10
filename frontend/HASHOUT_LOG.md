@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-10-10
+### infopanel Text in Photo + curate Describe a Memory + libmanage disk ratings
+- refers-to: infopanel.createInfoPanel ocrSection (Copy); curate.mountMemoriesPage describe button; libmanage.paintDiskMeta, mountDiskPage keys handler
+- kind: rationale
+- logged: zip v1.22.0 · 2026-10-10
+
+The info panel shows the recognised text of a photo, selectable, w/ a Copy link (Live Text's copy path); the section stays hidden when there is none, so the panel does not reserve space for it. Memories gains Describe a Memory. Browse Disk tiles paint stars & a label dot from sidecars & the page listens for 0-5, X & 6-9 on picked files while it is mounted; the listener is removed on teardown.
 ### ui/components/libmanage.ts + drops · libraries, repair, browse disk, folder & album drops
 - refers-to: libmanage.switchTo/mountLibraryPage/mountDiskPage/quickLook/collectEntries/uploadAll/albumTarget/registerLibraryDrops; grid.ts tile dragstart (application/x-dam-ids); sidebar.ts album rows carry data-album-id, Browse Disk & Libraries rows; importer.ts Add in place checkbox; main.ts libraries & disk routes, registerLibraryDrops; parity.css lib, disk & drop-target rules
 - kind: rationale

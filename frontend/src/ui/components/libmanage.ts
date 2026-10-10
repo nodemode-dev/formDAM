@@ -13,7 +13,20 @@ import { pickFolder } from "./outputs.js";
 interface LibraryEntry { path: string; name: string; active: boolean; exists: boolean; opened_ts?: number }
 interface RepairReport { integrity: string; finished?: number; deep: boolean; counts: Record<string, number>; missing: Array<{ name: string; path: string }>; offline: Array<{ name: string; path: string }>; orphans: string[] }
 interface LibraryInfo { path: string; name: string; items: number; bytes: number; referenced: number; libraries: LibraryEntry[]; repair: RepairReport | null }
-interface DiskFile { name: string; path: string; size: number; mtime: number; kind: string; media_id: number | null }
+interface DiskFile { name: string; path: string; size: number; mtime: number; kind: string; media_id: number | null; rating: number; label: string }
+const DISK_LABEL_KEYS: Record<string, string> = { "6": "red", "7": "yellow", "8": "green", "9": "blue" };
+
+function paintDiskMeta(node: HTMLElement, f: DiskFile): void {
+  const stars = node.querySelector<HTMLElement>(".tile-stars");
+  const dot = node.querySelector<HTMLElement>(".tile-label");
+  if (stars) {
+    setText(stars, f.rating > 0 ? "★".repeat(f.rating) : f.rating < 0 ? "Rejected" : "");
+    stars.classList.toggle("hidden", f.rating === 0);
+  }
+  if (dot) {
+    dot.className = `tile-label${f.label ? ` l-${f.label}` : " hidden"}`;
+  }
+}
 interface DiskListing { path: string; parent: string | null; dirs: Array<{ name: string; path: string }>; files: DiskFile[]; shortcuts: Array<{ name: string; path: string }>; sidecars: number }
 
 const MEDIA_EXT = new Set(["jpg", "jpeg", "png", "heic", "heif", "gif", "webp", "tif", "tiff", "bmp", "dng", "mov", "mp4", "m4v", "webm", "mkv", "3gp", "avi", "avif", "mts",
@@ -177,7 +190,8 @@ export function mountDiskPage(host: HTMLElement, startPath: string): () => void 
       const img = h("img", { alt: f.name, loading: "lazy", draggable: false }) as HTMLImageElement;
       loadImage(img, `/api/disk/thumb?path=${encodeURIComponent(f.path)}&s=384`);
       const badge = h("span", { class: `tile-chip disk-in${f.media_id ? "" : " hidden"}` }, "IN LIBRARY");
-      const tile = h("div", { class: "tile disk-tile" }, img, h("div", { class: "tile-meta" }, badge), h("div", { class: "disk-name" }, f.name));
+      const tile = h("div", { class: "tile disk-tile" }, img, h("div", { class: "tile-meta" }, h("span", { class: "tile-stars" }), h("span", { class: "tile-label" }), badge), h("div", { class: "disk-name" }, f.name));
+      paintDiskMeta(tile, f);
       tile.addEventListener("click", (event) => {
         if (event.detail > 1) return;
         if (picked.has(f.path)) picked.delete(f.path);
@@ -190,6 +204,7 @@ export function mountDiskPage(host: HTMLElement, startPath: string): () => void 
     }, (node, f) => {
       node.querySelector(".disk-in")?.classList.toggle("hidden", !f.media_id);
       node.classList.remove("selected");
+      paintDiskMeta(node, f);
     });
   };
   const run = async (reference: boolean) => {
@@ -214,8 +229,30 @@ export function mountDiskPage(host: HTMLElement, startPath: string): () => void 
     grid.querySelectorAll<HTMLElement>(".disk-tile").forEach((t, i) => t.classList.toggle("selected", all && Boolean(listing?.files[i])));
     sync();
   });
+  const keys = (event: KeyboardEvent) => {
+    if (!picked.size || !listing || document.querySelector(".modal-backdrop")) return;
+    const target = event.target as HTMLElement | null;
+    if (event.metaKey || event.ctrlKey || event.altKey || (target && target.closest("input, textarea, select"))) return;
+    const body: Record<string, unknown> = { paths: [...picked] };
+    if (/^[0-5]$/.test(event.key)) body.rating = Number(event.key);
+    else if (DISK_LABEL_KEYS[event.key]) body.label = DISK_LABEL_KEYS[event.key];
+    else if (event.key.toLowerCase() === "x") body.rating = -1;
+    else return;
+    event.preventDefault();
+    const data = listing;
+    void api("/disk/meta", { method: "POST", body: JSON.stringify(body) }).then(() => {
+      for (const f of data.files) {
+        if (!picked.has(f.path)) continue;
+        if ("rating" in body) f.rating = body.rating as number;
+        if ("label" in body) f.label = f.label === body.label ? "" : String(body.label);
+      }
+      grid.querySelectorAll<HTMLElement>(".disk-tile").forEach((node, i) => { const f = data.files[i]; if (f && picked.has(f.path)) paintDiskMeta(node, f); });
+      toast(`Wrote XMP for ${countFmt(picked.size)} file${picked.size === 1 ? "" : "s"}`);
+    }).catch((err) => toast(String((err as Error).message), "error"));
+  };
+  window.addEventListener("keydown", keys);
   void load(startPath || "~");
-  return () => undefined;
+  return () => window.removeEventListener("keydown", keys);
 }
 
 function quickLook(f: DiskFile): void {

@@ -250,8 +250,58 @@ def browse_disk(path: str = Query("", max_length=4000)):
     for f in files[:2000]:
         hit = q1("SELECT id FROM media WHERE rel_path=? OR (name=? AND size=?) LIMIT 1", (f["path"], f["name"], f["size"]))
         f["media_id"] = hit["id"] if hit else None
+        side = _sidecar_record(f["path"])
+        f["rating"] = side.get("rating", 0)
+        f["label"] = str(side.get("label") or "").lower()
     parent = os.path.dirname(target) if os.path.dirname(target) != target else None
     return {"path": target, "parent": parent, "dirs": dirs, "files": files, "shortcuts": _shortcuts(), "sidecars": sum(1 for e in entries if e.name.lower().endswith(".xmp"))}
+
+
+class DiskMetaIn(BaseModel):
+    paths: List[str] = Field(..., min_length=1, max_length=5000)
+    rating: Optional[int] = Field(None, ge=-1, le=5)
+    label: Optional[str] = Field(None, max_length=20)
+    keywords: List[str] = Field(default_factory=list, max_length=50)
+
+
+def _sidecar_record(path: str) -> Dict[str, Any]:
+    from ..services import xmpsvc
+
+    side = xmpsvc.find_sidecar(path)
+    if not side:
+        return {}
+    try:
+        with open(side, "r", encoding="utf-8", errors="replace") as fh:
+            return xmpsvc.parse_xmp(fh.read())
+    except OSError:
+        return {}
+
+
+@router.post("/disk/meta")
+def disk_meta(body: DiskMetaIn):
+    from ..services import xmpsvc
+
+    written = 0
+    for raw in body.paths:
+        path = _media_file(raw)
+        rec = _sidecar_record(path)
+        rec.setdefault("meta", {})
+        if body.rating is not None:
+            rec["rating"] = body.rating
+        if body.label is not None:
+            rec["label"] = body.label
+        if body.keywords:
+            rec["keywords"] = sorted(set(rec.get("keywords") or []) | set(body.keywords))
+        side = xmpsvc.find_sidecar(path) or xmpsvc.sidecar_for(path)
+        tmp = side + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(xmpsvc.build_xmp(rec))
+        os.replace(tmp, side)
+        hit = q1("SELECT id FROM media WHERE rel_path=?", (path,))
+        if hit:
+            xmpsvc.apply_record(hit["id"], {k: v for k, v in rec.items() if k in ("rating", "label", "keywords")})
+        written += 1
+    return {"written": written}
 
 
 def _media_file(path: str) -> str:

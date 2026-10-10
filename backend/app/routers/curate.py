@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from .. import jobs
-from ..db import ex, q1
+from ..db import ex, q, q1
 from ..services import curatesvc
 
 router = APIRouter()
@@ -77,6 +77,27 @@ def generate():
 @router.post("/memories", status_code=201)
 def create_memory(body: CustomIn):
     return {"id": curatesvc.custom(body.ids, body.title.strip() or "My Memory")}
+
+
+class PromptIn(BaseModel):
+    text: str = Field(..., min_length=2, max_length=300)
+
+
+@router.post("/memories/prompt", status_code=201)
+def memory_from_prompt(body: PromptIn):
+    from ..services import query
+
+    text = body.text.strip()
+    ids = query.ids({"text": text, "expand_stacks": True, "sort": "oldest"}, limit=3000)
+    if not ids:
+        raise HTTPException(404, detail="Nothing in the library matches that description")
+    rows = q(f"SELECT * FROM media WHERE id IN ({','.join('?' * len(ids))}) ORDER BY created_ts", ids)
+    picked = curatesvc._pick(rows)
+    if not picked:
+        raise HTTPException(404, detail="Nothing in the library matches that description")
+    mid = curatesvc.custom(picked, text[:1].upper() + text[1:])
+    ex("UPDATE memories SET kind='prompt', subtitle=? WHERE id=?", (f"{len(picked)} moments", mid))
+    return {"id": mid, "count": len(picked)}
 
 
 @router.get("/memories/{memory_id}")

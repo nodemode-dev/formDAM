@@ -61,7 +61,18 @@ export function mountMemoriesPage(host: HTMLElement): () => void {
   const grid = h("div", { class: "memory-grid" });
   const empty = emptyCard("No Memories Yet", "Create memories from your library, or select photos and choose Create Memory.");
   const gen = h("button", { class: "btn primary", type: "button" }, iconEl("sparkle"), "Create Memories") as HTMLButtonElement;
-  host.append(h("div", { class: "view-pad" }, h("div", { class: "section-head" }, h("h2", {}, "Memories"), h("span", { class: "head-spacer" }), gen), grid, empty));
+  const describe = h("button", { class: "btn", type: "button" }, iconEl("search"), "Describe a Memory...");
+  describe.addEventListener("click", async () => {
+    const text = await promptText("Describe a Memory", "", "For example: dogs at the beach, Tokyo in May 2025, birthday cake", "Create");
+    if (!text) return;
+    try {
+      const res = await api<{ id: number }>("/memories/prompt", { method: "POST", body: JSON.stringify({ text }) });
+      navigate(`#/memory/${res.id}`);
+    } catch (err) {
+      toast(String((err as Error).message), "error");
+    }
+  });
+  host.append(h("div", { class: "view-pad" }, h("div", { class: "section-head" }, h("h2", {}, "Memories"), h("span", { class: "head-spacer" }), describe, gen), grid, empty));
   let alive = true;
   const load = async () => {
     const res = await api<{ memories: Memory[] }>("/memories");

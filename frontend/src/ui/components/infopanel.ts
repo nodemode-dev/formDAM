@@ -166,11 +166,17 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
   const section = (title: string, ...kids: HTMLElement[]) =>
     h("div", { class: "info-section" }, h("div", { class: "info-k" }, title), ...kids);
 
+  const ocrText = h("div", { class: "info-ocr" });
+  const ocrCopy = h("button", { class: "link-btn", type: "button" }, "Copy");
+  ocrCopy.addEventListener("click", () => void navigator.clipboard?.writeText(ocrText.textContent ?? "").catch(() => undefined));
+  const ocrSection = h("div", { class: "info-section hidden" }, h("div", { class: "info-k" }, "Text in Photo", ocrCopy), ocrText);
+
   const el = h("div", { class: "info-panel hidden" },
     stars, labels, titleIn, captionIn,
     section("Keywords", kwList, kwInput, kwData),
     section("People", peopleList),
     section("Subjects", subjectList),
+    ocrSection,
     rCaptured.wrap, rPlace.wrap, rCamera.wrap, rLens.wrap, rExposure.wrap,
     rType.wrap, rFile.wrap, rDims.wrap, rSize.wrap, rDuration.wrap, rImported.wrap,
     section("Albums", albumList),
@@ -212,6 +218,9 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     peopleList.parentElement!.classList.toggle("hidden", d.people.length === 0);
     subjectList.parentElement!.classList.toggle("hidden", d.subjects.length === 0);
     albumList.parentElement!.classList.toggle("hidden", (d.albums ?? []).length === 0);
+    const ocr = ((d as { ocr_text?: string | null }).ocr_text ?? "").trim();
+    setText(ocrText, ocr);
+    ocrSection.classList.toggle("hidden", !ocr);
     setText(rCaptured.value, `${fullStamp(d.created_ts)}${d.created_src === "exif" ? "" : d.created_src === "adjusted" ? " (adjusted)" : " (from file)"}`);
     const where = [d.place, d.admin, d.country].filter(Boolean).join(", ");
     const coords = d.lat !== null && d.lat !== undefined && d.lon !== null && d.lon !== undefined ? `${d.lat.toFixed(5)}, ${d.lon.toFixed(5)}` : "";
