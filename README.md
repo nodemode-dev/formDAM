@@ -1,12 +1,12 @@
 # DAM
 
-Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the server only accepts loopback connections & no photo, coordinate or query leaves it.
+Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Sharing (a separate guest server that answers share links only) & sync (through a folder you choose) are opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
 
 ## Quickstart
 
 ```
 ./DAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
-setup/DAM_oc_install   # install only: backend venv + pip deps + face & CLIP models (~190 MB, sha256-pinned) + frontend npm install
+setup/DAM_oc_install   # install only: backend venv + pip deps + face, CLIP & LaMa models (~285 MB, sha256-pinned) + frontend npm install
 setup/DAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); DAM_OPEN=0 skips the browser
 setup/DAM_banner       # the DAM icon as an ASCII banner (NO_COLOR, DAM_BANNER=0 & DAM_BANNER_COLOR honored)
 ```
@@ -23,11 +23,13 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 - **Formats & metadata**: HEIC/HEIF, 23 camera RAW extensions via LibRaw, video via ffmpeg; EXIF, GPS, lens & exposure, Apple maker notes (Live Photo pairing, bursts, selfies, portraits), QuickTime tags.
 - **Library grid**: day-grouped tiles w/ Years / Months / All Photos views, zoom slider, combinable quick filters (media types, rating, label, keyword), eleven sort orders, stacks, Cmd-click & Shift-click selection, infinite scroll via keyset cursors.
 - **Viewer**: full-size photos & range-streamed video playback, info panel w/ camera data, location, keywords, people, subjects & recognised text, ratings & labels from the keyboard, download, delete.
-- **Organize**: 0-5 stars, seven colour labels, reject, titles, captions & alt text, a hierarchical keyword manager w/ shortcuts, smart albums, album folders, stacks & bursts, pinned views, batch rename w/ tokens, Show in Finder & Edit With.
+- **Organize**: 0-5 stars, seven colour labels, reject, titles, captions & alt text, a hierarchical keyword manager w/ shortcuts, smart albums, album folders, stacks & bursts, pinned views, batch rename w/ tokens, Show in Finder & Edit With (a working copy opens in the other app & each save comes back as a revertible edit).
 - **Search**: one search over every text field, dates & places, plus CLIP ("puppies in flowers"), suggestions, Advanced Find (Cmd-F) saved as smart albums.
 - **Places**: offline reverse geocoding, an offline map w/ clustered thumbnails, city & country collections, trips, location & date editing singly or in batches.
-- **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people.
-- **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, retouch, markup, copy & paste edits, revert, video trim; RAW develops through the same pipeline.
+- **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people, & Look Up in the info panel (dog & cat breeds, birds, insects, flowers, plants, animals & landmarks, using the photo's location for landmarks). Media types include time-lapse, cinematic, spatial, animated & long exposure.
+- **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, Clean Up (brush or click to remove objects w/ the LaMa model), markup, lens corrections, a Live Photo Long Exposure effect, copy & paste edits, revert, video trim; RAW files add a develop section (Kelvin white balance & tint, exposure, highlight recovery, demosaic, noise, fringe).
+- **Sharing**: share links w/ optional password, expiry, downloads & location, a QR code & a guest page where people like, comment & download; shared albums where guests can also add photos, w/ activity & replies in the app; a static web gallery for any host; Mail, Messages & AirDrop on the Mac. Links reach your network or a VPN such as Tailscale while DAM is running.
+- **Sync & Shared Library**: keep this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS); a second shared folder makes a family Shared Library, w/ a Both / Personal / Shared switch in the filter menu.
 - **Output**: XMP sidecars, File Info (IPTC) w/ templates, export to JPEG, HEIC, PNG, TIFF or WebP w/ sizing, naming, subfolders & metadata options, print & PDF contact sheets, saved workflows.
 - **Curation**: memories (generated or described) w/ generated music, slideshows, compare w/ linked zoom.
 - **Libraries**: several libraries, repair, consolidate referenced files.
@@ -84,14 +86,15 @@ library/    created on first run: originals/, cache/, vault/, dam.db
 | CLIP ViT-B/32 LAION-2B, int8 ONNX | MIT | backend, downloaded at install |
 | GeoNames cities5000 (reduced) | CC BY 4.0 | backend/app/data, place names |
 | Natural Earth admin-0 | Public domain | backend/app/data, map outlines |
-
-Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natural Earth. Parts of the rename, EXIF and XMP code are adapted from FormLit (Apache-2.0); see LICENSES.md.
+| LaMa inpainting (opencv/inpainting_lama ONNX) | Apache-2.0 | backend, downloaded at install, Clean Up |
 | ffmpeg | LGPL/GPL | external PATH binary, called as a subprocess, never bundled |
 | vite | MIT | frontend dev/build |
 | typescript | Apache-2.0 | frontend dev/build |
 | vitest | MIT | frontend tests |
 | jsdom | MIT | frontend tests |
 
-Face & CLIP models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo.
+Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natural Earth. Parts of the rename, EXIF and XMP code are adapted from FormLit (Apache-2.0); see LICENSES.md.
+
+Face, CLIP & LaMa models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo.
 
 DAM itself is MIT licensed (see LICENSE).

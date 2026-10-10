@@ -1,5 +1,19 @@
 # DAM build notes
 
+## zip v1.23.0 (2026-10-10) · app reports v1.13.9
+
+Round 71: close out the remaining 5 partials and 4 none from the v1.22.0 comparison. Re-graded on the same 77 rows: 76.5 of 77, 99 percent (76 full, 1 partial, 0 none), from 92 percent at v1.22.0; Immich v3.3.1 stays at 65. The one partial is sync across devices: computers sync, phones are not peers. Seven feature commits plus docs and the version bump, all by nodemode-ai on main.
+
+What landed: (1) media types: time-lapse, cinematic and spatial from QuickTime and HEIC tags, animated from frame counts, and the Long Exposure effect computed from a Live Photo's aligned frames; schema v7 (d6d648d). (2) RAW develop: Kelvin white balance and tint solved from the file's own As Shot multipliers, exposure in stops on a linear 16-bit decode, highlight clip, blend or rebuild, demosaic choice, LibRaw noise reduction, red and blue fringe, and manual lens distortion and vignetting for any photo (703c7d6). (3) Clean Up: brush strokes and clicks filled by the LaMa inpainting model (opencv/inpainting_lama, Apache-2.0, sha256-pinned in all three installers and the Mac build), per region and feathered, with the Telea fill as fallback (de81a89). (4) Look Up: breeds, birds, insects, flowers, plants, animals and landmarks by two-stage zero-shot CLIP, landmarks found by GPS first; results in the info panel and in search; schema v8 (6bc7416). (5) Edit With round trip: a working copy opens in the other app and each save comes back as a revertible edit (ad12155). (6) Sharing: an opt-in guest server (port 8790) answering share links only, with passwords, expiry, downloads, location stripped by default, QR codes, a guest page with likes and comments, shared albums with guest contributions and owner activity, a static web gallery, and Mail, Messages and AirDrop on the Mac through NSSharingService in a helper process; schema v9 (e524785). (7) Sync: folder-based sync between computers and a family Shared Library, with SQLite triggers as the change log and last-writer-wins per photo; schema v10 (7bee02c).
+
+Rules kept: the engine stays loopback-only; sharing and sync are off until turned on; private, hidden and vaulted items are never shared or written to a sync folder.
+
+Verified here: ruff clean; pytest 37 passed, 1 skipped, 1 failing as before (test_trash, identical on v1.22.0); frontend tsc clean, 10 vitest passing, production build clean. Each phase was probed through the engine and its interface driven in headless Chromium at 4x CPU and a slow network: LaMa on a street photo, Look Up on a 13-photo animal, plant and landmark set, Edit With with a stand-in editor, share links and a password link over HTTP plus a guest browser session (like, comment, owner activity), and sync between three libraries (two computers and a family library) including a conflict, hiding, album rename and delete, and moving a photo back to Personal. An independent read-only audit checked the nine re-graded rows against the code before publishing.
+
+Not verified here: the Mac sharing helper (Mail, Messages, AirDrop) was not run, since there is no Mac in this environment; the new media-type tag rules were checked on tagged fixtures, not iPhone originals.
+
+Debt carried: app.css raw z-index values; older strips that rebuild containers; test_trash; Look Up accuracy is that of a general model; phones are not sync peers.
+
 ## zip v1.22.0 (2026-10-10) · app reports v1.13.9
 
 Round 70, parity build: close the FormDAM comparison's partial and missing rows against Apple Photos (macOS 27) and Adobe Bridge 16, to at least 85 percent. Re-graded on the same 77 scored rows: 92 percent (68 full, 5 partial, 4 none), from 33 percent at v1.21.2; Immich v3.3.1 stays at 65. Eleven commits on main, one per phase, plus the version bump; details per change in backend/HASHOUT_LOG.md and frontend/HASHOUT_LOG.md.

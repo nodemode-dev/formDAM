@@ -582,3 +582,15 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 - [x] 3. A real sidecar · DEV_PLAN, BUILD_NOTES copy, root HASHOUT_LOG, TEST_PLAN & dev-wise ship in DAM_planning_docs_sidecar_v1.22.0.zip.
 - [x] 4. Close the parity list's partials & get the build to at least 85 percent · re-graded on the same 77 rows: 92 percent (68 full, 5 partial, 4 none), from 33. [~] still partial: media types beyond the ten detected, species & landmark identification, generative Clean Up, RAW-specific develop controls, Edit With round-trips. [>] still none: sharing & links, shared albums, a family library, sync (DAM is loopback-only by design today).
 - [x] 5. Pull in FormLit's DAM features where they close gaps · adapted (Apache-2.0, attributed): the rename token engine, EXIF reading, XMP build, parse & JPEG embedding.
+
+## Round 71 · after zip v1.22.0 (zip DAM_v1.23.0; app reports v1.13.9)
+
+- [x] 1. Media Types collections (was partial) · time-lapse, cinematic, spatial, animated & long exposure added. d6d648d.
+- [x] 2. Developing RAW files (was partial) · RAW Develop section & lens corrections. 703c7d6.
+- [x] 3. Retouch and object removal (was partial) · Clean Up with the LaMa model, brush strokes. de81a89.
+- [x] 4. Identifying landmarks, plants and animals (was partial) · Look Up in the info panel. 6bc7416.
+- [x] 5. Opening a photo in another app (was partial) · Edit With round trip. ad12155.
+- [x] 6. Sharing to other people and links (was none) · opt-in guest server, links, QR, web gallery, Mac share services. e524785.
+- [x] 7. Shared albums (was none) · album links w/ likes, comments, contributions & owner activity. e524785.
+- [x] 8. A library shared with family (was none) · Shared Library through a shared folder. 7bee02c.
+- [~] 9. Syncing the library across devices (was none, now partial) · folder sync between computers, last writer wins per photo. 7bee02c. [>] phones as sync peers & Optimize Storage, recorded in DEV_PLAN Next.
