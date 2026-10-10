@@ -39,6 +39,14 @@ if not exist models\clip_merges.txt curl -fSL -o models\clip_merges.txt %CLIP_BA
 if not exist models\inpainting_lama_2025jan.onnx curl -fSL -o models\inpainting_lama_2025jan.onnx https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx
 if not exist models\image_segmentation_efficientsam_ti_2025april.onnx curl -fSL -o models\image_segmentation_efficientsam_ti_2025april.onnx https://huggingface.co/opencv/image_segmentation_efficientsam/resolve/1e791988b34b2098736003057da0f3e6bc826259/image_segmentation_efficientsam_ti_2025april.onnx
 if not exist models\object_detection_yolox_2022nov.onnx curl -fSL -o models\object_detection_yolox_2022nov.onnx https://huggingface.co/opencv/object_detection_yolox/resolve/78c368f74ce73ee28fc7a1be418a598c71b58b52/object_detection_yolox_2022nov.onnx
+if not exist models\bioclip_image_int8.onnx curl -fSL -o models\bioclip_image_int8.onnx https://huggingface.co/Virien/naturdex-bioclip-onnx/resolve/fa3c062ea31a6e1881b1977fe555b2d481dca730/bioclip-image-int8.onnx
+set BIO_DEMO=https://huggingface.co/spaces/imageomics/bioclip-demo/resolve/eeb91af989f1dffc405230a50b4c6214834c918b
+if not exist models\bioclip_species_int8.npy (
+    curl -fSL -o models\txt_emb_species.npy %BIO_DEMO%/txt_emb_species.npy
+    curl -fSL -o models\txt_emb_species.json %BIO_DEMO%/txt_emb_species.json
+    python -m app.services.species prepare models\txt_emb_species.npy models\txt_emb_species.json models
+    del /q models\txt_emb_species.npy models\txt_emb_species.json
+)
 
 echo.
 echo ^>^> Setting up the interface...

@@ -110,5 +110,7 @@ LANDMARKS = [
 
 KIND_LABELS = {
     "dog": "Dog breed", "cat": "Cat breed", "bird": "Bird", "insect": "Insect & Spider", "flower": "Flower",
-    "plant": "Plant & Tree", "animal": "Animal", "landmark": "Landmark",
+    "plant": "Plant & Tree", "animal": "Animal", "landmark": "Landmark", "mammal": "Mammal", "fish": "Fish",
+    "reptile": "Reptile", "amphibian": "Amphibian", "mollusc": "Mollusc & Snail", "crustacean": "Crustacean",
+    "fungus": "Mushroom & Fungus", "art": "Artwork", "food": "Food & Drink",
 }

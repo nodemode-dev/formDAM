@@ -36,6 +36,9 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | pycryptodomex (pyzipper dependency) | BSD-2-Clause and public domain | AES and HMAC under pyzipper |
 | LaMa inpainting (opencv/inpainting_lama, inpainting_lama_2025jan.onnx, revision aee6d22) | Apache-2.0 | Clean Up object removal in services/cleanup.py; fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the other models. Without it Clean Up falls back to OpenCV Telea |
 | EfficientSAM-Ti (opencv/image_segmentation_efficientsam, image_segmentation_efficientsam_ti_2025april.onnx, revision 1e79198) | Apache-2.0 | Clean Up Select Object and distraction outlines in services/cleanmodels.py; sha256-pinned like LaMa |
+| BioCLIP image encoder (imageomics/bioclip, MIT; int8 ONNX export Virien/naturdex-bioclip-onnx revision fa3c062, MIT, bioclip_image_int8.onnx) | MIT | Look Up species in services/species.py; sha256-pinned; checked here against the official open_clip weights (cosine 0.91 to 0.99, same top species). Cite: Stevens et al., BioCLIP: A Vision Foundation Model for the Tree of Life, CVPR 2024 |
+| BioCLIP species text embeddings (imageomics/bioclip-demo space revision eeb91af, txt_emb_species.npy and .json, 384,490 taxa) | MIT | sha256-pinned download, converted at install to int8 (bioclip_species_int8.npy, about 197 MB) by services/species.py prepare; the fp32 source is deleted |
+| Wikidata landmarks, artworks and dishes (backend/app/data/lookup_world.json.gz, built by setup/gen_lookup_data.py via the QLever Wikidata endpoint) | CC0-1.0 | Look Up names, coordinates and artist credits; no attribution required |
 | YOLOX-s (opencv/object_detection_yolox, object_detection_yolox_2022nov.onnx, revision 78c368f) | Apache-2.0 | Clean Up distraction suggestions (COCO classes) in services/cleanmodels.py; sha256-pinned like LaMa |
 | DAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
 

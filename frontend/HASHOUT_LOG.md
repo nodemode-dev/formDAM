@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### ui/components/infopanel.ts lookupCard detail line + engine/types LookupResult detail/rank
+- refers-to: infopanel lookupCard lookup-kind text; types LookupResult detail, rank
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+Look Up results can carry a detail (the scientific name for species, the artist for artworks) and a rank (genus or family when the species itself was not clear). Both go into the existing kind line, so the card keeps its height and nothing below it moves.
 ### ui/components/editor.ts Clean Up pane · Select Object, Show Distractions, face pixelation
 - refers-to: editor Spot, CleanInfo, Suggestion, Box4; cleanMode, cleanInfo, suggestions, pendingBox; modeRow, suggestBtn, suggestLabel, cleanStatus, loadCleanInfo, segmentWith, faceUnder; drawOverlay retouch branch; overlay pointerdown retouch branch; parity.css .ed-mask .ed-pixel .ed-suggest .ed-pending .ed-clean-status
 - kind: rationale

@@ -161,8 +161,8 @@ def _qr(path: str) -> bool:
         img = cv2.imread(path)
         if img is None:
             return False
-        found, _ = cv2.QRCodeDetector().detect(img)
-        return bool(found)
+        text, _, _ = cv2.QRCodeDetector().detectAndDecode(img)
+        return bool(text)
     except Exception:
         return False
 

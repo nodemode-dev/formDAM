@@ -55,6 +55,16 @@ fetch_model image_segmentation_efficientsam_ti_2025april.onnx \
 fetch_model object_detection_yolox_2022nov.onnx \
   https://huggingface.co/opencv/object_detection_yolox/resolve/78c368f74ce73ee28fc7a1be418a598c71b58b52/object_detection_yolox_2022nov.onnx \
   c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063
+fetch_model bioclip_image_int8.onnx \
+  https://huggingface.co/Virien/naturdex-bioclip-onnx/resolve/fa3c062ea31a6e1881b1977fe555b2d481dca730/bioclip-image-int8.onnx \
+  ae858e6a807b3a19d1e1f9ecbe3cc5302badf0a6a0cddcc5d1728cdf9d28517a
+if [ ! -f "$MODELS_DIR/bioclip_species_int8.npy" ]; then
+  BIO_DEMO=https://huggingface.co/spaces/imageomics/bioclip-demo/resolve/eeb91af989f1dffc405230a50b4c6214834c918b
+  fetch_model txt_emb_species.npy "$BIO_DEMO/txt_emb_species.npy" 91ce02dff2433222e3138b8bf7eefa1dd74b30f4d406c16cd3301f66d65ab4ed
+  fetch_model txt_emb_species.json "$BIO_DEMO/txt_emb_species.json" 844e6fabc06cac072214d566b78f40825b154efa9479eb11285030ca038b2ece
+  python -m app.services.species prepare "$MODELS_DIR/txt_emb_species.npy" "$MODELS_DIR/txt_emb_species.json" "$MODELS_DIR"
+  rm -f "$MODELS_DIR/txt_emb_species.npy" "$MODELS_DIR/txt_emb_species.json"
+fi
 
 if ! command -v ffmpeg > /dev/null 2>&1; then
   echo "note: ffmpeg not found on PATH. Video thumbnails, video dedup, & video face scanning need it (brew install ffmpeg / apt install ffmpeg)."

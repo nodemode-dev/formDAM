@@ -181,7 +181,7 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     const alts = (r.alternatives ?? []).join(", ");
     return h("div", { class: "lookup-card" },
       h("div", { class: "lookup-name" }, r.name),
-      h("div", { class: "lookup-kind" }, `${r.kind_label}${r.near ? " · near this photo's location" : ""}`),
+      h("div", { class: "lookup-kind" }, `${r.kind_label}${r.rank && r.rank !== "species" ? ` (${r.rank})` : ""}${r.detail ? ` · ${r.detail}` : ""}${r.near ? " · near this photo's location" : ""}`),
       alts ? h("div", { class: "lookup-alt" }, `Could also be: ${alts}`) : h("span", { class: "hidden" }),
       h("div", { class: "row-gap" }, showAll, learn));
   }

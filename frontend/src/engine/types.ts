@@ -75,6 +75,8 @@ export interface LookupResult {
   wiki: string;
   near?: boolean;
   alternatives?: string[];
+  detail?: string;
+  rank?: string;
 }
 
 export interface MediaDetails extends Media {
