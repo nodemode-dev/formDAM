@@ -5,6 +5,7 @@ import { mountPlacesPage, mountTripsPage, registerPlaces } from "./ui/components
 import { mountPetsPage, mountSubjectsPage, registerDiscover } from "./ui/components/discover.js";
 import { registerFind } from "./ui/components/find.js";
 import { registerEditor } from "./ui/components/editor.js";
+import { registerOutputs } from "./ui/components/outputs.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -120,6 +121,7 @@ registerPlaces();
 registerDiscover();
 registerFind();
 registerEditor();
+registerOutputs();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;

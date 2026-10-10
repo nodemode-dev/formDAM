@@ -99,6 +99,12 @@ def import_one(path: str, move: bool = False) -> Dict[str, Any]:
         metasvc.apply(media_id)
     except Exception:
         pass
+    try:
+        from . import xmpsvc
+
+        xmpsvc.import_sidecar(media_id, path, dest)
+    except Exception:
+        pass
     return {"status": "imported", "media_id": media_id, "id": media_id, "kind": kind, "rel_path": rel}
 
 

@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-10-10
+### ui/components/outputs.ts · File Info, Export, Contact Sheet, Print, Workflows
+- refers-to: outputs.pickFolder/fileInfoFlow/exportFlow/pdfModal/contactSheetFlow/printFlow/workflowsFlow/newWorkflowFlow/outputEntries/registerOutputs; main.ts registerOutputs; parity.css fileinfo, pdf-frame, wf-step rules
+- kind: rationale
+- logged: zip v1.22.0 · 2026-10-10
+
+One Output menu (selection bar, viewer toolbar) & the first four entries in the tile menu reach every output path. File Info groups the IPTC fields the way Bridge's dialog does (Description, Creator & Rights, Contact, Location & Status), shows the place lookup as placeholders, saves only touched fields & holds the XMP auto-write toggle. Export picks a folder through the native picker & falls back to a typed path when the shell has none. Contact sheets & prints render as engine PDFs in an iframe so the system print dialog (Print...) & Save PDF both work inside Tauri's WebView, where window.print on the app page would print the UI; option changes reload the PDF in place. Shortcuts: Cmd/Ctrl-Shift-E export, Cmd/Ctrl-Alt-I File Info, Cmd/Ctrl-P print.
 ### ui/components/editor.ts + viewer toolbar seam + thumb versions · photo editor & video trim
 - refers-to: editor.openEditor (layout, runPreview, slider, curves, filters, crop/retouch/markup overlay, undo/redo, compare, auto, revert, Done), openTrim, honorTrim, copyEdits/pasteEdits/revertToOriginal, editEntries, registerEditor; viewer.ts viewerHooks.toolbar rendered in the top bar, reloadStill, videoReady; api.ts thumbVersions + thumbUrl v param; store.ts loadMore thumbVersions fill; grid.ts paintTileMeta thumb refresh; main.ts registerEditor; parity.css editor rules
 - kind: rationale
