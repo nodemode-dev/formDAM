@@ -1,5 +1,10 @@
 backend/venv/
 backend/models/*.onnx
+backend/models/*.npy
+backend/models/*.json
+backend/models/*.json.gz
+backend/models/*.txt
+backend/models/*.part
 backend/__pycache__/
 **/__pycache__/
 **/.pytest_cache/
