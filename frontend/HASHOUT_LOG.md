@@ -1,5 +1,5 @@
 # frontend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.19.0) · 2026-10-10
+current: v1.13.9 (zip v1.22.0) · 2026-10-10
 ### library sort menu + stack and memory tile entries · gaps found by the independent grade audit
 - refers-to: library.ts sort menu (First added, Name Z to A, Smallest first, Recently viewed); store.ts SortOrder viewed; organize.ts tileEntries Make Stack Top, Remove from Stack; curate.ts registerCurate Remove from Memory
 - kind: rationale

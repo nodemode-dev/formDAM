@@ -392,7 +392,7 @@ export function openCompare(ids: number[]): void {
     p.img.style.transform = `translate(${t.tx}px, ${t.ty}px) scale(${t.scale})`;
     p.pane.classList.toggle("focus", i === focus);
     const item = state.byId.get(p.id);
-    setText(p.stars, item ? `${"★".repeat(item.rating ?? 0)}${item.rejected ? " Rejected" : ""}${item.favorite ? " ♥" : ""}` : "");
+    setText(p.stars, item ? `${"★".repeat(item.rating ?? 0)}${item.rejected ? " Rejected" : ""}${item.favorite ? " Favorite" : ""}` : "");
   });
   const linkBtn = h("button", { class: "btn", type: "button" }, "Linked Zoom: On");
   const fit = h("button", { class: "btn", type: "button" }, "Fit");

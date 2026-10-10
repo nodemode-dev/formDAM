@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.21.2) · 2026-10-10
+current: v1.13.9 (zip v1.22.0) · 2026-10-10
 ### routers/curate.py memory_from_prompt + curatesvc._pick near-duplicate rule + routers/library.py disk metadata · describe a memory, rate files on disk
 - refers-to: curate.memory_from_prompt (/memories/prompt); curatesvc._pick last-shot comparison; library._sidecar_record, disk_meta (/disk/meta), disk_browse rating & label
 - kind: rationale + replaced code
