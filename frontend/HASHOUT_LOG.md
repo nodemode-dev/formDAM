@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### ui/components/privacy.ts + settings Privacy pane
+- refers-to: privacy.privacyPane; settings PANES privacy entry
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+Settings gains a Privacy pane with Automation Access (off by default): turning it on shows the token once with Copy and New Token; turning it off revokes it and hides the token. The pane says plainly what the switch guards and what it cannot, notes when the engine was started with DAM_AUTOMATION=1, and lists the other reach-beyond-this-computer features and where they are switched on.
 ### sharing.ts familyCard · Shared Library with a share key
 - refers-to: sharing.familyCard, FamilyState, FamilyPeer, mountSharedPage refresh; parity.css .pkg-pw-row inputs
 - kind: rationale + replaced code

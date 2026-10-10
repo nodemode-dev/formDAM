@@ -18,6 +18,26 @@ struct Backend(Mutex<Option<Child>>);
 struct Tray(Mutex<Option<TrayIcon>>);
 static TRAY_ENABLED: AtomicBool = AtomicBool::new(false);
 static ENGINE_PORT: AtomicU16 = AtomicU16::new(0);
+static SHELL_KEY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+fn shell_key() -> &'static str {
+    SHELL_KEY.get_or_init(|| {
+        use std::io::Read;
+        let mut bytes = [0u8; 32];
+        let filled = std::fs::File::open("/dev/urandom")
+            .and_then(|mut f| f.read_exact(&mut bytes))
+            .is_ok();
+        if !filled {
+            use std::hash::{BuildHasher, Hasher};
+            for chunk in bytes.chunks_mut(8) {
+                let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+                h.write_u128(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0));
+                chunk.copy_from_slice(&h.finish().to_le_bytes()[..chunk.len()]);
+            }
+        }
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    })
+}
 
 const MEDIA_EXTS: &[&str] = &[
     "jpg", "jpeg", "png", "heic", "heif", "gif", "webp", "tif", "tiff", "bmp",
@@ -242,6 +262,7 @@ fn kc_write(_passkey: &str) -> bool {
 fn engine_post(port: u16, path: &str, body: serde_json::Value) {
     let _ = ureq::post(&format!("http://127.0.0.1:{port}{path}"))
         .set("x-dam-local", "1")
+        .set("x-dam-shell", shell_key())
         .timeout(std::time::Duration::from_secs(10))
         .send_json(body);
 }
@@ -249,6 +270,7 @@ fn engine_post(port: u16, path: &str, body: serde_json::Value) {
 fn engine_get(port: u16, path: &str) -> Option<serde_json::Value> {
     ureq::get(&format!("http://127.0.0.1:{port}{path}"))
         .set("x-dam-local", "1")
+        .set("x-dam-shell", shell_key())
         .timeout(std::time::Duration::from_secs(10))
         .call()
         .ok()
@@ -419,6 +441,7 @@ fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
     let mut cmd = Command::new(&bin);
     cmd.current_dir(&dir)
         .env("DAM_PORT", "0")
+        .env("DAM_SHELL_KEY", shell_key())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     Ok(cmd)

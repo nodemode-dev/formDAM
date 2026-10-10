@@ -8,6 +8,7 @@ import { h } from "../dom.js";
 import { iconEl, type IconName } from "../icons.js";
 import { openModal, textField } from "../modal.js";
 import { toast } from "../toast.js";
+import { privacyPane } from "./privacy.js";
 
 export type BackgroundControl = { enable: () => void; disable: () => void; update: (bg: { radius: number; glow: number; bloom: number }) => void };
 
@@ -417,6 +418,7 @@ export function openSettings(): void {
     ] },
     { key: "library", label: "Library", icon: "library", nodes: [libraryInfo] },
     { key: "vault", label: "Vault & Keychain", icon: "lock", nodes: [keychainWrap] },
+    { key: "privacy", label: "Privacy", icon: "eyeOff", nodes: [privacyPane()] },
   ];
 
   const paneEls = new Map<string, HTMLElement>();
