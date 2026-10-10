@@ -1,5 +1,56 @@
 # DAM build notes
 
+## zip v1.24.0 (2026-10-10) · app reports v1.13.9
+
+Round 72: the owner's direction on privacy and reach, plus the Look Up and Clean Up partials. Re-graded on the same 77 rows: 74.5 points, 97 percent (72 full, 5 partial, 0 none), from 96 percent at v1.23.0; Immich v3.3.1 stays at 65. The grades are the independent audit's. Clean Up is now full. Look Up stays partial: signs and books are not identified, only 1,500 landmarks compete without GPS, and accuracy on ordinary subjects is unmeasured. Sharing, shared albums and the family library stay partial by design: packages are files, not live links, and the family library works only on one network. Sync is unchanged. Five feature commits, four fix commits from the audit, docs and the version bump, all by nodemode-ai on main.
+
+What landed:
+1. **Encrypted packages replace share links and the guest server** (ef7d103). A WinZip AES-256 zip (pyzipper, MIT) with random member names and an encrypted manifest holding names, metadata, edits, album or stack and notes. Location is scrubbed losslessly and verified. The recipient drops the zip into DAM and enters the password. Album packages merge back into the same album by share id without duplicates, using an origin hash. Schema 11.
+2. **Family Shared Library on the local network only, between DAM apps holding the same share key** (6f8d1e3, 608f352). HKDF subkeys, an authenticated UDP beacon, signed and replay-checked requests, AES-GCM sealed responses, private addresses only, its own port, off by default.
+3. **Automation access off by default** (4727fd9). Scripts, agents and MCP tools are refused until the user turns it on and hands out its token.
+4. **Clean Up** (050ea69). EfficientSAM-Ti object selection, YOLOX-s distraction suggestions, and face pixelation from YuNet boxes, all Apache-2.0, pinned and on device. LaMa crops now carry more context and masks grow further.
+5. **Look Up** (0f85a4e). BioCLIP (MIT), a pinned int8 ONNX re-export checked against the official weights, with its 384,490-taxon text embeddings converted to int8 at install. Wikidata (CC0) data: 3,746 landmarks with coordinates, 588 artworks with artists, and about 1,200 foods and drinks, rebuilt by setup/gen_lookup_data.py. The Mac build now bundles app/data, which also fixes offline place names in the packaged app. QR detection now requires a decoded payload.
+
+Audit fixes. An independent read-only audit found two serious defects, eight moderate and several minor; all are fixed and re-probed with the audit's own scripts:
+- **Window check** (b658629). The automation gate trusted a forgeable browser header. The window now proves itself with the launcher's per-launch key, traded for an HttpOnly cookie, and the key leaves the engine's environment.
+- **Packages** (0646e1b):
+  - Edit With versions and Live Photo videos are now scrubbed.
+  - Size caps and a disk-space check when opening.
+  - Per-entry validation, so one bad field no longer aborts an import.
+  - Retouch spots are sanitized.
+  - A package never changes photos you already have.
+  - Chosen passwords need 16 characters.
+  - IPTC-IIM and nested XMP place names are blanked.
+  - PNG CRCs are fixed after scrubbing.
+- **Family library** (6ad080f). Sealed responses are bound to the request nonce, beacons are confirmed by a signed hello, and a peer's journal listing must be its own.
+- **Clean Up and Windows installer** (478a1df). Clean Up boxes are range-checked and its cache is locked. The Windows installer now verifies every model's SHA-256.
+
+Rules kept:
+- The engine stays loopback-only.
+- Sync and the family library are off until turned on.
+- Private, hidden and vaulted items never leave.
+- Every model is permissively licensed and sha256-pinned.
+
+Verified here:
+- ruff clean; pytest 37 passed, 1 skipped, 1 failing as before (test_trash). The suite now needs DAM_AUTOMATION=1.
+- Frontend: tsc clean, production build clean.
+- Packages between two libraries: right and wrong passwords, GPS and IPTC place names absent, crafted manifests and a zip bomb refused.
+- Three family engines with two keys: discovery, sync, refusal of the other key, and 401 for unsigned, replayed and stale requests.
+- The window session: no key, the key, reload, a second tab, a forged header from another browser.
+- Clean Up on a street photo and a 92-face crowd; Look Up on 28 photos.
+- The window session and every interface path above were driven in headless Chromium at 4x CPU and a slow network.
+
+Not verified here:
+- The Tauri shell's key and window URL were compiled standalone with rustc, not in a full cargo build (no WebKit here).
+- The Windows boot and installer scripts were not run.
+- The Mac send helper for packages was not run.
+
+Debt carried:
+- app.css raw z-index values; older strips that rebuild containers; test_trash.
+- "Local network" still means any private range, so VPN ranges count.
+- Any family key holder can claim any device id.
+- Phones are not peers.
+
 ## zip v1.23.0 (2026-10-10) · app reports v1.13.9
 
 Round 71: close out the remaining 5 partials and 4 none from the v1.22.0 comparison. Re-graded on the same 77 rows: 74 of 77, 96 percent (71 full, 6 partial, 0 none), from 92 percent at v1.22.0; Immich v3.3.1 stays at 65. Every row now has a working version. Still partial, by the independent audit's grades: Look Up (a closed list, no art, food or signs), Clean Up (no object picking or face pixelation), sharing links (LAN or VPN reach, no third-party share extensions), shared albums (no invitations, guest save or notifications), the family library (no invitations, setup rules or suggestions) and sync (phones are not peers, no Optimize Storage). Seven feature commits, two fix commits from the audit, docs and the version bump, all by nodemode-ai on main.

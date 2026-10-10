@@ -595,3 +595,14 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 - [~] 8. A library shared with family (was none, now partial) · Shared Library through a shared folder. 7bee02c. [>] invitations, setup rules, suggestions.
 - [x] 10. Independent audit before publishing · 11 findings, all fixed in 417816a & a136875; the five lowered grades are kept as the audit gave them.
 - [~] 9. Syncing the library across devices (was none, now partial) · folder sync between computers, last writer wins per photo. 7bee02c. [>] phones as sync peers & Optimize Storage, recorded in DEV_PLAN Next.
+
+## Round 72 · after zip v1.23.0 (zip DAM_v1.24.0; app reports v1.13.9)
+
+- [~] 1. Look Up should identify a lot more, w/ permissively licensed models running locally (still partial by the audit) · BioCLIP (MIT) over 384,490 taxa, Wikidata (CC0) landmarks, artworks & foods. 0f85a4e. [>] signs, symbols & books; landmark recall without GPS.
+- [x] 2. The same for Clean Up (was partial, now full) · EfficientSAM-Ti selection, YOLOX-s suggestions, face pixelation, all Apache-2.0 & on device. 050ea69.
+- [x] 3. Share links become AES password-protected zips sent outside the app; the recipient drops the zip in, enters the password, & the scrambled names are restored into a new album or stack · ef7d103, hardened in 0646e1b. Sharing stays partial against Photos because a package is a file, not a live link.
+- [x] 4. The same for shared albums · album packages merge back into the same album w/ notes, no duplicates. ef7d103. Partial against Photos: no live updates or invitations.
+- [x] 5. The family Shared Library only on the same network & only between DAM apps holding the same share key · 6f8d1e3, 6ad080f. Partial against Photos: one network, no setup rules.
+- [x] 6. Agentic, MCP & scripted use strictly enabled by the user, off by default · 4727fd9; the audit's forgeable-header finding fixed in b658629.
+- [x] 7. Sync across devices opt-in & off by default · unchanged design, off until turned on; confirmed by the audit.
+- [x] 8. Independent audit before publishing · 2 serious & 8 moderate findings, all fixed in b658629, 0646e1b, 6ad080f & 478a1df; the grades are the audit's.

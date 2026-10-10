@@ -1,17 +1,17 @@
 # DAM
 
-Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Sharing (a separate guest server that answers share links only) & sync (through a folder you choose) are opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
+Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between DAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
 
 ## Quickstart
 
 ```
 ./DAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
-setup/DAM_oc_install   # install only: backend venv + pip deps + face, CLIP & LaMa models (~285 MB, sha256-pinned) + frontend npm install
+setup/DAM_oc_install   # install only: backend venv + pip deps + face, CLIP, Clean Up & Look Up models (~650 MB on disk, ~1.2 GB downloaded once, sha256-pinned) + frontend npm install
 setup/DAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); DAM_OPEN=0 skips the browser
 setup/DAM_banner       # the DAM icon as an ASCII banner (NO_COLOR, DAM_BANNER=0 & DAM_BANNER_COLOR honored)
 ```
 
-Open http://127.0.0.1:5173. The DAM mark lives in `frontend/public/` (source art, composed diamond app icon w/ neon glow, 512 PNG) & doubles as favicon + sidebar brand. Windows: `DAM.bat` does the same, with its steps in `setup\`.
+`./DAM` opens the interface at http://127.0.0.1:5173 with a one-time launch key in the address, which connects that browser to the engine; to connect another browser, use the address the boot script prints. A window opened without it shows a "not connected" card, because the engine answers only windows its launcher opened. The DAM mark lives in `frontend/public/` (source art, composed diamond app icon w/ neon glow, 512 PNG) & doubles as favicon + sidebar brand. Windows: `DAM.bat` does the same, with its steps in `setup\`.
 
 Prefer a single process? Build the UI once (`cd frontend && npm run build`) & the backend serves it at http://127.0.0.1:8000 directly.
 
@@ -26,10 +26,11 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 - **Organize**: 0-5 stars, seven colour labels, reject, titles, captions & alt text, a hierarchical keyword manager w/ shortcuts, smart albums, album folders, stacks & bursts, pinned views, batch rename w/ tokens, Show in Finder & Edit With (a working copy opens in the other app & each save comes back as a revertible edit).
 - **Search**: one search over every text field, dates & places, plus CLIP ("puppies in flowers"), suggestions, Advanced Find (Cmd-F) saved as smart albums.
 - **Places**: offline reverse geocoding, an offline map w/ clustered thumbnails, city & country collections, trips, location & date editing singly or in batches.
-- **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people, & Look Up in the info panel (dog & cat breeds, birds, insects, flowers, plants, animals & landmarks, using the photo's location for landmarks). Media types include time-lapse, cinematic, spatial, animated & long exposure.
-- **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, Clean Up (brush or click to remove objects w/ the LaMa model), markup, lens corrections, a Live Photo Long Exposure effect, copy & paste edits, revert, video trim; RAW files add a develop section (Kelvin white balance & tint, exposure, highlight recovery, demosaic, noise, fringe).
-- **Sharing**: share links w/ optional password, expiry, downloads & location, a QR code & a guest page where people like, comment & download; shared albums where guests can also add photos, w/ activity & replies in the app; a static web gallery for any host; Mail, Messages & AirDrop on the Mac. Links reach your network or a VPN such as Tailscale while DAM is running.
-- **Sync & Shared Library**: keep this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS); a second shared folder makes a family Shared Library, w/ a Both / Personal / Shared switch in the filter menu.
+- **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people, & Look Up in the info panel: about 384,000 species of animals, plants & fungi (BioCLIP, named to species, genus or family w/ the scientific name), dog & cat breeds, about 3,700 landmarks (any landmark in range of the photo's location competes, the best-known 1,500 otherwise), about 590 famous artworks w/ their artists, & about 1,200 foods & drinks. Media types include time-lapse, cinematic, spatial, animated & long exposure.
+- **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, Clean Up (brush, click Select Object or pick from suggested distractions to remove them w/ LaMa; brushing over a face pixelates it), markup, lens corrections, a Live Photo Long Exposure effect, copy & paste edits, revert, video trim; RAW files add a develop section (Kelvin white balance & tint, exposure, highlight recovery, demosaic, noise, fringe).
+- **Sharing**: Share as Encrypted Package turns photos or an album into a WinZip AES-256 zip w/ a generated password (or your own of at least 16 characters; zip encryption is guessed quickly offline, so short passwords are refused); file names, metadata & edits are inside the encryption & members carry random names. Location (GPS & place names in EXIF, XMP & IPTC, in edits & Live Photo videos too) is stripped losslessly unless you include it. Opening a package never changes photos you already have; it only adds new ones & links the rest. Send the zip by Mail, Messages, AirDrop or anything else & pass the password on separately; the recipient drops it onto DAM, enters the password & gets a new album or stack. Shared album packages carry notes both ways & merge back into the same album w/o duplicates. A static web gallery for any host is still available.
+- **Sync & Shared Library**: both off by default. Sync keeps this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS). The family Shared Library works only on the local network between DAM apps holding the same share key: peers find each other by an authenticated beacon & exchange signed, encrypted requests on their own port; an app w/ another key, or anything outside private network ranges, is refused. A Both / Personal / Shared switch sits in the filter menu.
+- **Privacy**: automation access (scripts, agents, MCP tools) is off by default; Settings > Privacy turns it on & shows a token to give them. Only the app window & the desktop shell reach the engine otherwise: the launcher passes a per-launch key that the window trades for an HttpOnly session cookie, & the key is removed from the engine's environment so programs it starts never see it.
 - **Output**: XMP sidecars, File Info (IPTC) w/ templates, export to JPEG, HEIC, PNG, TIFF or WebP w/ sizing, naming, subfolders & metadata options, print & PDF contact sheets, saved workflows.
 - **Curation**: memories (generated or described) w/ generated music, slideshows, compare w/ linked zoom.
 - **Libraries**: several libraries, repair, consolidate referenced files.
@@ -53,7 +54,9 @@ Run on a Mac from the repo root: it fetches the face models, builds the UI, free
 | Env var | Default | Meaning |
 | --- | --- | --- |
 | `DAM_LIBRARY` | `<repo>/library` | Library root (originals, cache, vault, `dam.db`) |
-| `DAM_MODELS` | `backend/models` | Face & CLIP model directory |
+| `DAM_MODELS` | `backend/models` | Model directory (face, CLIP, Clean Up, Look Up) |
+| `DAM_AUTOMATION` | unset | `1` lets any local caller use the API (the test suite & scripted runs need it); otherwise turn on Automation Access in Settings > Privacy |
+| `DAM_SHELL_KEY` | set by the launcher | Per-launch key the desktop shell or `setup/DAM_boot` passes to the engine; without it the engine makes one & prints the address that connects a window |
 | `DAM_CONFIG` | Application Support/DAM, %APPDATA%/DAM or ~/.config/dam | Where the list of known libraries is kept |
 | `DAM_FACE_THRESHOLD` | `0.55` | Cosine threshold for person clustering (also adjustable in People) |
 | `DAM_TRASH_DAYS` | `30` | Days before trash auto-purges |
@@ -87,6 +90,10 @@ library/    created on first run: originals/, cache/, vault/, dam.db
 | GeoNames cities5000 (reduced) | CC BY 4.0 | backend/app/data, place names |
 | Natural Earth admin-0 | Public domain | backend/app/data, map outlines |
 | LaMa inpainting (opencv/inpainting_lama ONNX) | Apache-2.0 | backend, downloaded at install, Clean Up |
+| EfficientSAM-Ti & YOLOX-s (opencv_zoo ONNX) | Apache-2.0 | backend, downloaded at install, Clean Up select & suggestions |
+| BioCLIP image encoder (int8 ONNX) & species embeddings | MIT | backend, downloaded at install, Look Up species |
+| Wikidata landmarks, artworks & dishes | CC0 | backend/app/data, Look Up |
+| pyzipper & pycryptodomex | MIT & BSD-2-Clause / public domain | backend, encrypted packages |
 | ffmpeg | LGPL/GPL | external PATH binary, called as a subprocess, never bundled |
 | vite | MIT | frontend dev/build |
 | typescript | Apache-2.0 | frontend dev/build |
@@ -95,6 +102,6 @@ library/    created on first run: originals/, cache/, vault/, dam.db
 
 Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natural Earth. Parts of the rename, EXIF and XMP code are adapted from FormLit (Apache-2.0); see LICENSES.md.
 
-Face, CLIP & LaMa models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo.
+Models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo: face (YuNet, SFace, under 40 MB), CLIP (146 MB), Clean Up (LaMa 89 MB, EfficientSAM 47 MB, YOLOX 35 MB) & Look Up (BioCLIP 84 MB plus species embeddings, downloaded once at 850 MB & stored as 192 MB int8). Look Up's landmark, art & food lists are rebuilt w/ `setup/gen_lookup_data.py`.
 
 DAM itself is MIT licensed (see LICENSE).

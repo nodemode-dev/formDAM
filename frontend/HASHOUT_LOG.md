@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### engine/session.ts + main.ts gate + .lockout-card · the window connects with the launcher's key
+- refers-to: session KEY_RE, openSession, showLockout hashchange; main.ts top-level gate before initPrefs; parity.css .lockout-card; packages.ts MIN_PASSWORD 16 and hint
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+Before any API call, main.ts reads a dam-key fragment, removes it from the address with replaceState, and trades it for the session cookie; without a fragment it asks whether the cookie is already valid (reloads and other tabs in the same browser). If neither works, one static card replaces #app and module evaluation parks on a promise that never settles, so nothing else mounts or calls the engine; a later hashchange carrying a key connects and reloads once. Checked under 4x CPU and a slow network: no key shows the card, the key connects and loads every thumbnail, reload and a second tab stay connected, a forged header from another browser gets 403.
 ### ui/components/infopanel.ts lookupCard detail line + engine/types LookupResult detail/rank
 - refers-to: infopanel lookupCard lookup-kind text; types LookupResult detail, rank
 - kind: rationale

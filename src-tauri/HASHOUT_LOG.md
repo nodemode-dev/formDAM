@@ -1,6 +1,20 @@
 # src-tauri HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.18.2) · 2026-09-18
 
+### src/main.rs window URL carries the launch key · and ../DAM_boot, ../DAM_boot.bat do the same for the browser build
+- refers-to: main.rs navigate to http://127.0.0.1:{port}/#dam-key={shell_key}; DAM_boot DAM_SHELL_KEY from /dev/urandom, UI_OPEN; DAM_boot.bat key from the venv's python secrets, UI_OPEN
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+The audit showed browser fetch headers can be forged, so the window now proves itself with the shell key: the fragment never reaches a server, the page trades it for an HttpOnly cookie and drops it from the address. The boot scripts make their own key, pass it to the engine and open the browser with it, and print the address for connecting another browser.
+
+### src/main.rs shell_key + ../build_macos_app models and app/data · the shell proves itself to the engine; Look Up data ships
+- refers-to: main.rs SHELL_KEY, shell_key, engine_post and engine_get x-dam-shell header, backend_command DAM_SHELL_KEY env; build_macos_app EfficientSAM, YOLOX, BioCLIP and species fetch_model lines, species prepare step after the venv, --add-data app/data:app/data, --collect-all pyzipper and Cryptodome, --hidden-import app.familyserver
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+With automation access off by default the engine refuses callers that are neither the window nor a token holder, and the shell's own calls (menu-bar import, Keychain unlock results, glass state) are neither. The shell makes 64 hex characters from /dev/urandom once per launch (a RandomState-seeded fallback if that fails), hands them to the engine it spawns as DAM_SHELL_KEY, and sends them as x-dam-shell on every call; a program that did not start the engine never sees the value. Checked by compiling the functions standalone with rustc, since this container has no WebKit for cargo check. The build script fetches the new Clean Up and Look Up models with the same sha256 check, converts the species embeddings once inside the build venv (numpy is only there), and bundles app/data, which the packaged engine never had: offline place names were missing from the Mac app before this.
+
 ### ../build_macos_app + ../package_dmg + ../apply_icon · rename DAMp to DAM, part 3
 - refers-to: build_macos_app header + Icon Composer hint; package_dmg icon hint + signing & notarizing examples (keychain profile name dam); apply_icon header, default /Applications/DAM.app, repo-root hint, closing hint
 - kind: rationale
