@@ -95,7 +95,9 @@ def main() -> int:
     _open_log()
     os.environ.setdefault("DAM_DIST", os.path.join(resource_dir(), "frontend_dist"))
     os.environ.setdefault("DAM_MODELS", os.path.join(resource_dir(), "models"))
-    os.environ.setdefault("DAM_LIBRARY", default_library())
+    from app import libraries
+
+    os.environ.setdefault("DAM_LIBRARY", libraries.current() or default_library())
     port = int(os.environ.get("DAM_PORT", "0") or 0)
     if sys.platform == "darwin":
         from app.services import iccsvc

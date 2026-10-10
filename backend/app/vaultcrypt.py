@@ -400,6 +400,10 @@ def _protect(row, home: str) -> None:
     from .services import libraryfs, thumbs
 
     media_id = row["id"]
+    if "referenced" in row.keys() and row["referenced"]:
+        row = libraryfs.consolidate(media_id)
+        if row is None:
+            return
     src = libraryfs.abs_path(row["rel_path"])
     if not os.path.isfile(src):
         return

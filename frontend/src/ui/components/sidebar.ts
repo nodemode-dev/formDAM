@@ -37,6 +37,8 @@ const UTILITIES: RowSpec[] = [
   { label: "Keywords", icon: "tag", hash: "#/keywords" },
   { label: "Subjects & Content", icon: "sparkle", hash: "#/subjects" },
   { label: "Import", icon: "upload", hash: "#/import" },
+  { label: "Browse Disk", icon: "drive", hash: "#/disk" },
+  { label: "Libraries", icon: "library", hash: "#/libraries" },
 ];
 
 export interface PinEntry {
@@ -119,9 +121,9 @@ export function mountSidebar(host: HTMLElement): void {
       row({ label: "All Albums", icon: "albums", hash: "#/albums" }),
     ];
     for (const album of state.albums) {
-      rows.push(
-        row({ label: album.name, icon: album.is_private ? "lock" : "folder", hash: `#/album/${album.id}` }),
-      );
+      const node = row({ label: album.name, icon: album.is_private ? "lock" : "folder", hash: `#/album/${album.id}` });
+      if (!album.is_smart) node.dataset.albumId = String(album.id);
+      rows.push(node);
     }
     albumsWrap.replaceChildren(...rows);
     highlight();

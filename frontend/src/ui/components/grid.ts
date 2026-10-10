@@ -400,6 +400,12 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
     openViewer(ids, ids.indexOf(item.id));
   });
   tile.classList.toggle("selected", state.selection.has(item.id));
+  tile.draggable = true;
+  tile.addEventListener("dragstart", (event) => {
+    const ids = state.selection.has(item.id) && state.selection.size > 1 ? [...state.selection] : [item.id];
+    event.dataTransfer?.setData("application/x-dam-ids", JSON.stringify(ids));
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
+  });
   return tile;
 }
 

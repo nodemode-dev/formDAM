@@ -115,8 +115,12 @@ def _adopt_legacy_catalog() -> None:
 
 def connect() -> sqlite3.Connection:
     conn = getattr(_local, "conn", None)
-    if conn is not None:
+    path = db_path()
+    if conn is not None and getattr(_local, "path", path) == path:
         return conn
+    if conn is not None:
+        conn.close()
+        _local.conn = None
     os.makedirs(library_root(), exist_ok=True)
     _adopt_legacy_catalog()
     conn = sqlite3.connect(db_path(), check_same_thread=False)
@@ -125,6 +129,7 @@ def connect() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=8000")
     _local.conn = conn
+    _local.path = path
     return conn
 
 

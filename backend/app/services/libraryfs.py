@@ -53,7 +53,7 @@ def _dest_for(created_ts: float, name: str) -> str:
     return candidate
 
 
-def import_one(path: str, move: bool = False) -> Dict[str, Any]:
+def import_one(path: str, move: bool = False, reference: bool = False) -> Dict[str, Any]:
     name = os.path.basename(path)
     kind, mime = classify.media_kind(name)
     if not kind:
@@ -74,12 +74,16 @@ def import_one(path: str, move: bool = False) -> Dict[str, Any]:
         created_ts, created_src = exif_ts, "exif"
     else:
         created_ts, created_src = mediainfo.fs_created(path)
-    dest = _dest_for(created_ts, name)
-    if move:
-        shutil.move(path, dest)
+    if reference:
+        dest = os.path.abspath(path)
+        rel = dest
     else:
-        shutil.copy2(path, dest)
-    rel = os.path.relpath(dest, originals_dir())
+        dest = _dest_for(created_ts, name)
+        if move:
+            shutil.move(path, dest)
+        else:
+            shutil.copy2(path, dest)
+        rel = os.path.relpath(dest, originals_dir())
     is_screenshot = 1 if kind == "image" and classify.looks_screenshot(name, mime, exif_ts is not None, width, height) else 0
     is_screen_rec = 1 if classify.looks_screen_recording(name, kind) else 0
     media_id = ex(
@@ -89,6 +93,8 @@ def import_one(path: str, move: bool = False) -> Dict[str, Any]:
         (sha, rel, os.path.basename(dest), size, kind, mime, width, height, duration,
          created_ts, created_src, time.time(), is_screenshot, is_screen_rec),
     )
+    if reference:
+        ex("UPDATE media SET referenced=1 WHERE id=?", (media_id,))
     batch_id = getattr(_batch, "id", None)
     if batch_id:
         ex("UPDATE media SET batch_id=? WHERE id=?", (batch_id, media_id))
@@ -141,3 +147,20 @@ def link_live(photo_id: int, video_id: int) -> bool:
 
 def abs_path(rel: str) -> str:
     return os.path.join(originals_dir(), rel)
+
+
+def consolidate(media_id: int, move: bool = False):
+    row = q1("SELECT * FROM media WHERE id=?", (media_id,))
+    if row is None or not row["referenced"]:
+        return row
+    src = row["rel_path"]
+    if not os.path.isfile(src):
+        return None
+    dest = _dest_for(row["created_ts"], os.path.basename(src))
+    if move:
+        shutil.move(src, dest)
+    else:
+        shutil.copy2(src, dest)
+    rel = os.path.relpath(dest, originals_dir())
+    ex("UPDATE media SET rel_path=?, referenced=0 WHERE id=?", (rel, media_id))
+    return q1("SELECT * FROM media WHERE id=?", (media_id,))

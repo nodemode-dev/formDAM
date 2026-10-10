@@ -191,7 +191,7 @@ def _purge_row(row) -> None:
     keys = row.keys() if hasattr(row, "keys") else []
     companion = q1("SELECT * FROM media WHERE live_of=?", (row["id"],)) if "live_of" in keys else None
     path = libraryfs.abs_path(row["rel_path"])
-    if os.path.isfile(path):
+    if os.path.isfile(path) and not ("referenced" in keys and row["referenced"]):
         os.unlink(path)
     ex("DELETE FROM faces WHERE media_id=?", (row["id"],))
     ex("DELETE FROM album_items WHERE media_id=?", (row["id"],))

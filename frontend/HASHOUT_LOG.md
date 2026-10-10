@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-10-10
+### ui/components/libmanage.ts + drops · libraries, repair, browse disk, folder & album drops
+- refers-to: libmanage.switchTo/mountLibraryPage/mountDiskPage/quickLook/collectEntries/uploadAll/albumTarget/registerLibraryDrops; grid.ts tile dragstart (application/x-dam-ids); sidebar.ts album rows carry data-album-id, Browse Disk & Libraries rows; importer.ts Add in place checkbox; main.ts libraries & disk routes, registerLibraryDrops; parity.css lib, disk & drop-target rules
+- kind: rationale
+- logged: zip v1.22.0 · 2026-10-10
+
+The Library page lists known libraries (open, remove from list), opens or creates one through the folder picker, runs Repair (optional checksum pass) & shows its last report w/ an Import Unknown Files action, & copies referenced files in. A switch reloads the page, because every cache in the store belongs to the old catalog. Browse Disk is Bridge's folder view: shortcuts (home folders, mounted volumes), breadcrumbs, folders as chips, media as tiles w/ engine thumbnails & an In Library badge, click to pick, double-click to preview, then Import Copies or Add in Place. Drops: files or whole folders dropped anywhere (folders walked w/ webkitGetAsEntry) import in 40-file chunks; dropped on a sidebar album row or onto an open album, they also join that album, duplicates included; tiles drag onto album rows to add without importing. The import page's own drop zone keeps its handler, & the global one ignores drops inside it.
 ### ui/components/curate.ts + grid multi-select · memories, groups, slideshow, compare
 - refers-to: curate.memoriesStrip/mountMemoriesPage/mountMemoryPage/groupsStrip/Music/playMemory/openSlideshow/openCompare/createMemoryFlow/registerCurate; grid.ts tile click (Cmd/Ctrl-click toggle, Shift-click range, selectAnchor); icons-extra pause; collections.ts Memories & Groups sections (replaced the "Automatic Memories are on the roadmap" placeholder); sidebar.ts Memories row; main.ts memories & memory routes, registerCurate
 - kind: rationale + removed code

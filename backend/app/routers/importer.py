@@ -17,6 +17,7 @@ router = APIRouter()
 class ImportIn(BaseModel):
     path: str
     move: bool = False
+    reference: bool = False
     paths: Optional[List[str]] = None
 
 
@@ -39,7 +40,7 @@ def start_import(body: ImportIn):
         libraryfs.begin_batch("folder", ", ".join(os.path.basename(t.rstrip(os.sep)) or t for t in targets))
         for path in files:
             try:
-                result = libraryfs.import_one(path, move=body.move)
+                result = libraryfs.import_one(path, move=body.move and not body.reference, reference=body.reference)
             except Exception:
                 counts["failed"] += 1
                 continue
@@ -99,11 +100,12 @@ async def import_upload(files: List[UploadFile] = File(...)):
                         pass
             elif status == "duplicate":
                 counts["duplicates"] += 1
+                imported.append({"id": result.get("media_id")})
             else:
                 counts["skipped"] += 1
     libraryfs.end_batch()
     followon.start_after_import(counts)
-    return {"counts": counts}
+    return {"counts": counts, "ids": [r["id"] for r in imported if r.get("id")]}
 
 
 class GlassDiagIn(BaseModel):

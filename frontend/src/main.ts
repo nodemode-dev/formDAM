@@ -7,6 +7,7 @@ import { registerFind } from "./ui/components/find.js";
 import { registerEditor } from "./ui/components/editor.js";
 import { registerOutputs } from "./ui/components/outputs.js";
 import { mountMemoriesPage, mountMemoryPage, registerCurate } from "./ui/components/curate.js";
+import { mountDiskPage, mountLibraryPage, registerLibraryDrops } from "./ui/components/libmanage.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -124,6 +125,7 @@ registerFind();
 registerEditor();
 registerOutputs();
 registerCurate();
+registerLibraryDrops();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;
@@ -212,6 +214,10 @@ function render(): void {
     teardown = mountPlacesPage(plainShell("Places"));
   } else if (view === "trips") {
     teardown = mountTripsPage(plainShell("Trips"));
+  } else if (view === "libraries") {
+    teardown = mountLibraryPage(plainShell("Library"));
+  } else if (view === "disk") {
+    teardown = mountDiskPage(plainShell("Browse Disk"), param);
   } else if (view === "memories") {
     teardown = mountMemoriesPage(plainShell("Memories"));
   } else if (view === "memory") {

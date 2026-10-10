@@ -14,6 +14,9 @@ export function mountImportPage(host: HTMLElement): () => void {
     style: "flex:1",
   }) as HTMLInputElement;
   const moveCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
+  const refCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
+  refCheck.addEventListener("change", () => { if (refCheck.checked) moveCheck.checked = false; });
+  moveCheck.addEventListener("change", () => { if (moveCheck.checked) refCheck.checked = false; });
   const goBtn = h("button", { class: "btn primary", type: "button" }, iconEl("upload"), "Import") as HTMLButtonElement;
   const pickBtn = h("button", { class: "btn", type: "button" }, iconEl("folder"), "Choose Folder...") as HTMLButtonElement;
   const browseBtn = h("button", { class: "btn", type: "button" }, iconEl("drive"), "Browse") as HTMLButtonElement;
@@ -88,7 +91,7 @@ export function mountImportPage(host: HTMLElement): () => void {
     try {
       const res = await api<{ job_id: string }>("/import", {
         method: "POST",
-        body: JSON.stringify({ path, move: moveCheck.checked }),
+        body: JSON.stringify({ path, move: moveCheck.checked, reference: refCheck.checked }),
       });
       progress.classList.remove("hidden");
       progress.replaceChildren(h("span", { class: "spin" }, iconEl("refresh")), h("span", { class: "banner-text" }, "Importing..."));
@@ -100,7 +103,7 @@ export function mountImportPage(host: HTMLElement): () => void {
           return;
         }
         const c = job.counts;
-        const verb = moveCheck.checked ? "Moved" : "Copied";
+        const verb = refCheck.checked ? "Referenced" : moveCheck.checked ? "Moved" : "Copied";
         toast(`${verb} ${countFmt(c.imported ?? 0)} into the library · ${countFmt(c.duplicates ?? 0)} exact duplicates skipped${moveCheck.checked ? "" : " · originals left in place"}`);
         invalidateMedia();
         void refreshSummary();
@@ -478,6 +481,7 @@ export function mountImportPage(host: HTMLElement): () => void {
       "By default files are COPIED into the managed library (originals/YYYY/MM inside the library folder shown in Settings) & your originals stay untouched where they are. Turn on Move to relocate them instead. Everything is SHA-256 fingerprinted & exact duplicates of anything already in the library are skipped."),
     h("div", { style: "display:flex;gap:12px;align-items:center;max-width:860px" }, input, pickBtn, browseBtn, goBtn),
     h("label", { class: "field-check", style: "margin-top:12px" }, moveCheck, "Move files into the library instead of copying"),
+    h("label", { class: "field-check", style: "margin-top:6px" }, refCheck, "Add in place: leave files where they are (referenced, like Photos' \"Copy items\" off)"),
     h("div", { style: "margin-top:18px" }, dropZone),
     h("div", { style: "margin-top:16px" }, progress),
   );
