@@ -1,7 +1,6 @@
 import { api } from "../../engine/api.js";
 import { countFmt, fullStamp } from "../../engine/format.js";
-import { invalidateMedia, patchMedia, pollJob, state } from "../../engine/store.js";
-import type { Media } from "../../engine/types.js";
+import { invalidateMedia, pollJob, state } from "../../engine/store.js";
 import type { CtxEntry } from "../contextmenu.js";
 import { openContextMenu } from "../contextmenu.js";
 import { h } from "../dom.js";
@@ -144,9 +143,10 @@ export async function galleryFlow(ids: number[]): Promise<void> {
 async function moveLibrary(ids: number[], shared: boolean): Promise<void> {
   try {
     const res = await api<{ changed: number; skipped: number }>("/media/shared-library", { method: "POST", body: JSON.stringify({ ids, shared }) });
-    patchMedia(ids, { shared_lib: shared ? 1 : 0 } as Partial<Media>);
     invalidateMedia();
-    toast(`${countFmt(res.changed)} moved to the ${shared ? "Shared" : "Personal"} Library${res.skipped ? `, ${countFmt(res.skipped)} private or already there` : ""}`);
+    const sync = await api<SyncState>("/sync").catch(() => null);
+    const off = shared && !sync?.channels.shared.enabled ? ". Set up the Shared Library folder on the Sharing page so others receive them" : "";
+    toast(`${countFmt(res.changed)} moved to the ${shared ? "Shared" : "Personal"} Library${res.skipped ? `, ${countFmt(res.skipped)} skipped (private, hidden, already there or added by someone else)` : ""}${off}`);
   } catch (err) {
     toast((err as Error).message, "error");
   }
@@ -235,8 +235,8 @@ export function mountSharedPage(host: HTMLElement): () => void {
   const actPane = h("div", { class: "share-act-pane hidden" }, actHead, actEmpty, actList, reply, h("div", { class: "row-gap" }, send));
   const deviceName = h("input", { class: "field-input compact", type: "text", maxlength: "60" }) as HTMLInputElement;
   let paintSync: (s: SyncState) => void = () => undefined;
-  const personal = syncCard("personal", "Sync This Library", "Keeps this library the same on your other computers through a folder they all see: iCloud Drive, Dropbox, OneDrive, Syncthing, a NAS or an external drive. Originals, edits, favorites, ratings, keywords, captions, albums & deletions sync. Private, hidden & vaulted items never leave this computer.", (s) => paintSync(s));
-  const family = syncCard("shared", "Shared Library", "A second library shared with family through a folder you all can reach. Move photos into it from the photo menu; everyone sees, edits & deletes them. Moving a photo back to your Personal Library removes it from everyone else's.", (s) => paintSync(s));
+  const personal = syncCard("personal", "Sync This Library", "Keeps this library the same on your other computers through a folder they all see: iCloud Drive, Dropbox, OneDrive, Syncthing, a NAS or an external drive. Originals (with Live Photo videos), edits, trims, favorites, ratings, keywords, captions, locations, plain albums & deletions sync; people, smart albums, stacks & memories stay per computer. Private, hidden & vaulted items are never written to the folder, and making a synced photo private, hidden or vaulted removes its file from the folder & hides it on the other computers.", (s) => paintSync(s));
+  const family = syncCard("shared", "Shared Library", "A second library shared with family through a folder you all can reach; anyone who can write to that folder takes part. Move photos into it from the photo menu; everyone sees, edits & deletes them. Only the person who added a photo can move it back to their Personal Library, which removes it from everyone else's.", (s) => paintSync(s));
   paintSync = (s) => { personal.paint(s); family.paint(s); if (document.activeElement !== deviceName) deviceName.value = s.device.name; };
   deviceName.addEventListener("change", () => void api<SyncState>("/sync/device", { method: "PUT", body: JSON.stringify({ name: deviceName.value || "This computer" }) }).then(paintSync));
   const pad = h("div", { class: "view-pad" },

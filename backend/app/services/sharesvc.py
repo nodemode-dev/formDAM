@@ -20,6 +20,8 @@ COOKIE_TTL = 7 * 24 * 3600
 MAX_TEXT = 1000
 MAX_NAME = 60
 SHAREABLE = "m.trashed_ts IS NULL AND m.private=0 AND m.hidden=0 AND m.live_of IS NULL"
+IDS_TTL_S = 5.0
+_ids_cache: Dict[Any, Any] = {}
 
 
 def settings() -> Dict[str, Any]:
@@ -27,7 +29,7 @@ def settings() -> Dict[str, Any]:
         port = int(setting_get("share_port") or DEFAULT_PORT)
     except ValueError:
         port = DEFAULT_PORT
-    return {"enabled": setting_get("share_enabled") == "1", "port": port, "name": setting_get("share_name") or socket.gethostname()}
+    return {"enabled": setting_get("share_enabled") == "1", "port": port, "name": setting_get("share_name") or "DAM"}
 
 
 def save_settings(enabled: Optional[bool] = None, port: Optional[int] = None, name: Optional[str] = None) -> Dict[str, Any]:
@@ -137,6 +139,23 @@ def live(token: str):
 
 
 def item_ids(share) -> List[int]:
+    key = (share["id"], share["kind"], share["album_id"])
+    hit = _ids_cache.get(key)
+    if hit is not None and time.time() - hit[0] < IDS_TTL_S:
+        return hit[1]
+    ids = _item_ids(share)
+    if len(_ids_cache) > 64:
+        _ids_cache.clear()
+    _ids_cache[key] = (time.time(), ids)
+    return ids
+
+
+def forget_items(share_id: Optional[int] = None) -> None:
+    for key in [k for k in _ids_cache if share_id is None or k[0] == share_id]:
+        _ids_cache.pop(key, None)
+
+
+def _item_ids(share) -> List[int]:
     if share["kind"] == "album":
         rows = q(f"""SELECT m.id FROM album_items ai JOIN media m ON m.id=ai.media_id
                      WHERE ai.album_id=? AND {SHAREABLE} ORDER BY ai.position, m.created_ts""", (share["album_id"],))
@@ -147,7 +166,9 @@ def item_ids(share) -> List[int]:
 
 
 def allowed(share, media_id: int) -> bool:
-    return media_id in item_ids(share)
+    if media_id not in item_ids(share):
+        return False
+    return bool(_shareable_ids([media_id]))
 
 
 def needs_unlock(share, cookie: Optional[str]) -> bool:
@@ -216,8 +237,9 @@ def contribute(share, path: str, author: str) -> Dict[str, Any]:
 
     result = libraryfs.import_one(path, move=True)
     media_id = result.get("media_id")
-    if not media_id:
-        return result
+    if not media_id or result.get("status") != "imported" and not _shareable_ids([media_id]):
+        return {"status": "received"}
+    forget_items(share["id"])
     pos = q1("SELECT COALESCE(MAX(position), -1) + 1 AS p FROM album_items WHERE album_id=?", (share["album_id"],))["p"]
     ex("INSERT OR IGNORE INTO album_items(album_id, media_id, position, added_ts) VALUES(?,?,?,?)",
        (share["album_id"], media_id, pos, time.time()))
@@ -253,11 +275,12 @@ def download_path(share, media_id: int) -> Optional[str]:
 
     row = q1("SELECT * FROM media WHERE id=?", (media_id,))
     src = libraryfs.abs_path(row["rel_path"])
-    if share["include_location"] and not row["edit_json"]:
+    trimmed = row["kind"] == "video" and (row["trim_in"] is not None or row["trim_out"] is not None)
+    if share["include_location"] and not row["location_hidden"] and not row["edit_json"] and not trimmed:
         return src
     folder = os.path.join(cache_dir(), "share")
     os.makedirs(folder, exist_ok=True)
-    stamp = hashlib.sha1(f"{row['edit_json'] or ''}|{row['edited_ts'] or 0}|{share['include_location']}".encode()).hexdigest()[:12]
+    stamp = hashlib.sha1(f"{row['edit_json'] or ''}|{row['edited_ts'] or 0}|{share['include_location']}|{row['trim_in']}|{row['trim_out']}".encode()).hexdigest()[:12]
     if row["kind"] == "video":
         out = os.path.join(folder, f"{media_id}_{stamp}{os.path.splitext(row['name'])[1].lower() or '.mp4'}")
         if not os.path.isfile(out):
@@ -267,9 +290,20 @@ def download_path(share, media_id: int) -> Optional[str]:
             if not ff:
                 return None
             tmp = out + ".part" + os.path.splitext(out)[1]
-            subprocess.run([ff, "-y", "-v", "error", "-i", src, "-map", "0", "-map_metadata", "-1", "-c", "copy", tmp],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
-            if not os.path.isfile(tmp):
+            args = [ff, "-y", "-v", "error"]
+            if row["trim_in"] is not None:
+                args += ["-ss", f"{float(row['trim_in']):.3f}"]
+            if row["trim_out"] is not None:
+                args += ["-to", f"{float(row['trim_out']):.3f}"]
+            args += ["-i", src, "-map", "0:v:0", "-map", "0:a?", "-dn", "-c", "copy"]
+            if not share["include_location"]:
+                args += ["-map_metadata", "-1"]
+            done = subprocess.run(args + [tmp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+            if done.returncode != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
                 return None
             os.replace(tmp, out)
         return out
@@ -282,9 +316,35 @@ def download_path(share, media_id: int) -> Optional[str]:
             return None
         fd, tmp = tempfile.mkstemp(dir=folder, suffix=".jpg")
         os.close(fd)
-        img.convert("RGB").save(tmp, "JPEG", quality=92)
+        exif = gps_exif(row) if share["include_location"] else None
+        if exif is not None:
+            img.convert("RGB").save(tmp, "JPEG", quality=92, exif=exif)
+        else:
+            img.convert("RGB").save(tmp, "JPEG", quality=92)
         os.replace(tmp, out)
     return out
+
+
+def gps_exif(row):
+    if row["lat"] is None or row["lon"] is None or row["location_hidden"]:
+        return None
+    from PIL import Image
+    from PIL.TiffImagePlugin import IFDRational
+
+    def dms(value: float):
+        value = abs(value)
+        deg = int(value)
+        minutes = int((value - deg) * 60)
+        seconds = round(((value - deg) * 60 - minutes) * 60 * 1000)
+        return (IFDRational(deg, 1), IFDRational(minutes, 1), IFDRational(seconds, 1000))
+
+    exif = Image.Exif()
+    gps = exif.get_ifd(0x8825)
+    gps[1] = "N" if row["lat"] >= 0 else "S"
+    gps[2] = dms(row["lat"])
+    gps[3] = "E" if row["lon"] >= 0 else "W"
+    gps[4] = dms(row["lon"])
+    return exif
 
 
 def web_gallery(ids: List[int], title: str, dest: str, include_location: bool, state: Dict[str, Any]) -> None:
@@ -329,7 +389,11 @@ def web_gallery(ids: List[int], title: str, dest: str, include_location: bool, s
                 counts["skipped"] += 1
                 continue
             full = f"photos/{stem}.jpg"
-            img.convert("RGB").save(os.path.join(folder, full), "JPEG", quality=90)
+            exif = gps_exif(row) if include_location else None
+            if exif is not None:
+                img.convert("RGB").save(os.path.join(folder, full), "JPEG", quality=90, exif=exif)
+            else:
+                img.convert("RGB").save(os.path.join(folder, full), "JPEG", quality=90)
             img.thumbnail((640, 640))
             img.convert("RGB").save(os.path.join(folder, f"thumbs/{stem}.jpg"), "JPEG", quality=82)
         entries.append({"full": full, "thumb": f"thumbs/{stem}.jpg", "kind": row["kind"], "title": row["title"] or "", "caption": row["caption"] or ""})

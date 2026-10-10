@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from .. import jobs, macshare, shareserver
 from ..db import ex, q1
 from ..services import filesvc, sharesvc
+from ..vault import hash_passkey
 
 router = APIRouter()
 
@@ -98,10 +99,16 @@ def share_album(album_id: int, body: LinkIn):
         raise HTTPException(404, detail="No such album")
     if album["is_private"]:
         raise HTTPException(409, detail="Private albums are never shared")
+    if album["rules_json"]:
+        raise HTTPException(409, detail="Smart albums cannot be shared; share a link to their photos instead")
     existing = q1("SELECT * FROM shares WHERE kind='album' AND album_id=? AND revoked=0", (album_id,))
     if existing:
-        ex("UPDATE shares SET allow_download=?, allow_comments=?, allow_contrib=?, include_location=? WHERE id=?",
-           (int(body.allow_download), int(body.allow_comments), int(body.allow_contrib), int(body.include_location), existing["id"]))
+        expires = time.time() + body.expires_days * 86400 if body.expires_days else None
+        ex("""UPDATE shares SET title=?, expires_ts=?, password_hash=?, allow_download=?, allow_comments=?, allow_contrib=?,
+              include_location=? WHERE id=?""",
+           (body.title.strip()[:120] or existing["title"], expires, hash_passkey(body.password) if body.password else None,
+            int(body.allow_download), int(body.allow_comments), int(body.allow_contrib), int(body.include_location), existing["id"]))
+        sharesvc.forget_items(existing["id"])
         return sharesvc.describe(q1("SELECT * FROM shares WHERE id=?", (existing["id"],)))
     return sharesvc.create("album", body.title or album["name"], album_id=album_id, expires_days=body.expires_days,
                            password=body.password or None, allow_download=body.allow_download, allow_comments=body.allow_comments,

@@ -15,6 +15,7 @@ from .services import classify, sharesvc, thumbs
 
 MAX_UPLOAD = 1024 * 1024 * 1024
 COOKIE = "dam_share"
+VIEW_ONLY_PX = 2048
 FAIL_LIMIT = 8
 FAIL_WINDOW_S = 600
 _failures: Dict[str, List[float]] = {}
@@ -27,6 +28,20 @@ _lock = threading.Lock()
 
 @app.middleware("http")
 async def headers(request: Request, call_next):
+    parts = request.url.path.strip("/").split("/")
+    if request.method == "POST" and len(parts) == 3 and parts[0] == "s" and parts[2] == "contribute":
+        try:
+            size = int(request.headers.get("content-length") or "0")
+        except ValueError:
+            size = 0
+        share = sharesvc.live(parts[1])
+        reset_thread_conn()
+        if share is None or not share["allow_contrib"] or share["kind"] != "album":
+            return JSONResponse({"detail": "Adding photos is off for this album"}, status_code=403)
+        if size <= 0 or size > MAX_UPLOAD + 65536:
+            return JSONResponse({"detail": "That file is too large or the upload has no length"}, status_code=413)
+        if sharesvc.needs_unlock(share, request.cookies.get(f"{COOKIE}_{parts[1]}")):
+            return JSONResponse({"detail": "Password required"}, status_code=401)
     try:
         response = await call_next(request)
     finally:
@@ -116,7 +131,7 @@ def still(token: str, media_id: int, request: Request, w: int = Query(2048, ge=2
     row = _member(share, media_id)
     if row["kind"] != "image":
         raise HTTPException(415, detail="Videos play from /v")
-    path = sharesvc.still_path(media_id, w)
+    path = sharesvc.still_path(media_id, w if share["allow_download"] else min(w, VIEW_ONLY_PX))
     if path is None:
         raise HTTPException(404, detail="This photo could not be shown")
     return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "private, max-age=3600"})
