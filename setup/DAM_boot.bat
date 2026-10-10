@@ -35,6 +35,9 @@ if exist "%ROOT%\backend\.env" (
     )
 )
 
+for /f "usebackq delims=" %%k in (`""%ROOT%\backend\venv\Scripts\python.exe" -c "import secrets; print(secrets.token_hex(32))""`) do set "DAM_SHELL_KEY=%%k"
+set "UI_OPEN=%UI%/#dam-key=%DAM_SHELL_KEY%"
+
 echo Booting the engine...
 start "DAM engine" cmd /k "cd /d "%ROOT%\backend" && venv\Scripts\activate && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 
@@ -51,6 +54,8 @@ echo     - Interface: %UI%
 echo ===========================================
 echo.
 echo Close either window to stop that half.
+echo A browser window opened here is connected to DAM. To connect another one, open:
+echo   %UI_OPEN%
 
 if "%DAM_OPEN%"=="0" goto done
 set /a tries=0
@@ -61,7 +66,7 @@ if !tries! GEQ 90 goto done
 timeout /t 1 /nobreak >nul
 goto wait_ui
 :open_ui
-start "" "%UI%"
+start "" "%UI_OPEN%"
 :done
 endlocal
 exit /b 0

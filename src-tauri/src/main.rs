@@ -581,7 +581,7 @@ fn main() {
                 }
                 match port {
                     Some(found) => {
-                        let url: tauri::Url = format!("http://127.0.0.1:{found}")
+                        let url: tauri::Url = format!("http://127.0.0.1:{found}/#dam-key={}", shell_key())
                             .parse()
                             .expect("loopback url");
                         let _ = window.navigate(url);

@@ -31,6 +31,10 @@ if [ -f backend/.env ]; then
   set +a
 fi
 
+DAM_SHELL_KEY="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+export DAM_SHELL_KEY
+UI_OPEN="${UI}/#dam-key=${DAM_SHELL_KEY}"
+
 echo ""
 echo "Booting the engine..."
 ( cd backend && ./boot_backend ) &
@@ -50,6 +54,9 @@ echo "    - Engine:    http://127.0.0.1:8000"
 echo "    - Interface: ${UI}"
 echo "==========================================="
 echo ""
+echo "A browser window opened here is connected to DAM. To connect another one, open:"
+echo "  ${UI_OPEN}"
+echo ""
 echo "Press Ctrl+C to stop both"
 
 OPENER_PID=""
@@ -58,9 +65,9 @@ if [ "${DAM_OPEN:-1}" != "0" ]; then
     for _ in $(seq 1 90); do
       if curl -fsS -o /dev/null "$UI" 2>/dev/null; then
         if command -v open >/dev/null 2>&1; then
-          open "$UI"
+          open "$UI_OPEN"
         elif command -v xdg-open >/dev/null 2>&1; then
-          xdg-open "$UI" >/dev/null 2>&1
+          xdg-open "$UI_OPEN" >/dev/null 2>&1
         fi
         exit 0
       fi

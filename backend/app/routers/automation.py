@@ -3,11 +3,11 @@ import os
 import secrets
 import time
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from ..db import setting_get, setting_set
-from ..security import forget_automation
+from ..security import SESSION_COOKIE, WINDOW_SESSION, forget_automation, shell_allowed, window_allowed
 
 router = APIRouter()
 
@@ -17,7 +17,20 @@ class AutomationIn(BaseModel):
 
 
 def _from_window(request: Request) -> bool:
-    return request.headers.get("sec-fetch-site") == "same-origin" or os.environ.get("DAM_AUTOMATION") == "1"
+    return window_allowed(request) or os.environ.get("DAM_AUTOMATION") == "1"
+
+
+@router.get("/session")
+def session_state(request: Request):
+    return {"window": window_allowed(request)}
+
+
+@router.post("/session")
+def open_session(request: Request, response: Response):
+    if not shell_allowed(request):
+        raise HTTPException(403, detail="This window was not opened by DAM. Open DAM from its app or its launcher.")
+    response.set_cookie(SESSION_COOKIE, WINDOW_SESSION, httponly=True, samesite="strict", path="/")
+    return {"window": True}
 
 
 def _state():
@@ -45,7 +58,8 @@ def set_automation(body: AutomationIn, request: Request):
         if not _from_window(request):
             raise HTTPException(403, detail="Automation can only be turned on from the DAM window")
         setting_set("automation_enabled", "1")
-        return {**_state(), "token": _issue()}
+        token = _issue()
+        return {**_state(), "token": token}
     setting_set("automation_enabled", "0")
     setting_set("automation_token", "")
     forget_automation()
@@ -58,4 +72,5 @@ def rotate_automation(request: Request):
         raise HTTPException(403, detail="A new token can only be made from the DAM window")
     if setting_get("automation_enabled") != "1":
         raise HTTPException(409, detail="Turn Automation Access on first")
-    return {**_state(), "token": _issue()}
+    token = _issue()
+    return {**_state(), "token": token}

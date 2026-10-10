@@ -1,4 +1,5 @@
 import os
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,11 @@ from .security import local_only_guard
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from . import security
+    if security.LAUNCH_GENERATED:
+        print("DAM: no launcher key was given; open the interface with this address (it connects the window):\n"
+              f"DAM:   http://127.0.0.1:8000/#dam-key={security.LAUNCH_KEY}  (use the port the engine or the dev server runs on)",
+              file=sys.stderr, flush=True)
     os.makedirs(originals_dir(), exist_ok=True)
     os.makedirs(cache_dir(), exist_ok=True)
     from . import vaultcrypt

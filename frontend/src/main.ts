@@ -10,6 +10,7 @@ import { mountMemoriesPage, mountMemoryPage, registerCurate } from "./ui/compone
 import { mountSharedPage, registerSharing } from "./ui/components/sharing.js";
 import { mountDiskPage, mountLibraryPage, registerLibraryDrops } from "./ui/components/libmanage.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
+import { openSession, showLockout } from "./engine/session.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
 import { openSettings, registerBackground } from "./ui/components/settings.js";
@@ -30,6 +31,10 @@ import { mountSidebar } from "./ui/components/sidebar.js";
 import { mountTrashPage } from "./ui/components/trash.js";
 import { mountViewer } from "./ui/components/viewer.js";
 
+if (!(await openSession())) {
+  showLockout(document.getElementById("app") as HTMLElement);
+  await new Promise<never>(() => undefined);
+}
 await initPrefs();
 hydrateStatePrefs();
 {

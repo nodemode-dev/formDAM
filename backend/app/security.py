@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 import re
+import secrets
 import time
 
 from fastapi import Request
@@ -15,7 +16,12 @@ MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
 
 SHELL_HEADER = "x-dam-shell"
 AUTOMATION_HEADER = "x-dam-automation"
-OPEN_PATHS = {"/api/health"}
+SESSION_COOKIE = "dam_session"
+OPEN_PATHS = {"/api/health", "/api/session"}
+_ENV_KEY = os.environ.pop("DAM_SHELL_KEY", "")
+LAUNCH_KEY = _ENV_KEY or secrets.token_hex(32)
+LAUNCH_GENERATED = not _ENV_KEY
+WINDOW_SESSION = hmac.new(LAUNCH_KEY.encode(), b"dam-window-session", hashlib.sha256).hexdigest()
 AUTOMATION_OFF = ("Automation access is off. Scripts, agents and MCP tools can use DAM only after you turn on "
                   "Automation Access in Settings > Privacy and give them the token it shows.")
 _cache: dict = {"ts": 0.0, "enabled": False, "hash": ""}
@@ -37,13 +43,18 @@ def forget_automation() -> None:
     _cache["ts"] = 0.0
 
 
+def shell_allowed(request: Request) -> bool:
+    return hmac.compare_digest(request.headers.get(SHELL_HEADER, ""), LAUNCH_KEY)
+
+
+def window_allowed(request: Request) -> bool:
+    return hmac.compare_digest(request.cookies.get(SESSION_COOKIE, ""), WINDOW_SESSION)
+
+
 def automation_allowed(request: Request) -> bool:
     if os.environ.get("DAM_AUTOMATION") == "1":
         return True
-    shell = os.environ.get("DAM_SHELL_KEY", "")
-    if shell and hmac.compare_digest(request.headers.get(SHELL_HEADER, ""), shell):
-        return True
-    if request.headers.get("sec-fetch-site") == "same-origin":
+    if shell_allowed(request) or window_allowed(request):
         return True
     token = request.headers.get(AUTOMATION_HEADER, "")
     if token:
