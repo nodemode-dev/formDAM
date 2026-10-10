@@ -1,5 +1,5 @@
 # frontend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.22.0) · 2026-10-10
+current: v1.13.9 (zip v1.23.0) · 2026-10-10
 ### sharing.ts sync cards, Move to Shared Library, library view switch
 - refers-to: sharing.syncCard, moveLibrary, mountSharedPage sync section & device name, registerSharing tile entry; organize.openQuickFilters Both/Personal/Shared; organize FLAG_VALUES shared & personal library
 - kind: rationale

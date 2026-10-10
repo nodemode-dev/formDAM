@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.22.0) · 2026-10-10
+current: v1.13.9 (zip v1.23.0) · 2026-10-10
 ### syncsvc & sharesvc · fixes from the independent audit
 - refers-to: syncsvc SHA_RE, EXT_RE, JOURNAL_RE, _object_path, _scope, _secret, _retract, _apply_retract, _apply_media checks, _live_row, _attach_live, pull journal listing & per-record guard, set_shared contributor rule, FIELDS trims; db SYNC_MEDIA_COLUMNS private & trims; sharesvc item_ids cache & forget_items, allowed live check, contribute duplicates, download_path trims & ffmpeg checks, gps_exif, settings name; shareserver contribute guard in the middleware, VIEW_ONLY_PX; sharing.share_album re-share fields & smart albums
 - kind: rationale + replaced code
