@@ -67,12 +67,23 @@ export interface Media {
   ocr_text?: string | null;
 }
 
+export interface LookupResult {
+  name: string;
+  kind: string;
+  kind_label: string;
+  score: number;
+  wiki: string;
+  near?: boolean;
+  alternatives?: string[];
+}
+
 export interface MediaDetails extends Media {
   exif: Record<string, string>;
   iptc: Record<string, string>;
   keywords: Array<{ id: number; name: string }>;
   people: Array<{ id: number; name: string | null }>;
   subjects: Array<{ label: string; kind: string; score: number }>;
+  lookup?: LookupResult[];
   batch: { id: number; source: string; label: string | null; started_ts: number } | null;
 }
 

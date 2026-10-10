@@ -94,8 +94,12 @@ def details(media_id: int, request: Request):
         """SELECT DISTINCT p.id, p.name FROM faces f JOIN people p ON p.id=f.person_id
            WHERE f.media_id=? AND p.hidden=0""", (media_id,))]
     item["subjects"] = [dict(r) for r in q(
-        "SELECT label, kind, score FROM media_labels WHERE media_id=? ORDER BY score DESC LIMIT 12", (media_id,))]
-    batch = q1("SELECT id, source, label, started_ts FROM import_batches WHERE id=?", (row["batch_id"],)) if row["batch_id"] else None
+        "SELECT label, kind, score FROM media_labels WHERE media_id=? AND kind<>'lookup' ORDER BY score DESC LIMIT 12", (media_id,))]
+    try:
+        item["lookup"] = json.loads(row["lookup_json"]) if row["lookup_json"] else []
+    except ValueError:
+        item["lookup"] = []
+    batch =q1("SELECT id, source, label, started_ts FROM import_batches WHERE id=?", (row["batch_id"],)) if row["batch_id"] else None
     item["batch"] = dict(batch) if batch else None
     return item
 

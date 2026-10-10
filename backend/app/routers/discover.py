@@ -1,11 +1,12 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .. import jobs
 from ..db import ex, q, q1
-from ..services import clipsvc, query
+from ..services import clipsvc, lookup, query
+from .guard import ensure_visible
 
 router = APIRouter()
 
@@ -29,6 +30,21 @@ def ensure_clip() -> None:
         return
     if info["ready"] and info["pending"] and not jobs.running("clip"):
         jobs.start("clip", clipsvc.index_job)
+
+
+def ensure_lookup() -> None:
+    lookup.ensure()
+
+
+@router.get("/media/{media_id}/lookup")
+def media_lookup(media_id: int, request: Request):
+    row = q1("SELECT * FROM media WHERE id=?", (media_id,))
+    ensure_visible(row, request)
+    if not clipsvc.ready():
+        return {"ready": False, "results": []}
+    results = lookup.apply(media_id)
+    indexed = q1("SELECT 1 AS x FROM clip_vectors WHERE media_id=?", (media_id,)) is not None
+    return {"ready": True, "indexed": indexed, "results": results}
 
 
 @router.get("/clip/status")

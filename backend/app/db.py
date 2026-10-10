@@ -133,7 +133,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -151,6 +151,7 @@ MEDIA_V5_COLUMNS = (
 )
 
 MIGRATIONS = {
+    8: ["ALTER TABLE media ADD COLUMN lookup_state INTEGER NOT NULL DEFAULT 0", "ALTER TABLE media ADD COLUMN lookup_json TEXT"],
     7: [f"ALTER TABLE media ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0"
         for col in ("is_animated", "is_timelapse", "is_cinematic", "is_spatial", "is_long_exposure")],
     6: [
@@ -282,7 +283,7 @@ def media_dict(row: sqlite3.Row) -> Dict[str, Any]:
     d["is_screenshot"] = bool(d.get("is_screenshot"))
     d["is_screen_rec"] = bool(d.get("is_screen_rec"))
     d["hidden"] = bool(d.get("hidden"))
-    for heavy in ("exif_json", "iptc_json"):
+    for heavy in ("exif_json", "iptc_json", "lookup_json"):
         d.pop(heavy, None)
     return d
 

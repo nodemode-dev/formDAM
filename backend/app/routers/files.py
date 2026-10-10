@@ -1,5 +1,6 @@
 import os
 from typing import List, Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -26,6 +27,10 @@ class CopyIn(BaseModel):
 
 class OpenIn(BaseModel):
     app: Optional[str] = None
+
+
+class LearnIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
 
 
 def _check(ids: List[int], request: Request) -> None:
@@ -77,6 +82,14 @@ def reveal(media_id: int, request: Request):
 @router.post("/media/{media_id}/open")
 def open_with(media_id: int, body: OpenIn, request: Request):
     return {"ok": filesvc.open_with(_path(media_id, request), body.app)}
+
+
+@router.post("/system/learn-more")
+def learn_more(body: LearnIn):
+    title = body.title.strip().replace(" ", "_")
+    if not title or any(c in title for c in "/?#\\"):
+        raise HTTPException(400, detail="Not a Wikipedia title")
+    return {"ok": filesvc.open_url("https://en.wikipedia.org/wiki/" + quote(title, safe="_,().'-"))}
 
 
 @router.get("/system/editors")

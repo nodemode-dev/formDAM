@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### infopanel Look Up section
+- refers-to: infopanel.createInfoPanel lookupSection, lookupCard, paint lookup patchList; types.LookupResult, MediaDetails.lookup; parity.css .lookup-*
+- kind: rationale
+- logged: zip v1.23.0 · 2026-10-10
+
+The info panel shows Look Up results above Subjects: the name, what kind of thing it is (and "near this photo's location" for a GPS landmark match), other likely names, Show All (a search for that name) & Learn More (Wikipedia in the browser). The results arrive w/ the details response, so the section paints in the same frame as the rest of the panel instead of appearing later & pushing it down; cards are keyed by name & alternatives so stepping between photos patches only what changed.
 ### editor Clean Up tab, RAW Develop, Lens Corrections & Live Photo Effect
 - refers-to: editor.ts EditState retouch points, retouchPane (Remove Last, Clear All), strokeNode, overlay pointerdown retouch branch, tab label Clean Up; RAW Develop & Lens Corrections sections; Live Photo Effect select; parity.css .ed-stroke
 - kind: rationale

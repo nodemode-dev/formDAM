@@ -1,7 +1,7 @@
 import { api } from "../../engine/api.js";
 import { formatDuration, fullStamp, humanBytes } from "../../engine/format.js";
 import { keywordState, loadKeywords, navigate, on, patched, saveMeta, state } from "../../engine/store.js";
-import type { MediaDetails } from "../../engine/types.js";
+import type { LookupResult, MediaDetails } from "../../engine/types.js";
 import { h } from "../dom.js";
 import { iconEl } from "../icons.js";
 import { patchList, setText } from "../keyed.js";
@@ -171,10 +171,26 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
   ocrCopy.addEventListener("click", () => void navigator.clipboard?.writeText(ocrText.textContent ?? "").catch(() => undefined));
   const ocrSection = h("div", { class: "info-section hidden" }, h("div", { class: "info-k" }, "Text in Photo", ocrCopy), ocrText);
 
+  const lookupList = h("div", { class: "lookup-list" });
+  const lookupSection = h("div", { class: "info-section hidden" }, h("div", { class: "info-k" }, "Look Up"), lookupList);
+  function lookupCard(r: LookupResult): HTMLElement {
+    const showAll = h("button", { class: "link-btn", type: "button" }, "Show All");
+    showAll.addEventListener("click", () => navigate(`#/search/${encodeURIComponent(r.name.toLowerCase())}`));
+    const learn = h("button", { class: "link-btn", type: "button" }, "Learn More");
+    learn.addEventListener("click", () => void api("/system/learn-more", { method: "POST", body: JSON.stringify({ title: r.wiki }) }).catch(() => toast("Could not open the browser")));
+    const alts = (r.alternatives ?? []).join(", ");
+    return h("div", { class: "lookup-card" },
+      h("div", { class: "lookup-name" }, r.name),
+      h("div", { class: "lookup-kind" }, `${r.kind_label}${r.near ? " · near this photo's location" : ""}`),
+      alts ? h("div", { class: "lookup-alt" }, `Could also be: ${alts}`) : h("span", { class: "hidden" }),
+      h("div", { class: "row-gap" }, showAll, learn));
+  }
+
   const el = h("div", { class: "info-panel hidden" },
     stars, labels, titleIn, captionIn,
     section("Keywords", kwList, kwInput, kwData),
     section("People", peopleList),
+    lookupSection,
     section("Subjects", subjectList),
     ocrSection,
     rCaptured.wrap, rPlace.wrap, rCamera.wrap, rLens.wrap, rExposure.wrap,
@@ -218,6 +234,9 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     peopleList.parentElement!.classList.toggle("hidden", d.people.length === 0);
     subjectList.parentElement!.classList.toggle("hidden", d.subjects.length === 0);
     albumList.parentElement!.classList.toggle("hidden", (d.albums ?? []).length === 0);
+    const found = d.lookup ?? [];
+    patchList(lookupList, found, (r) => `${r.kind}:${r.name}:${(r.alternatives ?? []).join(",")}`, lookupCard);
+    lookupSection.classList.toggle("hidden", found.length === 0);
     const ocr = ((d as { ocr_text?: string | null }).ocr_text ?? "").trim();
     setText(ocrText, ocr);
     ocrSection.classList.toggle("hidden", !ocr);

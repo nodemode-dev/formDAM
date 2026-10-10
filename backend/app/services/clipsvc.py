@@ -197,6 +197,12 @@ def _store(media_id: int, vec: np.ndarray, path: str) -> None:
     pet = next((name for name, kind, _ in labels if name in PETS), None)
     if pet:
         _assign_pet(media_id, pet, vec)
+    try:
+        from . import lookup
+
+        lookup.apply(media_id, vec)
+    except Exception:
+        pass
     ex("UPDATE media SET clip_state=1 WHERE id=?", (media_id,))
 
 

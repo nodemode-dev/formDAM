@@ -109,6 +109,15 @@ def open_with(path: str, app: Optional[str] = None) -> bool:
     return _run([app, path] if app else ["xdg-open", path])
 
 
+def open_url(url: str) -> bool:
+    if sys.platform == "darwin":
+        return _run(["open", url])
+    if os.name == "nt":
+        os.startfile(url)  # type: ignore[attr-defined]
+        return True
+    return _run(["xdg-open", url])
+
+
 def editor_apps() -> List[str]:
     if sys.platform != "darwin":
         return []
