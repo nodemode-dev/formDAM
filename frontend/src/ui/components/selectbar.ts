@@ -13,6 +13,8 @@ export interface ContextAction {
   handler: (ids: number[]) => void;
 }
 
+export const selectbarExtras: ContextAction[] = [];
+
 let contextActions: ContextAction[] = [];
 let renderContext: () => void = () => undefined;
 
@@ -40,7 +42,12 @@ export function mountSelectBar(host: HTMLElement): void {
   const hideBtn = h("button", { class: "btn", type: "button" }, iconEl("eyeOff"), "Hide");
   const trashBtn = h("button", { class: "btn danger", type: "button" }, iconEl("trash"), "Delete");
   const clearBtn = h("button", { class: "btn", type: "button" }, "Clear");
-  const bar = h("div", { class: "sel-bar pop-surface hidden" }, count, contextSlot, addBtn, hideBtn, trashBtn, clearBtn);
+  const extras = selectbarExtras.map((action) => {
+    const btn = h("button", { class: "btn", type: "button" }, iconEl(action.icon), action.label);
+    btn.addEventListener("click", () => action.handler([...state.selection]));
+    return btn;
+  });
+  const bar = h("div", { class: "sel-bar pop-surface hidden" }, count, contextSlot, ...extras, addBtn, hideBtn, trashBtn, clearBtn);
   host.append(bar);
 
   clearBtn.addEventListener("click", clearSelection);

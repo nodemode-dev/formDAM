@@ -1,7 +1,7 @@
 import { api, fileUrl, thumbUrl } from "../../engine/api.js";
 import { countFmt, dayKey, dayLabel, formatDuration, monthLabel } from "../../engine/format.js";
 import {
-  dropFromCaches, loadMore, on, openViewer, pageFor, periodSummary, setFavorite, setGrouping, setSelected, specFor, state, toggleSelect, trashMedia,
+  dropFromCaches, loadMore, on, openViewer, pageFor, patched, periodSummary, setFavorite, setGrouping, setSelected, specFor, state, toggleSelect, trashMedia,
 } from "../../engine/store.js";
 import type { FilterName, Media } from "../../engine/types.js";
 import { h } from "../dom.js";
@@ -290,11 +290,39 @@ export function loadThumb(img: HTMLImageElement, mediaId: number, size: number):
   observeThumb(img);
 }
 
+export const tileHooks: { ctx: Array<(item: Media) => CtxEntry[]> } = { ctx: [] };
+
+export function paintTileMeta(tile: HTMLElement, item: Media): void {
+  let meta = tile.querySelector<HTMLElement>(":scope > .tile-meta");
+  if (!meta) {
+    meta = h("div", { class: "tile-meta" });
+    tile.append(meta);
+  }
+  const rating = item.rating ?? 0;
+  const key = `${rating}|${item.label ?? ""}|${item.rejected ? 1 : 0}|${item.stack_id ?? ""}|${item.is_raw ? 1 : 0}|${item.edit_json ? 1 : 0}|${item.favorite ? 1 : 0}`;
+  if (meta.dataset.key === key) return;
+  meta.dataset.key = key;
+  const parts: HTMLElement[] = [];
+  if (rating > 0) parts.push(h("span", { class: "tile-stars", "aria-label": `${rating} stars` }, "★".repeat(rating)));
+  if (item.label) parts.push(h("span", { class: `tile-label l-${item.label}`, title: item.label }));
+  if (item.is_raw) parts.push(h("span", { class: "tile-chip" }, "RAW"));
+  if (item.edit_json) parts.push(h("span", { class: "tile-chip" }, iconEl("wand")));
+  if (item.stack_id) parts.push(h("span", { class: "tile-chip", title: "Stack" }, iconEl("stack")));
+  meta.replaceChildren(...parts);
+  tile.classList.toggle("rejected", Boolean(item.rejected));
+  const badges = tile.querySelector<HTMLElement>(":scope > .tile-badges");
+  if (badges) {
+    const heart = badges.querySelector(".fav-mark");
+    if (item.favorite && !heart) badges.prepend(h("span", { class: "fav-mark" }, iconEl("heartFill")));
+    if (!item.favorite && heart) heart.remove();
+  }
+}
+
 export function tileFor(item: Media, context: () => number[], selectable = true, extraCtx?: (item: Media) => CtxEntry[]): HTMLElement {
   const img = h("img", { alt: item.name, loading: "lazy", draggable: false }) as HTMLImageElement;
   loadThumb(img, item.id, 384);
   const badges = h("div", { class: "tile-badges" });
-  if (item.favorite) badges.append(iconEl("heartFill"));
+  if (item.favorite) badges.append(h("span", { class: "fav-mark" }, iconEl("heartFill")));
   if (item.kind === "video") badges.append(iconEl("video"));
   if (item.kind === "image" && item.live_video_id) badges.append(h("span", { class: "live-chip" }, "LIVE"));
   const parts: HTMLElement[] = [img, badges];
@@ -302,6 +330,7 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
     parts.push(h("span", { class: "tile-duration" }, formatDuration(item.duration)));
   }
   const tile = h("div", { class: "tile", "data-id": String(item.id) }, ...parts);
+  paintTileMeta(tile, item);
   tile.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -311,6 +340,7 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
       { label: live.favorite ? "Unfavorite" : "Favorite", icon: "heart", action: () => void setFavorite(item.id, !live.favorite) },
       { label: "Add to Album...", icon: "albums", action: () => addToAlbumFlow([item.id]) },
       ...(extraCtx ? extraCtx(item) : []),
+      ...tileHooks.ctx.flatMap((fn) => fn(live)),
       { label: "Download", icon: "download", action: () => { const a = h("a", { href: fileUrl(item.id), download: live.name }); a.click(); } },
       "sep",
       { label: "Hide", icon: "eyeOff", action: async () => { await api(`/media/${item.id}/hide`, { method: "POST" }); dropFromCaches(item.id); toast("Hidden"); } },
@@ -526,6 +556,16 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
     }),
     on("selection", () => {
       rendered.forEach((node, id) => node.classList.toggle("selected", state.selection.has(id)));
+    }),
+    on("media", () => {
+      if (!monthMode) void loadMore(filter);
+    }),
+    on("meta", () => {
+      for (const id of patched.ids) {
+        const node = rendered.get(id);
+        const item = state.byId.get(id);
+        if (node && item) paintTileMeta(node, item);
+      }
     }),
   ];
 

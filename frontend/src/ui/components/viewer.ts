@@ -1,7 +1,7 @@
 import { api, fileUrl, stillUrl, thumbUrl } from "../../engine/api.js";
-import { countFmt, formatDuration, fullStamp, humanBytes, timeLabel, dayLabel } from "../../engine/format.js";
-import { closeViewer, dropFromCaches, markViewed, on, setFavorite, state, stepViewer, trashMedia } from "../../engine/store.js";
-import type { Media } from "../../engine/types.js";
+import { countFmt, timeLabel, dayLabel } from "../../engine/format.js";
+import { closeViewer, dropFromCaches, markViewed, on, patched, saveMeta, setFavorite, state, stepViewer, trashMedia } from "../../engine/store.js";
+import { createInfoPanel, type InfoPanel } from "./infopanel.js";
 import { h } from "../dom.js";
 import { iconEl, iconInto } from "../icons.js";
 import { toast } from "../toast.js";
@@ -24,6 +24,43 @@ function showFilmstrip(temporary: boolean): void {
   }
 }
 let filmStep: (idx: number) => void = () => undefined;
+
+export const viewerHooks: {
+  editLocation?: (id: number) => void;
+  editDate?: (id: number) => void;
+  onShow?: (id: number) => void;
+  toolbar: Array<(id: () => number | null) => HTMLElement>;
+  keys: Array<(event: KeyboardEvent, id: number) => boolean>;
+} = { toolbar: [], keys: [] };
+
+const LABEL_KEYS: Record<string, string> = { "6": "red", "7": "yellow", "8": "green", "9": "blue" };
+
+export function ratingKey(event: KeyboardEvent, ids: number[]): boolean {
+  if (event.metaKey || event.ctrlKey || event.altKey || ids.length === 0) return false;
+  const target = event.target as HTMLElement | null;
+  if (target && target.closest("input, textarea, select, [contenteditable=\"true\"]")) return false;
+  if (/^[0-5]$/.test(event.key)) {
+    void saveMeta(ids, { rating: Number(event.key) });
+    return true;
+  }
+  if (event.key in LABEL_KEYS) {
+    const first = state.byId.get(ids[0]);
+    const label = LABEL_KEYS[event.key];
+    void saveMeta(ids, { label: first?.label === label ? "" : label });
+    return true;
+  }
+  if (event.key === "x" || event.key === "X") {
+    const first = state.byId.get(ids[0]);
+    void saveMeta(ids, { rejected: !first?.rejected });
+    return true;
+  }
+  if (event.key === ".") {
+    const first = state.byId.get(ids[0]);
+    void saveMeta(ids, { favorite: !first?.favorite });
+    return true;
+  }
+  return false;
+}
 
 const FILM_STRIDE = 58;
 const FILM_PAD = 44;
@@ -146,6 +183,7 @@ export function mountViewer(host: HTMLElement): void {
   let liveBtn: HTMLButtonElement;
   let stripSlot: HTMLElement;
   let infoPanel: HTMLElement;
+  let info: InfoPanel;
   let frontIsA = true;
   let mediaSeq = 0;
   let zoomLayer: HTMLElement;
@@ -171,31 +209,6 @@ export function mountViewer(host: HTMLElement): void {
   function currentId(): number | null {
     if (!state.viewer) return null;
     return state.viewer.ids[state.viewer.index] ?? null;
-  }
-
-  async function fetchMeta(id: number): Promise<Media> {
-    const cached = state.byId.get(id);
-    if (cached && cached.albums) return cached;
-    const full = await api<Media>(`/media/${id}`);
-    state.byId.set(id, full);
-    return full;
-  }
-
-  function buildInfo(item: Media): HTMLElement[] {
-    const rows: Array<[string, string]> = [
-      ["Filename", item.name],
-      ["Captured", fullStamp(item.created_ts)],
-      ["Kind", item.kind === "video" ? "Video" : item.live_video_id ? "Live Photo" : "Photo"],
-      ["Dimensions", item.width && item.height ? `${item.width} x ${item.height}` : "Unknown"],
-      ["Size", humanBytes(item.size)],
-    ];
-    if (item.duration) rows.push(["Duration", formatDuration(item.duration)]);
-    if (item.albums && item.albums.length) rows.push(["Albums", item.albums.map((a) => a.name).join(", ")]);
-    if (item.is_screenshot) rows.push(["Category", "Screenshot"]);
-    if (item.is_screen_rec) rows.push(["Category", "Screen Recording"]);
-    return rows.map(([k, v]) =>
-      h("div", { class: "info-row" }, h("span", { class: "info-k" }, k), h("span", { class: "info-v" }, v)),
-    );
   }
 
   function dropCurrentAndContinue(id: number): void {
@@ -325,11 +338,7 @@ export function mountViewer(host: HTMLElement): void {
       infoBtn.classList.toggle("active", infoOpen);
       infoPanel.classList.toggle("hidden", !infoOpen);
       const id = currentId();
-      if (infoOpen && id !== null) {
-        void fetchMeta(id).then((full) => {
-          if (currentId() === id) infoPanel.replaceChildren(...buildInfo(full));
-        });
-      }
+      if (infoOpen && id !== null) info.show(id);
     });
 
     downloadLink = h("a", { class: "icon-btn", href: "#", "aria-label": "Download" }, iconEl("download")) as HTMLAnchorElement;
@@ -359,7 +368,9 @@ export function mountViewer(host: HTMLElement): void {
 
     vDate = h("div", { class: "v-date" }, "");
     vPos = h("div", { class: "v-pos" }, "");
-    infoPanel = h("div", { class: `info-panel${infoOpen ? "" : " hidden"}` });
+    info = createInfoPanel((id) => viewerHooks.editLocation?.(id), (id) => viewerHooks.editDate?.(id));
+    infoPanel = info.el;
+    infoPanel.classList.toggle("hidden", !infoOpen);
     stripSlot = h("div", { class: "strip-slot" });
 
     const top = h("div", { class: "viewer-top" },
@@ -458,11 +469,8 @@ export function mountViewer(host: HTMLElement): void {
     syncFilmstrip(state.viewer.index);
 
     void markViewed(id);
-    if (infoOpen) {
-      void fetchMeta(id).then((full) => {
-        if (currentId() === id) infoPanel.replaceChildren(...buildInfo(full));
-      });
-    }
+    if (infoOpen) info.show(id);
+    viewerHooks.onShow?.(id);
   }
 
   filmStep = (idx: number) => {
@@ -499,10 +507,17 @@ export function mountViewer(host: HTMLElement): void {
 
   window.addEventListener("keydown", (event) => {
     if (!state.viewer) return;
+    const shown = currentId();
+    if (shown !== null && viewerHooks.keys.some((fn) => fn(event, shown))) return;
     if (event.key === "Escape") closeViewer();
     if (event.key === "ArrowLeft") stepViewer(-1);
     if (event.key === "ArrowRight") stepViewer(1);
+    if (shown !== null && ratingKey(event, [shown])) event.preventDefault();
   });
 
   on("viewer", render);
+  on("meta", () => {
+    const id = currentId();
+    if (root && id !== null && patched.ids.includes(id)) patchFav(id);
+  });
 }

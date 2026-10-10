@@ -1,7 +1,9 @@
 import { api } from "../../engine/api.js";
 import { countFmt } from "../../engine/format.js";
+import { prefGet, prefSet } from "../../engine/prefstore.js";
 import { navigate, on, state } from "../../engine/store.js";
 import { h } from "../dom.js";
+import { patchList } from "../keyed.js";
 import { iconEl, type IconName } from "../icons.js";
 import { openSettings } from "./settings.js";
 
@@ -28,8 +30,32 @@ const UTILITIES: RowSpec[] = [
   { label: "Recently Viewed", icon: "eye", hash: "#/f/recently_viewed" },
   { label: "Screen Recordings", icon: "stage", hash: "#/f/screenrecs" },
   { label: "Duplicates", icon: "dupes", hash: "#/dedup" },
+  { label: "Imports", icon: "save", hash: "#/imports" },
+  { label: "Keywords", icon: "tag", hash: "#/keywords" },
   { label: "Import", icon: "upload", hash: "#/import" },
 ];
+
+export interface PinEntry {
+  label: string;
+  hash: string;
+  icon: IconName;
+}
+
+export function userPins(): PinEntry[] {
+  return prefGet<PinEntry[]>("pins", []);
+}
+
+export function isPinned(hash: string): boolean {
+  return userPins().some((p) => p.hash === hash);
+}
+
+export function togglePin(entry: PinEntry): boolean {
+  const pins = userPins();
+  const next = pins.some((p) => p.hash === entry.hash) ? pins.filter((p) => p.hash !== entry.hash) : [...pins, entry];
+  prefSet("pins", next);
+  window.dispatchEvent(new CustomEvent("dam-pins"));
+  return next.some((p) => p.hash === entry.hash);
+}
 
 function row(spec: RowSpec): HTMLElement {
   const tail = spec.locked ? h("span", { class: "row-tail" }, iconEl("lock")) : h("span", { class: "row-tail" });
@@ -46,6 +72,23 @@ function row(spec: RowSpec): HTMLElement {
 
 export function mountSidebar(host: HTMLElement): void {
   const albumsWrap = h("div", { class: "side-section" });
+  const pinsWrap = h("div", { class: "side-pins" });
+  const renderPins = () => {
+    patchList(pinsWrap, userPins(), (p) => p.hash, (p) => {
+      const node = row({ label: p.label, icon: p.icon, hash: p.hash });
+      node.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        togglePin(p);
+      });
+      return node;
+    });
+  };
+  renderPins();
+  window.addEventListener("dam-pins", () => {
+    renderPins();
+    highlight();
+  });
   const version = h("span", { class: "foot-version" }, "");
   const gearBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Settings" }, iconEl("gear"));
   gearBtn.addEventListener("click", openSettings);
@@ -60,7 +103,7 @@ export function mountSidebar(host: HTMLElement): void {
     h("div", { class: "side-brand" }, h("img", { class: "brand-mark", src: "/DAM-icon.png", alt: "DAM" }), h("span", {}, "DAM")),
     row({ label: "Library", icon: "grid", hash: "#/library" }),
     row({ label: "Collections", icon: "shapes", hash: "#/collections" }),
-    h("div", { class: "side-section" }, h("p", { class: "side-title" }, "Pinned"), ...PINNED.map(row)),
+    h("div", { class: "side-section" }, h("p", { class: "side-title" }, "Pinned"), ...PINNED.map(row), pinsWrap),
     albumsWrap,
     h("div", { class: "side-section" }, h("p", { class: "side-title" }, "Utilities"), ...UTILITIES.map(row)),
     foot,

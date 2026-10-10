@@ -93,6 +93,16 @@ export interface Album {
   count: number;
   cover_media_id: number | null;
   items?: Media[];
+  folder_id?: number | null;
+  is_smart?: boolean;
+  rules?: { rules: Array<Record<string, unknown>>; match?: "all" | "any"; sort?: string };
+}
+
+export interface AlbumFolder {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  position: number;
 }
 
 export interface Person {

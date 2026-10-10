@@ -43,10 +43,22 @@ def _require_album_access(album, request: Request) -> None:
 
 
 def _album_payload(album, count: int):
-    return {
+    keys = album.keys()
+    rules = album["rules_json"] if "rules_json" in keys else None
+    payload = {
         "id": album["id"], "name": album["name"], "is_private": bool(album["is_private"]),
         "count": count, "cover_media_id": album["cover_media_id"], "created_ts": album["created_ts"],
+        "folder_id": album["folder_id"] if "folder_id" in keys else None,
+        "is_smart": bool(rules),
     }
+    if rules:
+        from ..services import query
+        spec = query.parse_spec(rules)
+        payload["rules"] = spec
+        payload["count"] = query.count(spec)
+        top = query.ids(spec, limit=1)
+        payload["cover_media_id"] = top[0] if top else None
+    return payload
 
 
 @router.get("/albums")
@@ -98,6 +110,13 @@ def unlock_album(album_id: int, body: UnlockIn):
 def album_detail(album_id: int, request: Request):
     album = _album_or_404(album_id)
     _require_album_access(album, request)
+    if album["rules_json"]:
+        from ..services import query
+        spec = query.parse_spec(album["rules_json"])
+        rows = query.page(spec, limit=5000)["rows"]
+        payload = _album_payload(album, len(rows))
+        payload["items"] = [{k: v for k, v in media_dict(r).items() if k != "_sortv"} for r in rows]
+        return payload
     rows = q(
         """SELECT m.* FROM album_items ai JOIN media m ON m.id=ai.media_id
            WHERE ai.album_id=? AND m.trashed_ts IS NULL AND m.hidden=0 ORDER BY ai.position, ai.added_ts""",
@@ -123,6 +142,8 @@ def _refresh_private_flag(media_id: int) -> None:
 def add_items(album_id: int, body: ItemsIn, request: Request):
     album = _album_or_404(album_id)
     _require_album_access(album, request)
+    if album["rules_json"]:
+        raise HTTPException(409, detail="Smart albums fill themselves from their rules")
     added = 0
     for media_id in body.media_ids:
         if q1("SELECT id FROM media WHERE id=? AND trashed_ts IS NULL", (media_id,)) is None:

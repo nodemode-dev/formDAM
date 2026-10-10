@@ -3,10 +3,11 @@ import { api } from "./api.js";
 import type {
   Album, DupSet, FilterName, JobState, LibrarySummary, Media, MediaPage, PeopleStatus, PeriodSummary, Person,
 } from "./types.js";
+export type { Media } from "./types.js";
 
 export type Topic =
   | "route" | "page" | "summary" | "albums" | "people" | "peopleStatus"
-  | "trash" | "dedup" | "viewer" | "selection" | "zoom" | "grouping" | "job" | "media";
+  | "trash" | "dedup" | "viewer" | "selection" | "zoom" | "grouping" | "job" | "media" | "meta" | "keywords";
 
 type Listener = () => void;
 
@@ -233,6 +234,50 @@ export function specFor(filter: FilterName): QuerySpec {
   const rules = [...(base.rules ?? []), ...quickRules()];
   const sort = base.sort && state.sort === "newest" ? base.sort : state.sort;
   return { ...base, rules, sort };
+}
+
+export const patched: { ids: number[] } = { ids: [] };
+
+export function patchMedia(ids: number[], fields: Partial<Media>): void {
+  for (const id of ids) {
+    const item = state.byId.get(id);
+    if (item) Object.assign(item, fields);
+  }
+  patched.ids = ids;
+  emit("meta");
+}
+
+export async function saveMeta(ids: number[], fields: Record<string, unknown>): Promise<void> {
+  if (ids.length === 1) {
+    await api(`/media/${ids[0]}/meta`, { method: "PATCH", body: JSON.stringify(fields) });
+  } else {
+    await api("/media/batch/meta", { method: "POST", body: JSON.stringify({ ids, ...fields }) });
+  }
+  const local: Record<string, unknown> = { ...fields };
+  if ("rejected" in local) local.rejected = local.rejected ? 1 : 0;
+  if ("label" in local) local.label = (local.label as string) || null;
+  patchMedia(ids, local as Partial<Media>);
+}
+
+export interface KeywordRow {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  shortcut: string | null;
+  count: number;
+}
+
+export const keywordState = { list: [] as KeywordRow[], loaded: false };
+
+export async function loadKeywords(): Promise<KeywordRow[]> {
+  keywordState.list = (await api<{ keywords: KeywordRow[] }>("/keywords")).keywords;
+  keywordState.loaded = true;
+  emit("keywords");
+  return keywordState.list;
+}
+
+export function emitTopic(topic: Topic): void {
+  emit(topic);
 }
 
 export function setQuickFilter(patch: Partial<typeof state.quick>): void {

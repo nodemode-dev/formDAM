@@ -11,6 +11,11 @@ import { iconEl } from "../icons.js";
 import { openModal, textField } from "../modal.js";
 import { toast } from "../toast.js";
 import { bindSelectionClasses, loadThumb, tileFor } from "./grid.js";
+import type { AlbumFolder } from "../../engine/types.js";
+import { patchList, setText } from "../keyed.js";
+import { promptText } from "../prompt.js";
+import { loadFolders, moveAlbumFlow, newFolderFlow, smartAlbumFlow } from "./organize.js";
+import { isPinned, togglePin } from "./sidebar.js";
 
 export function unlockAlbumFlow(album: Album): Promise<boolean> {
   return new Promise((resolve) => {
@@ -83,10 +88,55 @@ export function createAlbumFlow(): void {
   nameInput.focus();
 }
 
-export function mountAlbumsPage(host: HTMLElement): () => void {
+export function mountAlbumsPage(host: HTMLElement, folderId: number | null = null): () => void {
   const grid = h("div", { class: "cards-grid" });
+  const folderGrid = h("div", { class: "cards-grid folder-grid" });
   const newBtn = h("button", { class: "btn primary", type: "button" }, iconEl("plus"), "New Album");
   newBtn.addEventListener("click", createAlbumFlow);
+  const smartBtn = h("button", { class: "btn", type: "button" }, iconEl("smart"), "New Smart Album");
+  smartBtn.addEventListener("click", () => smartAlbumFlow());
+  const folderBtn = h("button", { class: "btn", type: "button" }, iconEl("folderPlus"), "New Folder");
+  folderBtn.addEventListener("click", () => void newFolderFlow(folderId));
+  let folders: AlbumFolder[] = [];
+  const renderFolders = () => {
+    const here = folders.filter((f) => (f.parent_id ?? null) === folderId);
+    patchList(folderGrid, here, (f) => String(f.id), (f) => {
+      const card = h("button", { class: "count-card glass-panel", type: "button" }, iconEl("folder"),
+        h("span", { class: "card-label" }, f.name), h("span", { class: "card-count" }, ""), h("span", { class: "row-tail" }, iconEl("chevron")));
+      card.addEventListener("click", () => navigate(`#/albums/${f.id}`));
+      card.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openContextMenu(event.clientX, event.clientY, [
+          { label: "Rename...", icon: "type", action: async () => {
+            const name = await promptText("Rename folder", f.name);
+            if (name && name.trim()) {
+              await api(`/album-folders/${f.id}`, { method: "PATCH", body: JSON.stringify({ name: name.trim() }) });
+              void reloadFolders();
+            }
+          } },
+          { label: "New Folder Inside", icon: "folderPlus", action: () => void newFolderFlow(f.id).then(reloadFolders) },
+          "sep",
+          { label: "Delete Folder", icon: "trash", danger: true, action: async () => {
+            await api(`/album-folders/${f.id}`, { method: "DELETE" });
+            await loadAlbums();
+            void reloadFolders();
+          } },
+        ]);
+      });
+      return card;
+    }, (node, f) => setText(node.querySelector(".card-label") as HTMLElement, f.name));
+    const counts = new Map<number, number>();
+    for (const a of state.albums) if (a.folder_id) counts.set(a.folder_id, (counts.get(a.folder_id) ?? 0) + 1);
+    for (const node of Array.from(folderGrid.children) as HTMLElement[]) {
+      setText(node.querySelector(".card-count") as HTMLElement, countFmt(counts.get(Number(node.dataset.key)) ?? 0));
+    }
+  };
+  const reloadFolders = async () => {
+    folders = await loadFolders();
+    renderFolders();
+  };
+  void reloadFolders();
   let collapsed = prefGet<boolean>("albumsPage.collapsed", false);
   const collapseBtn = h("button", { class: `icon-btn collapse-btn${collapsed ? " closed" : ""}`, type: "button", "aria-label": "Collapse albums" }, iconEl("chevron"));
   collapseBtn.addEventListener("click", () => {
@@ -99,17 +149,19 @@ export function mountAlbumsPage(host: HTMLElement): () => void {
   const pad = h(
     "div",
     { class: "view-pad" },
-    h("div", { class: "section-head" }, collapseBtn, h("h2", {}, "Albums"), h("span", { class: "head-spacer" }), newBtn),
+    h("div", { class: "section-head" }, collapseBtn, h("h2", {}, "Albums"), h("span", { class: "head-spacer" }), folderBtn, smartBtn, newBtn),
+    folderGrid,
     grid,
   );
   host.append(pad);
 
   function render(): void {
-    const cards = state.albums.map((album) => {
+    renderFolders();
+    const cards = state.albums.filter((album) => (album.folder_id ?? null) === folderId).map((album) => {
       const card = h(
         "button",
         { class: "count-card glass-panel", type: "button" },
-        iconEl(album.is_private ? "lock" : "albums"),
+        iconEl(album.is_private ? "lock" : album.is_smart ? "smart" : "albums"),
         h("span", { class: "card-label" }, album.name),
         h("span", { class: "card-count" }, countFmt(album.count)),
         h("span", { class: "row-tail" }, iconEl("chevron")),
@@ -136,6 +188,11 @@ export function mountAlbumsPage(host: HTMLElement): () => void {
             });
             modal.body.append(wrap, h("div", { class: "modal-actions" }, go));
             input.focus();
+          } },
+          ...(album.is_smart ? [{ label: "Edit Rules...", icon: "smart" as const, action: () => smartAlbumFlow(album) }] : []),
+          { label: "Move to Folder...", icon: "folder", action: () => void moveAlbumFlow(album.id) },
+          { label: isPinned(`#/album/${album.id}`) ? "Unpin from Sidebar" : "Pin to Sidebar", icon: "pin", action: () => {
+            togglePin({ label: album.name, hash: `#/album/${album.id}`, icon: album.is_smart ? "smart" : "albums" });
           } },
           "sep",
           { label: "Delete Album...", icon: "trash", danger: true, action: () => {

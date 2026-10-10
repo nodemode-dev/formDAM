@@ -3,8 +3,11 @@ import { countFmt, dayLabel } from "../../engine/format.js";
 import { loadAlbums, loadPeople, navigate, on, pageFor, loadMore, refreshSummary, state } from "../../engine/store.js";
 import { h } from "../dom.js";
 import { iconEl, type IconName } from "../icons.js";
+import type { QuerySpec } from "../../engine/store.js";
 import { createAlbumFlow } from "./albums.js";
 import { loadImage, loadThumb } from "./grid.js";
+import { specHash } from "./organize.js";
+import { mediaTypeCards } from "./pages.js";
 
 function countCard(label: string, icon: IconName, key: string, hash: string, locked = false): HTMLElement {
   const count = h("span", { class: "card-count" }, "");
@@ -35,17 +38,17 @@ export function mountCollections(host: HTMLElement): () => void {
   const recentStrip = h("div", { class: "strip" });
   const peopleStrip = h("div", { class: "strip" });
   const albumsStrip = h("div", { class: "strip" });
-  const mediaCards = h("div", { class: "cards-grid" },
-    countCard("Videos", "video", "videos", "#/f/videos"),
-    countCard("Screenshots", "screenshot", "screenshots", "#/f/screenshots"),
-    countCard("Screen Recordings", "stage", "screenrecs", "#/f/screenrecs"),
-    countCard("Favorites", "heart", "favorites", "#/f/favorites"),
-  );
+  const mediaCards = h("div", { class: "cards-grid" });
+  const disposeTypes = mediaTypeCards(mediaCards);
   const utilCards = h("div", { class: "cards-grid" },
+    countCard("Favorites", "heart", "favorites", "#/f/favorites"),
     countCard("Recently Deleted", "trash", "trash", "#/trash", true),
     countCard("Hidden", "eyeOff", "hidden", "#/hidden", true),
     countCard("Recently Viewed", "eye", "recently_viewed", "#/f/recently_viewed"),
     countCard("Recently Saved", "save", "total", "#/f/recently_saved"),
+    countCard("Recently Edited", "wand", "edited", specHash({ rules: [{ field: "flag", value: "edited" }], sort: "edited", title: "Recently Edited" } as QuerySpec)),
+    countCard("Imports", "upload", "imports", "#/imports"),
+    countCard("Keywords", "tag", "keywords", "#/keywords"),
     countCard("Duplicates", "dupes", "dup_sets", "#/dedup"),
   );
   const newAlbumBtn = h("button", { class: "btn", type: "button" }, iconEl("plus"), "Create");
@@ -251,5 +254,8 @@ export function mountCollections(host: HTMLElement): () => void {
   void loadMore("all");
   void loadPeople();
   void loadAlbums();
-  return () => offs.forEach((off) => off());
+  return () => {
+    disposeTypes();
+    offs.forEach((off) => off());
+  };
 }

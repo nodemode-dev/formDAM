@@ -1,5 +1,7 @@
 import { countFmt } from "../../engine/format.js";
-import { on, refreshSummary, setGrouping, setSort, state } from "../../engine/store.js";
+import { on, quickRules, refreshSummary, setGrouping, setSort, state } from "../../engine/store.js";
+import { openQuickFilters } from "./organize.js";
+import { isPinned, togglePin } from "./sidebar.js";
 import type { FilterName } from "../../engine/types.js";
 import { h } from "../dom.js";
 import { iconEl, type IconName } from "../icons.js";
@@ -20,6 +22,13 @@ const FILTER_LABELS: Record<string, string> = {
 };
 
 export function filterTitle(filter: FilterName): string {
+  if (filter.startsWith("spec:")) {
+    try {
+      return (JSON.parse(filter.slice(5)) as { title?: string }).title ?? "Results";
+    } catch {
+      return "Results";
+    }
+  }
   return FILTER_LABELS[filter] ?? "Library";
 }
 
@@ -44,6 +53,11 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
     openContextMenu(rect.left, rect.bottom + 6, [
       { label: "Newest first", icon: "sortNewest", selected: state.sort === "newest", action: () => setSort("newest") },
       { label: "Oldest first", icon: "sortOldest", selected: state.sort === "oldest", action: () => setSort("oldest") },
+      { label: "Recently added", icon: "save", selected: state.sort === "added", action: () => setSort("added") },
+      { label: "Name", icon: "sortName", selected: state.sort === "name", action: () => setSort("name") },
+      { label: "Largest first", icon: "sortSize", selected: state.sort === "size", action: () => setSort("size") },
+      { label: "Highest rated", icon: "star", selected: state.sort === "rating", action: () => setSort("rating") },
+      { label: "Recently edited", icon: "wand", selected: state.sort === "edited", action: () => setSort("edited") },
     ]);
   });
 
@@ -83,9 +97,23 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
   });
   const searchWrap = h("span", { class: "search-wrap" }, iconEl("search"), searchInput);
 
+  const quickBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Quick filters", title: "Filter by rating, label and more" }, iconEl("star"));
+  const paintQuick = () => quickBtn.classList.toggle("active", quickRules().length > 0);
+  quickBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openQuickFilters(quickBtn);
+  });
+  paintQuick();
+  const pinHash = location.hash;
+  const pinBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Pin to sidebar", title: "Pin to sidebar" }, iconEl("pin"));
+  pinBtn.classList.toggle("active", isPinned(pinHash));
+  pinBtn.addEventListener("click", () => {
+    const on = togglePin({ label: filterTitle(filter), hash: pinHash, icon: "pin" });
+    pinBtn.classList.toggle("active", on);
+  });
   const controls: HTMLElement[] = isLibraryRoot
-    ? [searchWrap, seg, sortBtn, zoomWrap, menuAnchor]
-    : [searchWrap, sortBtn, zoomWrap];
+    ? [searchWrap, seg, quickBtn, sortBtn, zoomWrap, menuAnchor]
+    : [searchWrap, quickBtn, sortBtn, zoomWrap, pinBtn];
 
   const topbar = h(
     "div",
@@ -123,7 +151,7 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
   }
 
   const offGrid = mountGrid(view, filter, isLibraryRoot);
-  const offs = [on("grouping", renderSeg), on("summary", renderCount)];
+  const offs = [on("grouping", renderSeg), on("summary", renderCount), on("media", paintQuick)];
   renderSeg();
   renderCount();
   void refreshSummary();

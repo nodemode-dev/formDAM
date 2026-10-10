@@ -58,4 +58,15 @@
   --header-h: 35px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --dur: 180ms;
+  --z-base: 0;
+  --z-content: 1;
+  --z-raised: 5;
+  --z-sticky: 20;
+  --z-sidebar: 25;
+  --z-popover: 90;
+  --z-viewer: 100;
+  --z-editor: 120;
+  --z-modal: 200;
+  --z-menu: 250;
+  --z-toast: 300;
 }

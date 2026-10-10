@@ -1,4 +1,6 @@
-import { hydrateStatePrefs, loadAlbums, on, refreshSummary, state, syncRoute } from "./engine/store.js";
+import { hydrateStatePrefs, loadAlbums, on, refreshSummary, specKey, state, syncRoute } from "./engine/store.js";
+import { registerOrganize } from "./ui/components/organize.js";
+import { mountImportsPage, mountKeywordsPage } from "./ui/components/pages.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -109,6 +111,7 @@ const content = h("main", { class: "content" });
 mountSidebar(app);
 app.append(content);
 mountViewer(document.body);
+registerOrganize();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;
@@ -164,7 +167,7 @@ function render(): void {
   } else if (view === "collections") {
     teardown = mountCollections(plainShell("Collections"));
   } else if (view === "albums") {
-    teardown = mountAlbumsPage(plainShell("Albums"));
+    teardown = mountAlbumsPage(plainShell("Albums"), param ? Number(param) : null);
   } else if (view === "album") {
     teardown = mountAlbumDetail(plainShell("Album"), Number(param));
   } else if (view === "people") {
@@ -181,6 +184,18 @@ function render(): void {
     teardown = mountDedupPage(plainShell("Duplicates"));
   } else if (view === "import") {
     teardown = mountImportPage(plainShell("Import"));
+  } else if (view === "q") {
+    let key: FilterName = "all";
+    try {
+      key = specKey(JSON.parse(param));
+    } catch {
+      key = "all";
+    }
+    teardown = mountLibrary(content, key, false);
+  } else if (view === "imports") {
+    teardown = mountImportsPage(plainShell("Imports"));
+  } else if (view === "keywords") {
+    teardown = mountKeywordsPage(plainShell("Keywords"));
   } else {
     const shell = plainShell("Library");
     teardown = mountGrid(shell, "all", true);
