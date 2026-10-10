@@ -29,6 +29,7 @@ export const viewerHooks: {
   editLocation?: (id: number) => void;
   editDate?: (id: number) => void;
   onShow?: (id: number) => void;
+  refreshInfo?: () => void;
   toolbar: Array<(id: () => number | null) => HTMLElement>;
   keys: Array<(event: KeyboardEvent, id: number) => boolean>;
 } = { toolbar: [], keys: [] };
@@ -369,6 +370,8 @@ export function mountViewer(host: HTMLElement): void {
     vDate = h("div", { class: "v-date" }, "");
     vPos = h("div", { class: "v-pos" }, "");
     info = createInfoPanel((id) => viewerHooks.editLocation?.(id), (id) => viewerHooks.editDate?.(id));
+    const panel = info;
+    viewerHooks.refreshInfo = () => panel.refresh();
     infoPanel = info.el;
     infoPanel.classList.toggle("hidden", !infoOpen);
     stripSlot = h("div", { class: "strip-slot" });

@@ -8,6 +8,7 @@ import { createAlbumFlow } from "./albums.js";
 import { loadImage, loadThumb } from "./grid.js";
 import { specHash } from "./organize.js";
 import { mediaTypeCards } from "./pages.js";
+import { placesStrip, tripsStrip } from "./places.js";
 
 function countCard(label: string, icon: IconName, key: string, hash: string, locked = false): HTMLElement {
   const count = h("span", { class: "card-count" }, "");
@@ -40,6 +41,10 @@ export function mountCollections(host: HTMLElement): () => void {
   const albumsStrip = h("div", { class: "strip" });
   const mediaCards = h("div", { class: "cards-grid" });
   const disposeTypes = mediaTypeCards(mediaCards);
+  const placesBody = h("div", { class: "strip-reserve" });
+  const tripsBody = h("div", { class: "strip-reserve" });
+  const disposePlaces = placesStrip(placesBody);
+  const disposeTrips = tripsStrip(tripsBody);
   const utilCards = h("div", { class: "cards-grid" },
     countCard("Favorites", "heart", "favorites", "#/f/favorites"),
     countCard("Recently Deleted", "trash", "trash", "#/trash", true),
@@ -72,7 +77,16 @@ export function mountCollections(host: HTMLElement): () => void {
     { key: "media_types", title: "Media Types", extras: [], body: mediaCards },
     { key: "utilities", title: "Utilities", extras: [], body: utilCards },
     { key: "memories", title: "Memories", extras: [], body: h("div", { class: "empty-center" }, emptyState("sparkle", "No Memories Yet", "Automatic Memories are on the roadmap; nothing is generated in this build.")) },
-    { key: "trips", title: "Trips", extras: [], body: h("div", { class: "empty-center" }, emptyState("map", "No Trips Available", "Trip detection needs location data support, planned for a later build.")) },
+    {
+      key: "places", title: "Places",
+      extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/places") }, iconEl("map"), "Map")],
+      body: placesBody,
+    },
+    {
+      key: "trips", title: "Trips",
+      extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/trips") }, "See All")],
+      body: tripsBody,
+    },
     { key: "shared", title: "Shared Albums", extras: [], body: h("div", { class: "empty-center" }, emptyState("people", "Sharing Not Built Yet", "DAM is local-first today; shared albums arrive w/ sync support.")) },
   ];
 
@@ -256,6 +270,8 @@ export function mountCollections(host: HTMLElement): () => void {
   void loadAlbums();
   return () => {
     disposeTypes();
+    disposePlaces();
+    disposeTrips();
     offs.forEach((off) => off());
   };
 }

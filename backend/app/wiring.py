@@ -6,6 +6,7 @@ def connect() -> None:
     if _connected:
         return
     _connected = True
-    from .services import metasvc, stacksvc
+    from .services import geosvc, metasvc, stacksvc
 
     metasvc.on_applied(stacksvc.on_metadata)
+    metasvc.on_applied(geosvc.on_metadata)

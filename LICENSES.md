@@ -22,6 +22,11 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | cryptography | Apache-2.0 OR BSD-3-Clause | vault encryption at rest (X25519, HKDF-SHA256, AES-256-GCM); the wheel bundles OpenSSL 3 (Apache-2.0). Dual license, both options permissive (same class as tauri's MIT OR Apache-2.0): flagged for owner review per policy |
 | opencv-python-headless | Apache-2.0 | YuNet/SFace inference |
 | pillow-heif | BSD-3-Clause (bindings) | bundles libheif (LGPL-3.0) & codecs as dynamic libs; acceptable under LGPL separability (dynamic link, replaceable); revisit before any store distribution |
+| exifread | BSD-3-Clause | EXIF, GPS & Apple maker-note read (metasvc) |
+| rawpy | MIT | RAW decode; the wheel bundles LibRaw (LGPL-2.1 OR CDDL-1.0) as a dynamic lib, same separability reasoning as libheif |
+| GeoNames cities5000, admin1CodesASCII, countryInfo | CC BY 4.0 | backend/app/data/places.json.gz, reduced to name, coordinates, country, admin1 & population; offline reverse geocoding & place search. Attribution: "Place data from GeoNames (geonames.org), CC BY 4.0", shown under the Places page and in README |
+| Natural Earth admin-0 countries 1:50m | Public domain | backend/app/data/countries.json.gz, simplified outlines for the Places map & country fallback |
+| FormLit (nodemode-ai) | Apache-2.0 | rename token engine adapted into backend/app/services/renamesvc.py, with attribution in its HASHOUT entry; NOTICE obligations satisfied by this row |
 | pyobjc-core, pyobjc-framework-Cocoa, pyobjc-framework-ImageCaptureCore, pyobjc-framework-Quartz | MIT | Python bridge to Apple's ImageCaptureCore (the Photos.app device-import framework) for iPhone/iPad import + ImageIO thumbnail encode for the device browse grid; macOS only |
 | YuNet model | MIT | bundled via --add-data |
 | SFace model | Apache-2.0 | bundled via --add-data |

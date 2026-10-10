@@ -176,6 +176,10 @@ def rule_sql(rule: Dict[str, Any]) -> Tuple[str, List[Any]]:
     if field == "ids":
         ids = [int(v) for v in (value or [])][:5000] or [-1]
         return f"m.id IN ({','.join('?' * len(ids))})", ids
+    if field == "bbox" and isinstance(value, (list, tuple)) and len(value) == 4:
+        south, west, north, east = (float(v) for v in value)
+        lon_sql = "m.lon >= ? AND m.lon <= ?" if west <= east else "(m.lon >= ? OR m.lon <= ?)"
+        return (f"m.location_hidden = 0 AND m.lat >= ? AND m.lat <= ? AND {lon_sql}", [south, north, west, east])
     return "1=1", []
 
 
