@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### services/extedit.py + edit-with routes · Edit With round trip
+- refers-to: extedit.edits_dir/work_dir/external_path/_working_copy/start/status/stop/_adopt/_tick/_loop; editsvc.render_still external base; edit._base external arg, preview & auto external, revert_edits unlink, POST/GET/DELETE /media/{id}/edit-with
+- kind: rationale + replaced code
+- logged: zip v1.23.0 · 2026-10-10
+
+Edit With no longer hands the original to another app. It writes a working copy under library/edits/work (the original bytes when the photo is unedited & in a format editors save back, otherwise the current version rendered to an LZW TIFF, so in-app edits & RAW develop carry over), opens that, & a single poll thread watches the copy's mtime & size every 1.5 s. A change that holds still for two polls is adopted: the copy is decoded to prove it is a whole image, copied to library/edits/<id>-<stamp>-<n>, & the edit state becomes {"external": {file, app, ts}}, which render, preview & auto-enhance use as their base, so later in-app adjustments sit on top & Revert to Original removes both (and the file). The session keeps watching for further saves until it is stopped or 12 hours pass. Saving under a new name in the other app is not seen; the copy has to be saved in place. Vaulted & private items refuse, as before. Replaced: the menu entry called `filesvc.open_with(original, app)`, which let the other app overwrite the original.
 ### services/lookup.py + lookupdata.py + db v8 · Look Up for animals, plants & landmarks
 - refers-to: lookup.identify/apply/nearby/_within/_landmark_near/scan_job/ensure, GROUPS, NEUTRAL, TEMPLATES, GENERIC; lookupdata vocabularies & LANDMARKS; clipsvc._store lookup call; discover.ensure_lookup & GET /media/{id}/lookup; browse.details lookup & subjects filter; db MIGRATIONS[8] lookup_state, lookup_json & media_dict drop; files POST /system/learn-more, filesvc.open_url
 - kind: rationale

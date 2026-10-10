@@ -1,5 +1,6 @@
 import json
 import math
+import os
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -62,6 +63,11 @@ def render_still(media_id: int, src: Any, max_long: Optional[int]) -> Optional[I
 
     row = q1("SELECT name FROM media WHERE id=?", (media_id,))
     base = long_exposure(media_id, None if max_long is None else max_long * 2) if ops.get("effect") == "long_exposure" else None
+    if base is None and ops.get("external"):
+        from .extedit import external_path
+
+        ext = external_path(ops)
+        base = decode.open_image(ext, os.path.basename(ext), max_long=None if max_long is None else max_long * 2) if ext else None
     if base is None:
         base = decode.open_image(src, row["name"] if row else "", max_long=None if max_long is None else max_long * 2, develop=True,
                                  raw_opts=ops.get("raw") or None)

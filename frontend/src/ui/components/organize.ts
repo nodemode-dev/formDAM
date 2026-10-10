@@ -1,7 +1,7 @@
-import { api } from "../../engine/api.js";
+import { api, thumbVersions } from "../../engine/api.js";
 import { countFmt } from "../../engine/format.js";
 import {
-  clearSelection, invalidateMedia, keywordState, loadAlbums, loadKeywords, navigate, on, pollJob, quickRules,
+  clearSelection, invalidateMedia, keywordState, loadAlbums, loadKeywords, navigate, on, patchMedia, pollJob, quickRules,
   saveMeta, setQuickFilter, specKey, state, type QueryRule, type QuerySpec,
 } from "../../engine/store.js";
 import type { AlbumFolder, Media } from "../../engine/types.js";
@@ -15,7 +15,7 @@ import { toast } from "../toast.js";
 import { tileHooks } from "./grid.js";
 import { LABELS } from "./infopanel.js";
 import { selectbarExtras } from "./selectbar.js";
-import { ratingKey } from "./viewer.js";
+import { ratingKey, viewerHooks } from "./viewer.js";
 
 export function specHash(spec: QuerySpec & { title?: string }): string {
   return `#/q/${encodeURIComponent(JSON.stringify(spec))}`;
@@ -270,10 +270,45 @@ export async function copyToFlow(ids: number[]): Promise<void> {
   pollJob(res.job_id, (job) => toast(`Copied ${countFmt(job.counts.copied ?? 0)} original${(job.counts.copied ?? 0) === 1 ? "" : "s"} to ${dest}`));
 }
 
+interface EditWithStatus { active: boolean; adopted: number; app?: string; edit_json?: string | null; edited_ts?: number | null }
+
+const roundTrips = new Map<number, number>();
+
+async function startEditWith(id: number, app?: string): Promise<void> {
+  let res: EditWithStatus;
+  try {
+    res = await api<EditWithStatus>(`/media/${id}/edit-with`, { method: "POST", body: JSON.stringify(app ? { app } : {}) });
+  } catch (err) {
+    toast((err as Error).message || "Could not open the application");
+    return;
+  }
+  const label = app ?? "the default app";
+  toast(`Opened a copy in ${label}. Save it there and the change appears here.`);
+  window.clearInterval(roundTrips.get(id));
+  let seen = res.adopted;
+  const started = Date.now();
+  const timer = window.setInterval(() => {
+    void api<EditWithStatus>(`/media/${id}/edit-with`).then((s) => {
+      if (!s.active || Date.now() - started > 6 * 3600 * 1000) {
+        window.clearInterval(timer);
+        roundTrips.delete(id);
+      }
+      if (s.adopted > seen) {
+        seen = s.adopted;
+        thumbVersions.set(id, s.edited_ts ?? Date.now() / 1000);
+        patchMedia([id], { edit_json: s.edit_json, edited_ts: s.edited_ts } as Partial<Media>);
+        viewerHooks.reloadStill?.();
+        toast(`Applied the edit from ${label}. Revert to Original undoes it.`);
+      }
+    }).catch(() => undefined);
+  }, 2000);
+  roundTrips.set(id, timer);
+}
+
 export async function openWithFlow(id: number): Promise<void> {
   const apps = (await api<{ apps: string[] }>("/system/editors")).apps;
   if (apps.length === 0) {
-    await api(`/media/${id}/open`, { method: "POST", body: JSON.stringify({}) });
+    await startEditWith(id);
     return;
   }
   const modal = openModal("Edit With", 380);
@@ -285,7 +320,7 @@ export async function openWithFlow(id: number): Promise<void> {
     const btn = h("button", { class: "list-row glass-panel", type: "button" }, iconEl("external"), h("div", { class: "list-title" }, app));
     btn.addEventListener("click", async () => {
       modal.close();
-      await api(`/media/${id}/open`, { method: "POST", body: JSON.stringify({ app }) });
+      await startEditWith(id, app);
     });
     return btn;
   });

@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### organize Edit With round trip
+- refers-to: organize.startEditWith, roundTrips, openWithFlow
+- kind: rationale + replaced code
+- logged: zip v1.23.0 · 2026-10-10
+
+Edit With starts a round trip & polls its status every 2 s while the session lives; each new save from the other app bumps the thumbnail version, patches the item & reloads the viewer still, the same three steps the editor's Done uses, so the grid tile & open viewer update in place. One timer per item; starting again replaces it. Replaced: `api(/media/{id}/open)` straight on the original.
 ### infopanel Look Up section
 - refers-to: infopanel.createInfoPanel lookupSection, lookupCard, paint lookup patchList; types.LookupResult, MediaDetails.lookup; parity.css .lookup-*
 - kind: rationale

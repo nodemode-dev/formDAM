@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from ..db import ex, q1
 from ..dedup.visual import ffmpeg_path
-from ..services import cleanup, decode, editsvc, libraryfs, thumbs
+from ..services import cleanup, decode, editsvc, extedit, libraryfs, thumbs
 from .guard import ensure_visible
 from .render import clear_cached, source_of
 
@@ -44,6 +44,10 @@ class PreviewIn(BaseModel):
 class TrimIn(BaseModel):
     trim_in: Optional[float] = Field(None, ge=0)
     trim_out: Optional[float] = Field(None, ge=0)
+
+
+class EditWithIn(BaseModel):
+    app: Optional[str] = Field(None, max_length=200)
 
 
 def _row(media_id: int, request: Request):
@@ -107,7 +111,45 @@ def put_edits(media_id: int, body: EditIn, request: Request):
 @router.delete("/media/{media_id}/edits")
 def revert_edits(media_id: int, request: Request):
     _row(media_id, request)
-    return _store(media_id, {})
+    external = extedit.external_path(editsvc.edits_of(media_id))
+    out = _store(media_id, {})
+    if external:
+        try:
+            os.unlink(external)
+        except OSError:
+            pass
+    return out
+
+
+@router.post("/media/{media_id}/edit-with")
+def edit_with(media_id: int, body: EditWithIn, request: Request):
+    row = _row(media_id, request)
+    from .. import vaultcrypt
+
+    if vaultcrypt.protected(row) or vaultcrypt.is_vaulted(media_id):
+        raise HTTPException(409, detail="Protected items stay inside the vault")
+    if row["kind"] != "image":
+        raise HTTPException(415, detail="Only photos round-trip to another app")
+    if not os.path.isfile(libraryfs.abs_path(row["rel_path"])):
+        raise HTTPException(404, detail="Original file missing on disk")
+    try:
+        return extedit.start(media_id, body.app, _store)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(422, detail=str(exc))
+
+
+@router.get("/media/{media_id}/edit-with")
+def edit_with_status(media_id: int, request: Request):
+    _row(media_id, request)
+    row = q1("SELECT edit_json, edited_ts FROM media WHERE id=?", (media_id,))
+    return {**extedit.status(media_id), "edit_json": row["edit_json"], "edited_ts": row["edited_ts"]}
+
+
+@router.delete("/media/{media_id}/edit-with")
+def edit_with_stop(media_id: int, request: Request):
+    _row(media_id, request)
+    extedit.stop(media_id)
+    return {"ok": True}
 
 
 @router.post("/media/batch/edits")
@@ -126,18 +168,18 @@ def paste_edits(body: BatchEditIn):
     return {"items": out}
 
 
-def _base(row, width: int, raw_opts: Optional[Dict[str, Any]] = None):
-    raw_opts = raw_opts if decode.is_raw(row["name"]) and raw_opts else None
-    key = (row["id"], width, row["edited_ts"] or 0, json.dumps(raw_opts, sort_keys=True) if raw_opts else "")
+def _base(row, width: int, raw_opts: Optional[Dict[str, Any]] = None, external: Optional[str] = None):
+    raw_opts = raw_opts if decode.is_raw(row["name"]) and raw_opts and not external else None
+    key = (row["id"], width, row["edited_ts"] or 0, json.dumps(raw_opts, sort_keys=True) if raw_opts else "", external or "")
     with _base_lock:
         hit = _bases.get(key)
         if hit is not None:
             _bases.move_to_end(key)
             return hit
-    src, _ = source_of(row)
+    src, _ = (external, False) if external else source_of(row)
     if src is None:
         return None
-    img = decode.open_image(src, row["name"], max_long=width, develop=True, raw_opts=raw_opts)
+    img = decode.open_image(src, os.path.basename(external) if external else row["name"], max_long=width, develop=True, raw_opts=raw_opts)
     if img is None:
         return None
     with _base_lock:
@@ -153,7 +195,7 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     if row["kind"] != "image":
         raise HTTPException(415, detail="Only stills preview")
     base = editsvc.long_exposure(media_id, body.w) if body.state.get("effect") == "long_exposure" else None
-    base = base if base is not None else _base(row, body.w, body.state.get("raw"))
+    base = base if base is not None else _base(row, body.w, body.state.get("raw"), extedit.external_path(body.state))
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     stages = [s for s in (body.stages or editsvc.STAGES) if s in editsvc.STAGES]
@@ -184,7 +226,7 @@ def raw_info(media_id: int, request: Request):
 @router.get("/media/{media_id}/auto")
 def auto(media_id: int, request: Request):
     row = _row(media_id, request)
-    base = _base(row, 1024)
+    base = _base(row, 1024, None, extedit.external_path(editsvc.edits_of(media_id)))
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     return {"state": editsvc.auto_enhance(base)}
