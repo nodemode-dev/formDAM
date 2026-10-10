@@ -13,7 +13,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..config import library_root
-from ..db import setting_get, setting_set
+from ..db import setting_get
 
 DEFAULT_PORT = 8792
 BEACON_PORT = 48792
