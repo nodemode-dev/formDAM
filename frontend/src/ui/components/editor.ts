@@ -278,6 +278,41 @@ export function openEditor(item: Media): void {
     sliderSync.push(() => { effect.value = String((s as Dict).effect ?? ""); });
     adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, "Live Photo Effect"), effect));
   }
+  if (item.kind === "image" && (item as Media & { is_raw?: number }).is_raw) {
+    const raw = () => { const r = ((s as Dict).raw ?? {}) as Record<string, unknown>; (s as Dict).raw = r; return r; };
+    const pick = (label: string, key: string, options: Array<[string, string]>) => {
+      const sel = h("select", { class: "field-input" }) as HTMLSelectElement;
+      for (const [v, t] of options) sel.append(h("option", { value: v }, t));
+      sel.addEventListener("change", () => {
+        commit();
+        raw()[key] = sel.value;
+        if (key === "wb" && sel.value === "kelvin" && raw().temp === undefined) { raw().temp = shot.temp; raw().tint = shot.tint; }
+        tempRow.classList.toggle("hidden", raw().wb !== "kelvin"); tintRow.classList.toggle("hidden", raw().wb !== "kelvin"); requestPreview(0); });
+      sliderSync.push(() => { sel.value = String(((s as Dict).raw as Record<string, unknown> | undefined)?.[key] ?? options[0][0]); });
+      return h("label", { class: "ed-row" }, h("span", { class: "ed-label" }, label), h("span", {}), sel);
+    };
+    const num = (key: string, fallback: number) => () => Number(((s as Dict).raw as Record<string, unknown> | undefined)?.[key] ?? fallback);
+    let shot = { temp: 5500, tint: 0 };
+    const wbRow = pick("White Balance", "wb", [["camera", "As Shot"], ["auto", "Auto"], ["daylight", "Daylight"], ["kelvin", "Custom (Kelvin)"]]);
+    const tempRow = slider("Temperature (K)", 2000, 12000, () => num("temp", shot.temp)() / 100, (v) => { raw().temp = Math.round(v * 100); });
+    const tintRow = slider("Tint", -100, 100, () => num("tint", shot.tint)() / 100, (v) => { raw().tint = Math.round(v * 100); });
+    tempRow.classList.add("hidden");
+    tintRow.classList.add("hidden");
+    sliderSync.push(() => { const k = ((s as Dict).raw as Record<string, unknown> | undefined)?.wb === "kelvin"; tempRow.classList.toggle("hidden", !k); tintRow.classList.toggle("hidden", !k); });
+    void api<{ temp: number; tint: number; kelvin: boolean }>(`/media/${item.id}/raw-info`).then((r) => { shot = { temp: r.temp, tint: r.tint }; sliderSync.forEach((f) => f()); });
+    adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, "RAW Develop"),
+      wbRow, tempRow, tintRow,
+      slider("Exposure (stops)", -300, 300, num("exposure", 0), (v) => { raw().exposure = v; }),
+      pick("Highlights", "highlights", [["clip", "Clip"], ["blend", "Blend"], ["rebuild", "Recover"]]),
+      pick("Demosaic", "demosaic", [["", "Standard (AHD)"], ["quality", "Fine detail (DHT)"], ["fast", "Fast"]]),
+      slider("Raw Noise Reduction", 0, 100, num("noise", 0), (v) => { raw().noise = v; }),
+      slider("Fringe Red", -100, 100, num("ca_red", 0), (v) => { raw().ca_red = v; }),
+      slider("Fringe Blue", -100, 100, num("ca_blue", 0), (v) => { raw().ca_blue = v; })));
+  }
+  const lens = () => { const l = ((s as Dict).lens ?? {}) as Record<string, number>; (s as Dict).lens = l; return l; };
+  adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, "Lens Corrections"),
+    slider("Distortion", -100, 100, () => Number(((s as Dict).lens as Record<string, number> | undefined)?.distortion ?? 0), (v) => { lens().distortion = v; }),
+    slider("Vignetting", -100, 100, () => Number(((s as Dict).lens as Record<string, number> | undefined)?.vignette ?? 0), (v) => { lens().vignette = v; })));
   for (const sec of SLIDERS) {
     const rows = sec.rows.map(([key, label, min, max]) => slider(label, min, max, () => Number(group(sec.group)[key] ?? 0), (v) => { group(sec.group)[key] = v; }));
     adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, sec.title), ...rows));

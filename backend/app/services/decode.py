@@ -5,6 +5,7 @@ from typing import Optional, Tuple, Union
 from PIL import Image, ImageOps
 
 from .. import mediacodecs
+from . import rawdev
 
 RAW_EXTS = {
     "dng", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "raf", "orf", "rw2", "rwl", "pef",
@@ -62,10 +63,11 @@ def _raw_preview(raw) -> Optional[Image.Image]:
     return img.convert("RGB")
 
 
-def _raw_full(raw, max_long: Optional[int]) -> Image.Image:
+def _raw_full(raw, max_long: Optional[int], opts: Optional[dict] = None) -> Image.Image:
     half = bool(max_long) and max_long * 2 <= min(raw.sizes.width, raw.sizes.height)
-    rgb = raw.postprocess(use_camera_wb=True, output_bps=8, half_size=half)
-    return Image.fromarray(rgb)
+    if not opts:
+        return Image.fromarray(raw.postprocess(use_camera_wb=True, output_bps=8, half_size=half))
+    return Image.fromarray(rawdev.develop(raw, opts, half))
 
 
 def raw_size(src: Source) -> Optional[Tuple[int, int]]:
@@ -81,7 +83,8 @@ def raw_size(src: Source) -> Optional[Tuple[int, int]]:
         return None
 
 
-def open_image(src: Source, name: str, max_long: Optional[int] = None, develop: bool = False) -> Optional[Image.Image]:
+def open_image(src: Source, name: str, max_long: Optional[int] = None, develop: bool = False,
+               raw_opts: Optional[dict] = None) -> Optional[Image.Image]:
     mediacodecs.register()
     if is_raw(name):
         if not rawpy_available():
@@ -89,12 +92,12 @@ def open_image(src: Source, name: str, max_long: Optional[int] = None, develop: 
         try:
             with _raw_handle(src) as raw:
                 img = None
-                if max_long and max_long <= 1600 and not develop:
+                if max_long and max_long <= 1600 and not develop and not raw_opts:
                     img = _raw_preview(raw)
                     if img is not None and max(img.size) < max_long * 0.75:
                         img = None
                 if img is None:
-                    img = _raw_full(raw, max_long)
+                    img = _raw_full(raw, max_long, raw_opts)
         except Exception:
             return None
     else:

@@ -63,7 +63,8 @@ def render_still(media_id: int, src: Any, max_long: Optional[int]) -> Optional[I
     row = q1("SELECT name FROM media WHERE id=?", (media_id,))
     base = long_exposure(media_id, None if max_long is None else max_long * 2) if ops.get("effect") == "long_exposure" else None
     if base is None:
-        base = decode.open_image(src, row["name"] if row else "", max_long=None if max_long is None else max_long * 2, develop=True)
+        base = decode.open_image(src, row["name"] if row else "", max_long=None if max_long is None else max_long * 2, develop=True,
+                                 raw_opts=ops.get("raw") or None)
     if base is None:
         return None
     out = apply_edits(base, ops)
@@ -191,7 +192,33 @@ def _tone(img: Image.Image, state: Dict[str, Any]) -> Image.Image:
     return Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
 
 
+def _lens(img: Image.Image, lens: Dict[str, Any]) -> Image.Image:
+    import cv2
+
+    k = max(-1.0, min(1.0, float(lens.get("distortion", 0) or 0))) * 0.25
+    vig = max(-1.0, min(1.0, float(lens.get("vignette", 0) or 0)))
+    if not k and not vig:
+        return img
+    mode = img.mode
+    a = np.asarray(img.convert("RGB") if mode not in ("RGB", "L") else img)
+    h, w = a.shape[:2]
+    yy, xx = np.indices((h, w), dtype=np.float32)
+    cx, cy, norm = (w - 1) / 2.0, (h - 1) / 2.0, math.hypot(w / 2.0, h / 2.0)
+    nx, ny = (xx - cx) / norm, (yy - cy) / norm
+    r2 = nx * nx + ny * ny
+    if k:
+        f = 1 + k * r2
+        a = cv2.remap(a, (cx + nx * f * norm).astype(np.float32), (cy + ny * f * norm).astype(np.float32),
+                      cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    if vig and a.ndim == 3:
+        gain = (1 + vig * 0.8 * r2 * 2)[..., None]
+        a = np.clip(a.astype(np.float32) * gain, 0, 255).astype(np.uint8)
+    return Image.fromarray(a, "RGB" if a.ndim == 3 else "L")
+
+
 def _geometry(img: Image.Image, state: Dict[str, Any]) -> Image.Image:
+    if state.get("lens"):
+        img = _lens(img, state["lens"])
     geo = state.get("geometry") or {}
     turns = int(geo.get("rotate", 0) or 0) % 360
     if turns == 90:

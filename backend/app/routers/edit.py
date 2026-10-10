@@ -21,7 +21,7 @@ from .render import clear_cached, source_of
 router = APIRouter()
 
 MAX_STATE = 200_000
-PASTE_KEYS = ("light", "color", "detail", "bw", "filter", "levels", "curves")
+PASTE_KEYS = ("light", "color", "detail", "bw", "filter", "levels", "curves", "raw", "lens")
 _base_lock = threading.Lock()
 _bases: "OrderedDict[tuple, Any]" = OrderedDict()
 
@@ -125,8 +125,9 @@ def paste_edits(body: BatchEditIn):
     return {"items": out}
 
 
-def _base(row, width: int):
-    key = (row["id"], width, row["edited_ts"] or 0)
+def _base(row, width: int, raw_opts: Optional[Dict[str, Any]] = None):
+    raw_opts = raw_opts if decode.is_raw(row["name"]) and raw_opts else None
+    key = (row["id"], width, row["edited_ts"] or 0, json.dumps(raw_opts, sort_keys=True) if raw_opts else "")
     with _base_lock:
         hit = _bases.get(key)
         if hit is not None:
@@ -135,7 +136,7 @@ def _base(row, width: int):
     src, _ = source_of(row)
     if src is None:
         return None
-    img = decode.open_image(src, row["name"], max_long=width, develop=True)
+    img = decode.open_image(src, row["name"], max_long=width, develop=True, raw_opts=raw_opts)
     if img is None:
         return None
     with _base_lock:
@@ -151,7 +152,7 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     if row["kind"] != "image":
         raise HTTPException(415, detail="Only stills preview")
     base = editsvc.long_exposure(media_id, body.w) if body.state.get("effect") == "long_exposure" else None
-    base = base if base is not None else _base(row, body.w)
+    base = base if base is not None else _base(row, body.w, body.state.get("raw"))
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     stages = [s for s in (body.stages or editsvc.STAGES) if s in editsvc.STAGES]
@@ -159,6 +160,24 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     buf = io.BytesIO()
     img.convert("RGB").save(buf, "JPEG", quality=86)
     return Response(buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.get("/media/{media_id}/raw-info")
+def raw_info(media_id: int, request: Request):
+    row = _row(media_id, request)
+    if not decode.is_raw(row["name"]):
+        return {"raw": False}
+    src, _ = source_of(row)
+    if src is None:
+        raise HTTPException(404, detail="The original is missing")
+    from ..services import rawdev
+
+    try:
+        with decode._raw_handle(src) as raw:
+            shot = rawdev.as_shot(raw)
+    except Exception:
+        return {"raw": True, "temp": 5500, "tint": 0, "kelvin": False, "readable": False}
+    return {"raw": True, "readable": True, **shot}
 
 
 @router.get("/media/{media_id}/auto")
