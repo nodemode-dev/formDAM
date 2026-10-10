@@ -256,9 +256,64 @@ def _geometry(img: Image.Image, state: Dict[str, Any]) -> Image.Image:
     return img
 
 
+def _unit(value: Any) -> Optional[float]:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return None
+    return min(1.0, max(0.0, float(value)))
+
+
+def _point(p: Any) -> Optional[List[float]]:
+    if not isinstance(p, (list, tuple)) or len(p) < 2:
+        return None
+    x, y = _unit(p[0]), _unit(p[1])
+    return None if x is None or y is None else [x, y]
+
+
+def clean_spots(spots: Any) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for spot in (spots if isinstance(spots, list) else [])[:400]:
+        if not isinstance(spot, dict):
+            continue
+        kind = spot.get("kind")
+        if kind == "pixelate":
+            box = spot.get("box")
+            vals = [_unit(v) for v in box[:4]] if isinstance(box, list) and len(box) >= 4 else []
+            if len(vals) == 4 and None not in vals and vals[2] > 0 and vals[3] > 0:
+                out.append({"kind": "pixelate", "box": vals})
+        elif kind == "mask":
+            polys = []
+            for poly in (spot.get("polygons") if isinstance(spot.get("polygons"), list) else [])[:12]:
+                pts = [q for q in (_point(p) for p in (poly if isinstance(poly, list) else [])[:600]) if q]
+                if len(pts) >= 3:
+                    polys.append(pts)
+            if polys:
+                out.append({"kind": "mask", "polygons": polys, **({"label": str(spot["label"])[:40]} if spot.get("label") else {})})
+        else:
+            x, y, r = _unit(spot.get("x", 0.5)), _unit(spot.get("y", 0.5)), _unit(spot.get("r", 0.02))
+            if x is None or y is None or r is None:
+                continue
+            clean: Dict[str, Any] = {"x": x, "y": y, "r": r}
+            pts = [q for q in (_point(p) for p in (spot.get("points") if isinstance(spot.get("points"), list) else [])[:2000]) if q]
+            if pts:
+                clean["points"] = pts
+            out.append(clean)
+    return out
+
+
+def sanitize_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    if "retouch" in state:
+        spots = clean_spots(state["retouch"])
+        if spots:
+            state["retouch"] = spots
+        else:
+            state.pop("retouch")
+    return state
+
+
 def _retouch(img: Image.Image, spots: List[Dict[str, Any]]) -> Image.Image:
     import cv2
 
+    spots = clean_spots(spots)
     a = np.asarray(img.convert("RGB"))
     h, w = a.shape[:2]
     short = min(w, h)

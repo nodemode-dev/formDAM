@@ -228,6 +228,8 @@ def set_location(ids: List[int], lat: Optional[float], lon: Optional[float]) -> 
 def set_location_hidden(ids: List[int], hidden: bool) -> None:
     for media_id in ids:
         ex("UPDATE media SET location_hidden=?, xmp_ts=NULL WHERE id=?", (1 if hidden else 0, media_id))
+        ex("UPDATE media SET location_hidden=?, xmp_ts=NULL WHERE id=(SELECT live_video_id FROM media WHERE id=?)",
+           (1 if hidden else 0, media_id))
 
 
 def adjust_dates(ids: List[int], mode: str, ts: Optional[float], delta_s: float) -> List[Dict[str, Any]]:

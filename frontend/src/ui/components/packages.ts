@@ -12,7 +12,7 @@ interface Job { phase: string; error?: string; counts: Record<string, number>; p
 interface PackageRow { id: number; direction: "in" | "out"; kind: string; title: string; count: number; sender: string | null; path: string | null; created_ts: number; exists: boolean; album_id: number | null }
 interface Note { id: string; author: string; text: string; ts: number; mine: number }
 
-const MIN_PASSWORD = 10;
+const MIN_PASSWORD = 16;
 let native = false;
 
 function waitJob(id: string): Promise<Job> {
@@ -83,7 +83,7 @@ export async function packageFlow(ids: number[], album?: { id: number; name: str
   const title = textField("Title", "text", "Shared Photos");
   title.input.value = album?.name ?? first?.title ?? "Shared Photos";
   const addAs = seg([["album", "Album"], ["stack", "Stack"]], "album");
-  const password = textField("Password", "text", "At least 10 characters");
+  const password = textField("Password", "text", "At least 16 characters");
   password.input.value = suggested.password;
   const regen = h("button", { class: "btn", type: "button" }, "New Password");
   regen.addEventListener("click", async () => { password.input.value = (await api<{ password: string }>("/packages/password", { method: "POST" })).password; });
@@ -97,7 +97,7 @@ export async function packageFlow(ids: number[], album?: { id: number; name: str
   const form = h("div", { class: "share-form" },
     h("p", { class: "field-hint" }, album
       ? "Everything in the album, its notes and its share id go into one AES-256 encrypted zip. When the other person opens it in DAM, it becomes the same shared album; packages either of you send later add to it."
-      : "The originals, their edits and metadata go into one AES-256 encrypted zip with scrambled file names. The other person drops it into DAM and enters the password."),
+      : "The originals, their edits and metadata go into one AES-256 encrypted zip with scrambled file names. The other person drops it into DAM and enters the password. Zip encryption guesses passwords quickly offline, so keep the generated one unless yours is long and random, and send it by a different route than the zip."),
     title.wrap,
     album ? h("span", { class: "hidden" }) : h("label", { class: "field" }, h("span", { class: "field-label" }, "Arrives as"), addAs.el),
     h("div", { class: "row-gap pkg-pw-row" }, password.wrap, regen),

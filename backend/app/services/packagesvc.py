@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import secrets
@@ -17,7 +18,11 @@ FORMAT = "formdam-share"
 VERSION = 1
 MARKER = "formdam-share.json"
 MANIFEST = "manifest"
-MIN_PASSWORD = 10
+MIN_PASSWORD = 16
+MAX_MARKER = 4096
+MAX_MANIFEST = 16 * 1024 * 1024
+MAX_MEMBER = 8 * 1024 ** 3
+DISK_MARGIN = 1024 ** 3
 NAME_RE = re.compile(r"^[0-9a-f]{32}$")
 ORIGIN_RE = re.compile(r"^[0-9a-f]{64}$")
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -44,6 +49,56 @@ def _zipper():
     import pyzipper
 
     return pyzipper
+
+
+def _read_capped(zf, name: str, cap: int) -> bytes:
+    if zf.getinfo(name).file_size > cap:
+        raise PackageError("This package is damaged or too large to open")
+    with zf.open(name) as handle:
+        data = handle.read(cap + 1)
+    if len(data) > cap:
+        raise PackageError("This package is damaged or too large to open")
+    return data
+
+
+def _copy_capped(zf, member: str, dest: str) -> None:
+    cap = min(zf.getinfo(member).file_size, MAX_MEMBER)
+    written = 0
+    with zf.open(member) as src, open(dest, "wb") as dst:
+        while True:
+            chunk = src.read(1024 * 1024)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > cap:
+                raise PackageError("A file in this package is larger than it claims")
+            dst.write(chunk)
+
+
+def _check_space(zf) -> None:
+    need = sum(info.file_size for info in zf.infolist() if NAME_RE.match(info.filename))
+    if any(info.file_size > MAX_MEMBER for info in zf.infolist()):
+        raise PackageError("A file in this package is too large to open")
+    if need + DISK_MARGIN > shutil.disk_usage(cache_dir()).free:
+        raise PackageError("There is not enough free disk space to open this package")
+
+
+def _clean_file(src: str, work: str) -> str:
+    target = os.path.join(work, secrets.token_hex(8) + os.path.splitext(src)[1].lower())
+    with open(src, "rb") as handle:
+        clean = gpsscrub.scrub(handle.read())
+    with open(target, "wb") as handle:
+        handle.write(clean)
+    if gpsscrub.has_gps(target) is False:
+        return target
+    from PIL import Image
+
+    rendered = os.path.join(work, secrets.token_hex(8) + ".jpg")
+    with Image.open(src) as img:
+        img.convert("RGB").save(rendered, "JPEG", quality=95)
+    if gpsscrub.has_gps(rendered):
+        raise PackageError("Location could not be removed from an edited version")
+    return rendered
 
 
 def _shareable(ids: List[int]) -> List[int]:
@@ -122,14 +177,16 @@ def _entry(row, include_location: bool, work: str, members: List[Any]) -> Dict[s
             state = {}
         ext = external_path(state)
         if ext:
+            if not include_location or row["location_hidden"]:
+                ext = _clean_file(ext, work)
             edit_member = secrets.token_hex(16)
             members.append((edit_member, ext))
-            state["external"] = {**state["external"], "member": edit_member}
+            state["external"] = {**state["external"], "member": edit_member, "file": os.path.basename(ext)}
         entry["edit"] = state
     if row["live_video_id"] and not payload["converted"]:
         video = q1("SELECT * FROM media WHERE id=?", (row["live_video_id"],))
         if video is not None:
-            vp = _payload(video, include_location, work)
+            vp = _payload(video, include_location and not row["location_hidden"], work)
             vmember = secrets.token_hex(16)
             members.append((vmember, vp["path"]))
             entry["live"] = {"member": vmember, "name": vp["name"]}
@@ -209,7 +266,7 @@ def inspect(path: str) -> Dict[str, Any]:
             names = zf.namelist()
             if MARKER not in names or MANIFEST not in names:
                 return {"package": False}
-            marker = json.loads(zf.read(MARKER).decode("utf-8"))
+            marker = json.loads(_read_capped(zf, MARKER, MAX_MARKER).decode("utf-8"))
     except Exception:
         return {"package": False}
     if marker.get("format") != FORMAT:
@@ -219,7 +276,9 @@ def inspect(path: str) -> Dict[str, Any]:
 
 def _read_manifest(zf) -> Dict[str, Any]:
     try:
-        data = json.loads(zf.read(MANIFEST).decode("utf-8"))
+        data = json.loads(_read_capped(zf, MANIFEST, MAX_MANIFEST).decode("utf-8"))
+    except PackageError:
+        raise
     except RuntimeError as exc:
         raise PackageError("That password does not open this package") from exc
     except Exception as exc:
@@ -236,8 +295,9 @@ def check_password(path: str, password: str) -> Dict[str, Any]:
     with pz.AESZipFile(path) as zf:
         zf.setpassword(password.encode())
         data = _read_manifest(zf)
-    return {"title": data.get("title"), "sender": data.get("sender"), "count": len(data["items"]),
-            "album": (data.get("album") or {}).get("name"), "add_as": data.get("add_as")}
+    return {"title": str(data.get("title") or "")[:120], "sender": str(data.get("sender") or "")[:60], "count": len(data["items"]),
+            "album": str(data["album"].get("name") or "")[:120] if isinstance(data.get("album"), dict) else None,
+            "add_as": data.get("add_as") if data.get("add_as") in ("album", "stack") else "album"}
 
 
 def _safe_name(name: Any) -> str:
@@ -251,9 +311,15 @@ def _import_member(zf, member: str, name: str, work: str) -> Dict[str, Any]:
         return {"status": "skipped"}
     folder = tempfile.mkdtemp(dir=work)
     local = os.path.join(folder, _safe_name(name))
-    with zf.open(member) as src, open(local, "wb") as dst:
-        shutil.copyfileobj(src, dst, 1024 * 1024)
+    _copy_capped(zf, member, local)
     return libraryfs.import_one(local, move=True)
+
+
+def _number(value: Any, low: float, high: float) -> Optional[float]:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = float(value)
+    return value if math.isfinite(value) and low <= value <= high else None
 
 
 def _apply_meta(media_id: int, entry: Dict[str, Any]) -> None:
@@ -265,21 +331,25 @@ def _apply_meta(media_id: int, entry: Dict[str, Any]) -> None:
         if entry.get(key) and not row[key]:
             sets.append(f"{key}=?")
             vals.append(str(entry[key])[:2000])
-    if entry.get("rating") and not row["rating"]:
+    rating = _number(entry.get("rating"), 0, 5)
+    if rating and not row["rating"]:
         sets.append("rating=?")
-        vals.append(max(0, min(5, int(entry["rating"]))))
-    if entry.get("favorite"):
+        vals.append(int(rating))
+    if entry.get("favorite") is True or entry.get("favorite") == 1:
         sets.append("favorite=1")
-    if entry.get("lat") is not None and row["lat"] is None:
+    lat, lon = _number(entry.get("lat"), -90, 90), _number(entry.get("lon"), -180, 180)
+    if lat is not None and lon is not None and row["lat"] is None:
         sets.append("lat=?, lon=?")
-        vals += [float(entry["lat"]), float(entry["lon"])]
+        vals += [lat, lon]
     for key in ("trim_in", "trim_out"):
-        if entry.get(key) is not None and row[key] is None and row["kind"] == "video":
+        value = _number(entry.get(key), 0, 1e7)
+        if value is not None and row[key] is None and row["kind"] == "video":
             sets.append(f"{key}=?")
-            vals.append(float(entry[key]))
+            vals.append(value)
     if sets:
         ex(f"UPDATE media SET {', '.join(sets)} WHERE id=?", vals + [media_id])
-    for name in (entry.get("keywords") or [])[:200]:
+    words = entry.get("keywords")
+    for name in (words if isinstance(words, list) else [])[:200]:
         name = str(name).strip()[:120]
         if name:
             ex("INSERT OR IGNORE INTO keywords(name) VALUES(?)", (name,))
@@ -301,12 +371,44 @@ def _apply_edit(zf, media_id: int, edit: Dict[str, Any], work: str) -> None:
         else:
             os.makedirs(edits_dir(), exist_ok=True)
             name = f"{media_id}-shared-{secrets.token_hex(4)}{os.path.splitext(str(ext.get('file') or '.jpg'))[1][:6] or '.jpg'}"
-            with zf.open(member) as src, open(os.path.join(edits_dir(), name), "wb") as dst:
-                shutil.copyfileobj(src, dst)
+            _copy_capped(zf, member, os.path.join(edits_dir(), name))
             edit["external"] = {"file": name, "app": str(ext.get("app") or ""), "ts": time.time()}
-    clean = {k: v for k, v in edit.items() if v not in (None, {}, [])}
+    from .editsvc import sanitize_state
+
+    clean = sanitize_state({k: v for k, v in edit.items() if v not in (None, {}, [])})
     if clean:
         ex("UPDATE media SET edit_json=?, edited_ts=? WHERE id=?", (json.dumps(clean), time.time(), media_id))
+
+
+def _open_entry(zf, entry: Dict[str, Any], work: str, counts: Dict[str, int]) -> Optional[int]:
+    origin = str(entry.get("origin") or "").lower()
+    known = q1("SELECT id FROM media WHERE sha256=? OR origin_sha=?", (origin, origin)) if ORIGIN_RE.match(origin) else None
+    if known is not None:
+        counts["already"] += 1
+        return known["id"]
+    result = _import_member(zf, entry.get("member"), entry.get("name"), work)
+    media_id = result.get("media_id")
+    if not media_id:
+        counts["failed"] += 1
+        return None
+    if result.get("status") != "imported":
+        counts["already"] += 1
+        return media_id
+    if ORIGIN_RE.match(origin):
+        ex("UPDATE media SET origin_sha=? WHERE id=? AND sha256<>?", (origin, media_id, origin))
+    counts["imported"] += 1
+    _apply_meta(media_id, entry)
+    if isinstance(entry.get("edit"), dict):
+        _apply_edit(zf, media_id, entry["edit"], work)
+    live = entry.get("live")
+    if isinstance(live, dict):
+        try:
+            vres = _import_member(zf, live.get("member"), live.get("name"), work)
+            if vres.get("status") == "imported" and vres.get("media_id"):
+                libraryfs.link_live(media_id, vres["media_id"])
+        except Exception:
+            pass
+    return media_id
 
 
 def open_package(path: str, password: str, add_as: Optional[str], state: Dict[str, Any]) -> None:
@@ -319,41 +421,21 @@ def open_package(path: str, password: str, add_as: Optional[str], state: Dict[st
         with pz.AESZipFile(path) as zf:
             zf.setpassword(password.encode())
             data = _read_manifest(zf)
-            for entry in data["items"]:
+            _check_space(zf)
+            for entry in data["items"][:20000]:
                 if not isinstance(entry, dict):
                     continue
-                origin = str(entry.get("origin") or "").lower()
-                known = q1("SELECT id FROM media WHERE sha256=? OR origin_sha=?", (origin, origin)) if ORIGIN_RE.match(origin) else None
-                if known is not None:
-                    result = {"status": "duplicate", "media_id": known["id"]}
-                else:
-                    try:
-                        result = _import_member(zf, entry.get("member"), entry.get("name"), work)
-                    except Exception:
-                        counts["failed"] += 1
-                        continue
-                    if result.get("status") == "imported" and ORIGIN_RE.match(origin):
-                        ex("UPDATE media SET origin_sha=? WHERE id=? AND sha256<>?", (origin, result["media_id"], origin))
-                media_id = result.get("media_id")
-                if not media_id:
+                try:
+                    media_id = _open_entry(zf, entry, work, counts)
+                except Exception:
                     counts["failed"] += 1
                     continue
-                counts["imported" if result.get("status") == "imported" else "already"] += 1
-                _apply_meta(media_id, entry)
-                if entry.get("edit"):
-                    _apply_edit(zf, media_id, entry["edit"], work)
-                live = entry.get("live")
-                if isinstance(live, dict):
-                    try:
-                        vres = _import_member(zf, live.get("member"), live.get("name"), work)
-                        if vres.get("media_id"):
-                            libraryfs.link_live(media_id, vres["media_id"])
-                    except Exception:
-                        pass
+                if not media_id:
+                    continue
                 visible = q1("SELECT private, hidden, trashed_ts FROM media WHERE id=?", (media_id,))
                 if visible and not visible["private"] and not visible["hidden"] and not visible["trashed_ts"]:
                     imported_ids.append(media_id)
-            kind = "album" if data.get("album") else (add_as or data.get("add_as") or "album")
+            kind = "album" if isinstance(data.get("album"), dict) else (add_as if add_as in ("album", "stack") else "album")
             album_id, stack_id = None, None
             if kind == "stack" and len(imported_ids) > 1:
                 from . import stacksvc
@@ -379,7 +461,7 @@ def open_package(path: str, password: str, add_as: Optional[str], state: Dict[st
 
 
 def _album_for(data: Dict[str, Any], ids: List[int]) -> int:
-    meta = data.get("album") or {}
+    meta = data.get("album") if isinstance(data.get("album"), dict) else {}
     share_id = str(meta.get("share_id") or "")
     album = None
     if re.match(r"^[0-9a-f]{32}$", share_id):
@@ -406,7 +488,7 @@ def _album_for(data: Dict[str, Any], ids: List[int]) -> int:
 
 def _merge_notes(album_id: int, notes: List[Any]) -> int:
     added = 0
-    for note in notes[:5000]:
+    for note in (notes if isinstance(notes, list) else [])[:5000]:
         if not isinstance(note, dict):
             continue
         nid = str(note.get("id") or "")
@@ -416,7 +498,7 @@ def _merge_notes(album_id: int, notes: List[Any]) -> int:
         if q1("SELECT 1 AS x FROM album_notes WHERE id=?", (nid,)):
             continue
         ex("INSERT INTO album_notes(id, album_id, author, text, ts, media_sha) VALUES(?,?,?,?,?,?)",
-           (nid, album_id, str(note.get("author") or "Someone")[:60], text, float(note.get("ts") or time.time()),
+           (nid, album_id, str(note.get("author") or "Someone")[:60], text, _number(note.get("ts"), 0, 4e9) or time.time(),
             str(note.get("media_sha") or "")[:64] or None))
         added += 1
     return added

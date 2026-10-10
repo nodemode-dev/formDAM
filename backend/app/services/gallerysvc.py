@@ -34,7 +34,7 @@ def download_path(share, media_id: int) -> Optional[str]:
         return src
     folder = os.path.join(cache_dir(), "share")
     os.makedirs(folder, exist_ok=True)
-    stamp = hashlib.sha1(f"{row['edit_json'] or ''}|{row['edited_ts'] or 0}|{share['include_location']}|{row['trim_in']}|{row['trim_out']}".encode()).hexdigest()[:12]
+    stamp = hashlib.sha1(f"{row['edit_json'] or ''}|{row['edited_ts'] or 0}|{share['include_location']}|{row['location_hidden']}|{row['trim_in']}|{row['trim_out']}".encode()).hexdigest()[:12]
     if row["kind"] == "video":
         out = os.path.join(folder, f"{media_id}_{stamp}{os.path.splitext(row['name'])[1].lower() or '.mp4'}")
         if not os.path.isfile(out):
@@ -50,7 +50,7 @@ def download_path(share, media_id: int) -> Optional[str]:
             if row["trim_out"] is not None:
                 args += ["-to", f"{float(row['trim_out']):.3f}"]
             args += ["-i", src, "-map", "0:v:0", "-map", "0:a?", "-dn", "-c", "copy"]
-            if not share["include_location"]:
+            if not share["include_location"] or row["location_hidden"]:
                 args += ["-map_metadata", "-1"]
             done = subprocess.run(args + [tmp], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
             if done.returncode != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:

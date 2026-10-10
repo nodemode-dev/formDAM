@@ -6,7 +6,50 @@ GPS_TAG = 0x8825
 RETIRED_TAG = 0x8826
 TYPE_SIZES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8, 13: 4, 16: 8, 17: 8, 18: 8}
 XMP_GPS = re.compile(rb'(exif:GPS[A-Za-z]+)(="[^"]*"|>[^<]*<)')
-XMP_LOC = re.compile(rb'(photoshop:(?:City|State|Country)|Iptc4xmpCore:(?:Location|CountryCode)|Iptc4xmpExt:(?:LocationShown|LocationCreated))(="[^"]*"|>[^<]*<)')
+XMP_LOC = re.compile(rb'(photoshop:(?:City|State|Country)|Iptc4xmpCore:(?:Location|CountryCode)|Iptc4xmpExt:(?:LocationShown|LocationCreated'
+                     rb'|City|Sublocation|ProvinceState|ProvinceCode|CountryName|CountryCode|WorldRegion|LocationName|LocationId'
+                     rb'|GPSLatitude|GPSLongitude|GPSAltitude))(="[^"]*"|>[^<]*<)')
+IIM_PLACE = {26, 27, 90, 92, 95, 100, 101}
+
+
+def _iim(buf: bytearray) -> None:
+    if bytes(buf[:2]) != b"\xff\xd8":
+        return
+    pos = 2
+    while pos + 4 <= len(buf) and buf[pos] == 0xFF:
+        marker = buf[pos + 1]
+        if marker in (0xD9, 0xDA):
+            return
+        length = struct.unpack_from(">H", buf, pos + 2)[0]
+        end = min(len(buf), pos + 2 + length)
+        if marker == 0xED:
+            i = pos + 4
+            while i + 5 <= end:
+                if buf[i] == 0x1C and buf[i + 1] == 2:
+                    size = struct.unpack_from(">H", buf, i + 3)[0]
+                    if size & 0x8000:
+                        i += 1
+                        continue
+                    if buf[i + 2] in IIM_PLACE and i + 5 + size <= end:
+                        buf[i + 5:i + 5 + size] = b" " * size
+                    i += 5 + size
+                else:
+                    i += 1
+        pos += 2 + length
+
+
+def _png_crcs(buf: bytearray) -> None:
+    import zlib
+
+    pos = 8
+    while pos + 12 <= len(buf):
+        length = struct.unpack_from(">I", buf, pos)[0]
+        if pos + 12 + length > len(buf):
+            return
+        struct.pack_into(">I", buf, pos + 8 + length, zlib.crc32(bytes(buf[pos + 4:pos + 8 + length])) & 0xFFFFFFFF)
+        if bytes(buf[pos + 4:pos + 8]) == b"IEND":
+            return
+        pos += 12 + length
 
 
 def _blank_tiff(buf: bytearray, start: int) -> bool:
@@ -102,9 +145,14 @@ def scrub(data: bytes) -> bytes:
         while pos != -1:
             _blank_tiff(buf, pos + 6)
             pos = buf.find(marker, pos + 6)
+    _iim(buf)
     out = bytes(buf)
     out = XMP_GPS.sub(lambda m: m.group(1) + _same_len(m.group(2)), out)
     out = XMP_LOC.sub(lambda m: m.group(1) + _same_len(m.group(2)), out)
+    if out[:8] == b"\x89PNG\r\n\x1a\n":
+        fixed = bytearray(out)
+        _png_crcs(fixed)
+        out = bytes(fixed)
     return out
 
 
