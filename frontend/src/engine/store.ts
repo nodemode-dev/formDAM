@@ -17,7 +17,7 @@ export interface Route {
 
 export interface PageState {
   items: Media[];
-  next: { before: number; before_id: number } | null;
+  next: Record<string, unknown> | null;
   loading: boolean;
   loaded: boolean;
 }
@@ -51,6 +51,8 @@ export const state = {
   sort: prefGet<SortOrder>("sort", "newest"),
   grouping: prefGet<"all" | "months" | "years">("grouping", "all"),
   periodCache: new Map<string, PeriodSummary>(),
+  quick: prefGet<{ flags: string[]; minRating: number; label: string; keyword: string }>(
+    "quick", { flags: [], minRating: 0, label: "", keyword: "" }),
 };
 
 export function parseRoute(): Route {
@@ -82,12 +84,9 @@ export async function loadMore(filter: FilterName): Promise<void> {
   const page = pageFor(filter);
   if (page.loading || (page.loaded && page.next === null)) return;
   page.loading = true;
-  const params = new URLSearchParams({ filter, limit: "400", order: state.sort });
-  if (page.next) {
-    params.set("before", String(page.next.before));
-    params.set("before_id", String(page.next.before_id));
-  }
-  const data = await api<MediaPage>(`/media?${params.toString()}`);
+  const params = new URLSearchParams({ spec: JSON.stringify(specFor(filter)), limit: "400" });
+  if (page.next) params.set("cursor", JSON.stringify(page.next));
+  const data = await api<MediaPage>(`/browse?${params.toString()}`);
   for (const item of data.items) state.byId.set(item.id, item);
   page.items.push(...data.items);
   page.next = data.next;
@@ -179,7 +178,69 @@ export function clearSelection(): void {
   emit("selection");
 }
 
-export type SortOrder = "newest" | "oldest";
+export type SortOrder =
+  | "newest" | "oldest" | "added" | "added_oldest" | "name" | "name_desc" | "size" | "size_small" | "rating" | "edited";
+
+export interface QueryRule {
+  field: string;
+  op?: string;
+  value?: unknown;
+  rules?: QueryRule[];
+  match?: "all" | "any";
+}
+
+export interface QuerySpec {
+  rules?: QueryRule[];
+  match?: "all" | "any";
+  sort?: string;
+  text?: string;
+  fields?: string[];
+  expand_stacks?: boolean;
+}
+
+const LEGACY_SPECS: Record<string, QuerySpec> = {
+  all: {},
+  favorites: { rules: [{ field: "flag", value: "favorite" }] },
+  photos: { rules: [{ field: "flag", value: "photo" }] },
+  videos: { rules: [{ field: "flag", value: "video" }] },
+  screenshots: { rules: [{ field: "flag", value: "screenshot" }] },
+  screenrecs: { rules: [{ field: "flag", value: "screen_recording" }] },
+  not_in_album: { rules: [{ field: "flag", value: "not_in_album" }] },
+  recently_saved: { sort: "added" },
+  recently_viewed: { rules: [{ field: "flag", value: "viewed" }], sort: "viewed" },
+};
+
+const customSpecs = new Map<string, QuerySpec>();
+
+export function specKey(spec: QuerySpec): FilterName {
+  const key = `spec:${JSON.stringify(spec)}` as FilterName;
+  customSpecs.set(key, spec);
+  return key;
+}
+
+export function quickRules(): QueryRule[] {
+  const rules: QueryRule[] = state.quick.flags.map((flag) => ({ field: "flag", value: flag }));
+  if (state.quick.minRating > 0) rules.push({ field: "rating", op: ">=", value: state.quick.minRating });
+  if (state.quick.label) rules.push({ field: "label", value: state.quick.label });
+  if (state.quick.keyword) rules.push({ field: "keyword", value: state.quick.keyword });
+  return rules;
+}
+
+export function specFor(filter: FilterName): QuerySpec {
+  const custom = customSpecs.get(filter);
+  if (custom) return { sort: state.sort, ...custom };
+  const base = LEGACY_SPECS[filter] ?? {};
+  const rules = [...(base.rules ?? []), ...quickRules()];
+  const sort = base.sort && state.sort === "newest" ? base.sort : state.sort;
+  return { ...base, rules, sort };
+}
+
+export function setQuickFilter(patch: Partial<typeof state.quick>): void {
+  Object.assign(state.quick, patch);
+  prefSet("quick", state.quick);
+  invalidateMedia();
+  emit("media");
+}
 
 export function hydrateStatePrefs(): void {
   state.zoom = prefGet<number>("zoom", 184);

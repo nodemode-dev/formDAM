@@ -24,11 +24,61 @@ export interface Media {
   days_left?: number;
   pair_sim?: number;
   albums?: Array<{ id: number; name: string }>;
+  make?: string | null;
+  model?: string | null;
+  lens?: string | null;
+  focal?: number | null;
+  focal35?: number | null;
+  aperture?: number | null;
+  shutter?: number | null;
+  iso?: number | null;
+  flash?: number | null;
+  lat?: number | null;
+  lon?: number | null;
+  alt?: number | null;
+  place?: string | null;
+  admin?: string | null;
+  country?: string | null;
+  location_hidden?: number;
+  content_id?: string | null;
+  burst_id?: string | null;
+  camera_type?: string | null;
+  capture_type?: string | null;
+  fps?: number | null;
+  is_raw?: number;
+  is_panorama?: number;
+  is_selfie?: number;
+  is_portrait?: number;
+  is_slomo?: number;
+  rating?: number;
+  label?: string | null;
+  rejected?: number;
+  title?: string | null;
+  caption?: string | null;
+  alt_text?: string | null;
+  edit_json?: string | null;
+  edited_ts?: number | null;
+  trim_in?: number | null;
+  trim_out?: number | null;
+  stack_id?: number | null;
+  batch_id?: number | null;
+  referenced?: number;
+  created_src?: string;
+  ocr_text?: string | null;
+}
+
+export interface MediaDetails extends Media {
+  exif: Record<string, string>;
+  iptc: Record<string, string>;
+  keywords: Array<{ id: number; name: string }>;
+  people: Array<{ id: number; name: string | null }>;
+  subjects: Array<{ label: string; kind: string; score: number }>;
+  batch: { id: number; source: string; label: string | null; started_ts: number } | null;
 }
 
 export interface MediaPage {
   items: Media[];
-  next: { before: number; before_id: number } | null;
+  next: Record<string, unknown> | null;
 }
 
 export interface PeriodSummary {
@@ -105,4 +155,5 @@ export type FilterName =
   | "screenrecs"
   | "not_in_album"
   | "recently_saved"
-  | "recently_viewed";
+  | "recently_viewed"
+  | `spec:${string}`;

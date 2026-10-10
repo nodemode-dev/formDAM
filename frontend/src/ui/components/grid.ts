@@ -1,7 +1,7 @@
 import { api, fileUrl, thumbUrl } from "../../engine/api.js";
 import { countFmt, dayKey, dayLabel, formatDuration, monthLabel } from "../../engine/format.js";
 import {
-  dropFromCaches, loadMore, on, openViewer, pageFor, periodSummary, setFavorite, setGrouping, setSelected, state, toggleSelect, trashMedia,
+  dropFromCaches, loadMore, on, openViewer, pageFor, periodSummary, setFavorite, setGrouping, setSelected, specFor, state, toggleSelect, trashMedia,
 } from "../../engine/store.js";
 import type { FilterName, Media } from "../../engine/types.js";
 import { h } from "../dom.js";
@@ -371,12 +371,19 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
     return pageFor(filter).items.map((m) => m.id);
   }
 
-  function ensureDay(key: string, ts: number): { section: HTMLElement; grid: HTMLElement; count: HTMLElement; n: number } {
+  function groupOf(item: Media): { key: string; label: string } {
+    const sort = specFor(filter).sort ?? "newest";
+    if (sort === "newest" || sort === "oldest") return { key: dayKey(item.created_ts), label: dayLabel(item.created_ts) };
+    if (sort === "added" || sort === "added_oldest") return { key: `a${dayKey(item.imported_ts)}`, label: `Added ${dayLabel(item.imported_ts)}` };
+    return { key: "all", label: "" };
+  }
+
+  function ensureDay(key: string, label: string): { section: HTMLElement; grid: HTMLElement; count: HTMLElement; n: number } {
     let entry = dayNodes.get(key);
     if (!entry) {
       const count = h("span", { class: "day-count" }, "");
       const grid = h("div", { class: "tile-grid" });
-      const section = h("section", {}, h("div", { class: "day-head" }, h("h3", {}, dayLabel(ts)), count), grid);
+      const section = h("section", {}, h("div", { class: "day-head" }, h("h3", {}, label), count), grid);
       entry = { section, grid, count, n: 0 };
       dayNodes.set(key, entry);
       gridWrap.append(section);
@@ -426,8 +433,9 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
       for (; appendCursor < chunkEnd; appendCursor++) {
         const item = items[appendCursor];
         if (rendered.has(item.id)) continue;
-        const key = dayKey(item.created_ts);
-        const entry = ensureDay(key, item.created_ts);
+        const group = groupOf(item);
+        const key = group.key;
+        const entry = ensureDay(key, group.label);
         let frag = fragments.get(key);
         if (!frag) {
           frag = document.createDocumentFragment();

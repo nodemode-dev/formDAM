@@ -1,6 +1,7 @@
 import hashlib
 import os
 import shutil
+import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List
@@ -88,7 +89,34 @@ def import_one(path: str, move: bool = False) -> Dict[str, Any]:
         (sha, rel, os.path.basename(dest), size, kind, mime, width, height, duration,
          created_ts, created_src, time.time(), is_screenshot, is_screen_rec),
     )
+    batch_id = getattr(_batch, "id", None)
+    if batch_id:
+        ex("UPDATE media SET batch_id=? WHERE id=?", (batch_id, media_id))
+        ex("UPDATE import_batches SET imported=imported+1 WHERE id=?", (batch_id,))
+    try:
+        from . import metasvc
+
+        metasvc.apply(media_id)
+    except Exception:
+        pass
     return {"status": "imported", "media_id": media_id, "id": media_id, "kind": kind, "rel_path": rel}
+
+
+_batch = threading.local()
+
+
+def begin_batch(source: str, label: str = "") -> int:
+    batch_id = ex("INSERT INTO import_batches(started_ts, source, label) VALUES(?,?,?)", (time.time(), source, label or None))
+    _batch.id = batch_id
+    return batch_id
+
+
+def end_batch() -> None:
+    batch_id = getattr(_batch, "id", None)
+    _batch.id = None
+    if batch_id:
+        ex("UPDATE import_batches SET finished_ts=? WHERE id=?", (time.time(), batch_id))
+        ex("DELETE FROM import_batches WHERE id=? AND imported=0", (batch_id,))
 
 
 def link_live(photo_id: int, video_id: int) -> bool:

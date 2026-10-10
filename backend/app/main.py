@@ -8,7 +8,7 @@ from .config import VERSION, cache_dir, originals_dir
 from . import mediacodecs, upgrade_thumbs
 from .db import init_db, q, ex, setting_get, setting_set
 from .services import classify
-from .routers import albums, dedup, importer, mediaapi, people, system, trash
+from .routers import albums, browse, dedup, importer, mediaapi, people, system, trash
 from .security import local_only_guard
 
 
@@ -22,7 +22,9 @@ async def lifespan(app: FastAPI):
     trash.purge_expired()
     from .services import housekeeping
     housekeeping.register(trash.purge_expired)
+    housekeeping.register(browse.ensure_backfill)
     housekeeping.start()
+    browse.ensure_backfill()
     _reclassify_screenshots()
     upgrade_thumbs.run_async()
     yield
@@ -44,7 +46,7 @@ mediacodecs.register()
 app = FastAPI(title="DAM", version=VERSION, lifespan=lifespan)
 app.middleware("http")(local_only_guard)
 
-for module in (system, importer, mediaapi, albums, people, trash, dedup):
+for module in (system, importer, browse, mediaapi, albums, people, trash, dedup):
     app.include_router(module.router, prefix="/api")
 
 _dist = os.environ.get(

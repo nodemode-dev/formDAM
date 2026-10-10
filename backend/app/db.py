@@ -128,9 +128,60 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
+
+MEDIA_V5_COLUMNS = (
+    "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
+    "iso INTEGER", "flash INTEGER", "orientation INTEGER", "lat REAL", "lon REAL", "alt REAL",
+    "place TEXT", "admin TEXT", "country TEXT", "location_hidden INTEGER NOT NULL DEFAULT 0",
+    "content_id TEXT", "burst_id TEXT", "camera_type TEXT", "capture_type TEXT", "fps REAL",
+    "is_raw INTEGER NOT NULL DEFAULT 0", "is_panorama INTEGER NOT NULL DEFAULT 0",
+    "is_selfie INTEGER NOT NULL DEFAULT 0", "is_portrait INTEGER NOT NULL DEFAULT 0",
+    "is_slomo INTEGER NOT NULL DEFAULT 0", "exif_json TEXT", "meta_ver INTEGER NOT NULL DEFAULT 0",
+    "rating INTEGER NOT NULL DEFAULT 0", "label TEXT", "rejected INTEGER NOT NULL DEFAULT 0",
+    "title TEXT", "caption TEXT", "alt_text TEXT", "iptc_json TEXT",
+    "edit_json TEXT", "edited_ts REAL", "trim_in REAL", "trim_out REAL",
+    "stack_id INTEGER", "batch_id INTEGER", "referenced INTEGER NOT NULL DEFAULT 0",
+    "clip_state INTEGER NOT NULL DEFAULT 0", "orig_created_ts REAL", "xmp_ts REAL",
+)
 
 MIGRATIONS = {
+    5: [f"ALTER TABLE media ADD COLUMN {col}" for col in MEDIA_V5_COLUMNS] + [
+        "ALTER TABLE keywords ADD COLUMN parent_id INTEGER",
+        "ALTER TABLE keywords ADD COLUMN shortcut TEXT",
+        "ALTER TABLE albums ADD COLUMN folder_id INTEGER",
+        "ALTER TABLE albums ADD COLUMN rules_json TEXT",
+        "ALTER TABLE people ADD COLUMN kind TEXT NOT NULL DEFAULT 'person'",
+        "CREATE INDEX IF NOT EXISTS idx_media_content ON media(content_id)",
+        "CREATE INDEX IF NOT EXISTS idx_media_burst ON media(burst_id)",
+        "CREATE INDEX IF NOT EXISTS idx_media_stack ON media(stack_id)",
+        "CREATE INDEX IF NOT EXISTS idx_media_imported ON media(imported_ts DESC)",
+        """CREATE TABLE IF NOT EXISTS import_batches(
+             id INTEGER PRIMARY KEY, started_ts REAL NOT NULL, finished_ts REAL, source TEXT NOT NULL,
+             label TEXT, imported INTEGER NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS album_folders(
+             id INTEGER PRIMARY KEY, name TEXT NOT NULL, parent_id INTEGER, position INTEGER NOT NULL DEFAULT 0,
+             created_ts REAL NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS stacks(
+             id INTEGER PRIMARY KEY, kind TEXT NOT NULL, top_media_id INTEGER, created_ts REAL NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS clip_vectors(media_id INTEGER PRIMARY KEY, vec BLOB NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS media_labels(
+             media_id INTEGER NOT NULL, label TEXT NOT NULL, kind TEXT NOT NULL, score REAL NOT NULL,
+             PRIMARY KEY(media_id, label))""",
+        "CREATE INDEX IF NOT EXISTS idx_labels_label ON media_labels(label)",
+        """CREATE TABLE IF NOT EXISTS memories(
+             id INTEGER PRIMARY KEY, kind TEXT NOT NULL, key TEXT NOT NULL UNIQUE, title TEXT NOT NULL,
+             subtitle TEXT, start_ts REAL, end_ts REAL, key_media_id INTEGER, favorite INTEGER NOT NULL DEFAULT 0,
+             hidden INTEGER NOT NULL DEFAULT 0, music TEXT, created_ts REAL NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS memory_items(
+             memory_id INTEGER NOT NULL, media_id INTEGER NOT NULL, position INTEGER NOT NULL DEFAULT 0,
+             PRIMARY KEY(memory_id, media_id))""",
+        """CREATE TABLE IF NOT EXISTS people_groups(key TEXT PRIMARY KEY, name TEXT, hidden INTEGER NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS metadata_templates(
+             id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, fields_json TEXT NOT NULL, created_ts REAL NOT NULL)""",
+        """CREATE TABLE IF NOT EXISTS workflows(
+             id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, steps_json TEXT NOT NULL, created_ts REAL NOT NULL)""",
+    ],
     4: [
         "ALTER TABLE media ADD COLUMN live_video_id INTEGER",
         "ALTER TABLE media ADD COLUMN live_of INTEGER",
@@ -216,6 +267,8 @@ def media_dict(row: sqlite3.Row) -> Dict[str, Any]:
     d["is_screenshot"] = bool(d.get("is_screenshot"))
     d["is_screen_rec"] = bool(d.get("is_screen_rec"))
     d["hidden"] = bool(d.get("hidden"))
+    for heavy in ("exif_json", "iptc_json"):
+        d.pop(heavy, None)
     return d
 
 

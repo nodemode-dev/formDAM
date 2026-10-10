@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-09-18
+### src/engine/store.ts + types.ts + ui/components/grid.ts · library pages from the query engine
+- refers-to: store.ts loadMore params + fetch, PageState.next, SortOrder, QueryRule/QuerySpec, LEGACY_SPECS, specKey, quickRules, specFor, setQuickFilter, state.quick; types.ts MediaPage.next, FilterName spec union, Media v5 fields, MediaDetails; grid.ts groupOf + ensureDay label arg
+- kind: rationale + removed code
+- logged: zip v1.22.0 · 2026-10-10
+
+Pages now load from /api/browse with a JSON spec instead of /api/media?filter=, so every view can combine flags, rating, label & keyword quick filters & sort by date taken, date added, name, size or rating. The legacy filter names map to specs (LEGACY_SPECS), so routes & sidebar links are unchanged; custom views register a spec once & key their page by `spec:<json>`. The cursor is opaque ({v,id,k}) bc the sort column varies. Removed from loadMore: `const params = new URLSearchParams({ filter, limit: "400", order: state.sort }); if (page.next) { params.set("before", String(page.next.before)); params.set("before_id", String(page.next.before_id)); }` & the `/media?` fetch. Day sections follow the sort: date-taken sorts group by day, date-added sorts by import day, every other sort is one section, so a name sort is not shredded into day fragments.
 ### src/engine/theme.ts + src/theme/tokens.css + src/ui/components/settings.ts + src/styles/app.css · liquid glass parity w/ nodemode_dev v8.70.6
 - refers-to: theme.ts :: GlassPrefs.ver, DEFAULT_THEME.glass, loadTheme glass merge, applyTheme brightness + sheen + rim lines; tokens.css glass block; settings.ts PRESETS Standard; app.css .pop-surface
 - kind: rationale + replaced values

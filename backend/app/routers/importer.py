@@ -36,6 +36,7 @@ def start_import(body: ImportIn):
         for target in targets:
             files.extend(libraryfs.gather_media(target))
         counts["found"] = len(files)
+        libraryfs.begin_batch("folder", ", ".join(os.path.basename(t.rstrip(os.sep)) or t for t in targets))
         for path in files:
             try:
                 result = libraryfs.import_one(path, move=body.move)
@@ -54,6 +55,7 @@ def start_import(body: ImportIn):
                 counts["duplicates"] += 1
             else:
                 counts["skipped"] += 1
+        libraryfs.end_batch()
         followon.start_after_import(counts)
 
     return {"job_id": jobs.start("import", run)}
@@ -69,6 +71,7 @@ UPLOAD_EXTS = {
 async def import_upload(files: List[UploadFile] = File(...)):
     counts = {"imported": 0, "duplicates": 0, "skipped": 0, "failed": 0}
     imported: List[Dict[str, Any]] = []
+    libraryfs.begin_batch("drop", f"{len(files)} dropped")
     with tempfile.TemporaryDirectory(prefix="dam-drop-") as tmp:
         for upload in files:
             name = os.path.basename(upload.filename or "dropped")
@@ -96,6 +99,7 @@ async def import_upload(files: List[UploadFile] = File(...)):
                 counts["duplicates"] += 1
             else:
                 counts["skipped"] += 1
+    libraryfs.end_batch()
     followon.start_after_import(counts)
     return {"counts": counts}
 
@@ -181,7 +185,11 @@ def idevice_import(body: IDeviceImportIn):
         raise HTTPException(501, detail="iPhone import needs the DAM macOS desktop app")
 
     def run(state: Dict[str, Any]) -> None:
-        idevicesvc.run_import(body.serial, state, keys=body.keys, gen=body.gen, delete_after=body.delete_after)
+        libraryfs.begin_batch("iphone", body.serial)
+        try:
+            idevicesvc.run_import(body.serial, state, keys=body.keys, gen=body.gen, delete_after=body.delete_after)
+        finally:
+            libraryfs.end_batch()
         followon.start_after_import(state.get("counts") or {})
 
     return {"job_id": jobs.start("idevice-import", run)}
