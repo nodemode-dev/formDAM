@@ -92,6 +92,18 @@ export function fileUrl(mediaId: number): string {
   return `/api/media/${mediaId}/file`;
 }
 
+const WEB_NATIVE = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "avif"]);
+
+export function renderUrl(mediaId: number, width: number, version: number | string = 0): string {
+  return `/api/media/${mediaId}/render?w=${width}&v=${version}`;
+}
+
+export function stillUrl(item: { id: number; name: string; edit_json?: string | null; edited_ts?: number | null }, width = 3072): string {
+  const ext = item.name.split(".").pop()?.toLowerCase() ?? "";
+  if (item.edit_json || !WEB_NATIVE.has(ext)) return renderUrl(item.id, width, item.edited_ts ?? 0);
+  return fileUrl(item.id);
+}
+
 export function faceThumbUrl(faceId: number): string {
   return `/api/faces/${faceId}/thumb`;
 }

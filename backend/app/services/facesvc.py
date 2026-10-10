@@ -70,16 +70,12 @@ def _engines():
 
 
 def _load_image_bgr(path: str):
-    data = np.fromfile(path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_COLOR)
-    if img is None:
-        try:
-            from PIL import Image, ImageOps
-            with Image.open(path) as pil:
-                rgb = ImageOps.exif_transpose(pil).convert("RGB")
-                img = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
-        except Exception:
-            return None
+    from . import decode
+
+    pil = decode.open_image(path, path, max_long=MAX_EDGE)
+    if pil is None:
+        return None
+    img = cv2.cvtColor(np.array(pil.convert("RGB")), cv2.COLOR_RGB2BGR)
     height, width = img.shape[:2]
     edge = max(width, height)
     if edge > MAX_EDGE:

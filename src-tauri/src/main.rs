@@ -21,7 +21,9 @@ static ENGINE_PORT: AtomicU16 = AtomicU16::new(0);
 
 const MEDIA_EXTS: &[&str] = &[
     "jpg", "jpeg", "png", "heic", "heif", "gif", "webp", "tif", "tiff", "bmp",
-    "dng", "mov", "mp4", "m4v", "webm", "mkv", "3gp", "avi",
+    "dng", "mov", "mp4", "m4v", "webm", "mkv", "3gp", "avi", "avif", "mts",
+    "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "raf", "orf", "rw2", "rwl", "pef",
+    "srw", "x3f", "3fr", "iiq", "erf", "kdc", "dcr", "mos", "mrw",
 ];
 
 fn paths_to_strings(paths: Vec<FilePath>) -> Vec<String> {

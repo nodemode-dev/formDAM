@@ -11,7 +11,7 @@ def token_of(request: Request) -> str:
 
 def _any_token(request: Request, scope: str) -> bool:
     tokens = [token_of(request)]
-    if request.url.path.endswith(("/thumb", "/file")):
+    if request.url.path.endswith(("/thumb", "/file", "/render")):
         tokens += [value for name, value in request.cookies.items() if name == "dam_vt" or name.startswith("dam_at_")]
     return any(check_token(token, scope) for token in tokens if token)
 

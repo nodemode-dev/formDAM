@@ -63,7 +63,9 @@ def start_import(body: ImportIn):
 
 UPLOAD_EXTS = {
     ".jpg", ".jpeg", ".png", ".heic", ".heif", ".gif", ".webp", ".tif", ".tiff", ".bmp",
-    ".dng", ".mov", ".mp4", ".m4v", ".webm", ".mkv", ".3gp", ".avi",
+    ".dng", ".mov", ".mp4", ".m4v", ".webm", ".mkv", ".3gp", ".avi", ".avif", ".mts",
+    ".cr2", ".cr3", ".crw", ".nef", ".nrw", ".arw", ".srf", ".sr2", ".raf", ".orf", ".rw2", ".rwl", ".pef",
+    ".srw", ".x3f", ".3fr", ".iiq", ".erf", ".kdc", ".dcr", ".mos", ".mrw",
 }
 
 

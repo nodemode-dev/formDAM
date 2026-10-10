@@ -121,6 +121,16 @@ def _frame_sig(image) -> Tuple[FrameSig, bool]:
 
 
 def image_signature(path: str) -> Optional[VisualSig]:
+    from ..services import decode
+
+    if decode.is_raw(path):
+        image = decode.open_image(path, path, max_long=256)
+        if image is None:
+            return None
+        size = decode.raw_size(path) or image.size
+        (dhash, phash, pmask, color), flat = _frame_sig(image)
+        return VisualSig(dhash=dhash, phash=phash, pmask=pmask, color=color,
+                         width=size[0], height=size[1], media="image", flat=flat)
     try:
         from PIL import Image, ImageOps
 

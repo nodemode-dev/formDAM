@@ -5,6 +5,12 @@ IMAGE_EXTS = {
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif",
     "webp": "image/webp", "bmp": "image/bmp", "tif": "image/tiff", "tiff": "image/tiff",
     "heic": "image/heic", "heif": "image/heif", "avif": "image/avif",
+    "dng": "image/x-adobe-dng", "cr2": "image/x-canon-cr2", "cr3": "image/x-canon-cr3", "crw": "image/x-canon-crw",
+    "nef": "image/x-nikon-nef", "nrw": "image/x-nikon-nrw", "arw": "image/x-sony-arw", "srf": "image/x-sony-srf",
+    "sr2": "image/x-sony-sr2", "raf": "image/x-fuji-raf", "orf": "image/x-olympus-orf", "rw2": "image/x-panasonic-rw2",
+    "rwl": "image/x-leica-rwl", "pef": "image/x-pentax-pef", "srw": "image/x-samsung-srw", "x3f": "image/x-sigma-x3f",
+    "3fr": "image/x-hasselblad-3fr", "iiq": "image/x-phaseone-iiq", "erf": "image/x-epson-erf",
+    "kdc": "image/x-kodak-kdc", "dcr": "image/x-kodak-dcr", "mos": "image/x-leaf-mos", "mrw": "image/x-minolta-mrw",
 }
 VIDEO_EXTS = {
     "mp4": "video/mp4", "mov": "video/quicktime", "m4v": "video/x-m4v", "webm": "video/webm",

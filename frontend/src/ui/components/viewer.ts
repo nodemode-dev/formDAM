@@ -1,4 +1,4 @@
-import { api, fileUrl, thumbUrl } from "../../engine/api.js";
+import { api, fileUrl, stillUrl, thumbUrl } from "../../engine/api.js";
 import { countFmt, formatDuration, fullStamp, humanBytes, timeLabel, dayLabel } from "../../engine/format.js";
 import { closeViewer, dropFromCaches, markViewed, on, setFavorite, state, stepViewer, trashMedia } from "../../engine/store.js";
 import type { Media } from "../../engine/types.js";
@@ -409,7 +409,8 @@ export function mountViewer(host: HTMLElement): void {
       front.classList.remove("active");
       frontIsA = !frontIsA;
       const full = new Image();
-      full.src = fileUrl(id);
+      const known = state.byId.get(id);
+      full.src = known ? stillUrl(known) : fileUrl(id);
       full.addEventListener("load", () => {
         if (seq === mediaSeq) back.src = full.src;
       }, { once: true });

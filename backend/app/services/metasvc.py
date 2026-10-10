@@ -30,13 +30,9 @@ def read(path: str, kind: str) -> Dict[str, Any]:
 
 
 def _dims(path: str) -> Optional[tuple]:
-    try:
-        from PIL import Image, ImageOps
+    from . import decode
 
-        with Image.open(path) as img:
-            return ImageOps.exif_transpose(img).size
-    except Exception:
-        return None
+    return decode.image_size(path, path)
 
 
 def apply(media_id: int, meta: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
@@ -49,7 +45,7 @@ def apply(media_id: int, meta: Optional[Dict[str, Any]] = None) -> Optional[Dict
     if meta is None:
         meta = read(path, row["kind"])
     width, height = row["width"], row["height"]
-    if row["kind"] == "image" and not (width and height):
+    if row["kind"] == "image" and (not (width and height) or (_is_raw(row["name"]) and META_VER > (row["meta_ver"] or 0))):
         size = _dims(path)
         if size:
             width, height = size

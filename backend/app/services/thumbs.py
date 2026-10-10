@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Optional
 
-from PIL import Image, ImageOps
+from PIL import Image
 
 from ..config import cache_dir
 from ..dedup.visual import ffmpeg_path
@@ -69,11 +69,14 @@ def ensure_thumb(media_id: int, rel_path: str, kind: str, requested: int) -> Opt
         return None
     if kind == "image":
         try:
-            with Image.open(src) as img:
-                img.draft("RGB", (size * 2, size * 2))
-                frame = ImageOps.exif_transpose(img).convert("RGB")
-                frame.thumbnail((size, size), Image.Resampling.LANCZOS)
-                frame.save(out, "WEBP", quality=80, method=4)
+            from . import decode, editsvc
+
+            frame = editsvc.render_still(media_id, src, size)
+            if frame is None:
+                frame = decode.open_image(src, rel_path, max_long=size)
+            if frame is None:
+                return None
+            frame.convert("RGB").save(out, "WEBP", quality=80, method=4)
             return out
         except Exception:
             return None
