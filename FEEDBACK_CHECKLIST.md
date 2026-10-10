@@ -587,10 +587,11 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 
 - [x] 1. Media Types collections (was partial) · time-lapse, cinematic, spatial, animated & long exposure added. d6d648d.
 - [x] 2. Developing RAW files (was partial) · RAW Develop section & lens corrections. 703c7d6.
-- [x] 3. Retouch and object removal (was partial) · Clean Up with the LaMa model, brush strokes. de81a89.
-- [x] 4. Identifying landmarks, plants and animals (was partial) · Look Up in the info panel. 6bc7416.
+- [~] 3. Retouch and object removal (still partial) · Clean Up with the LaMa model, brush strokes. de81a89. [>] object picking & face pixelation.
+- [~] 4. Identifying landmarks, plants and animals (still partial) · Look Up in the info panel. 6bc7416. [>] art, food & signs; an open vocabulary.
 - [x] 5. Opening a photo in another app (was partial) · Edit With round trip. ad12155.
-- [x] 6. Sharing to other people and links (was none) · opt-in guest server, links, QR, web gallery, Mac share services. e524785.
-- [x] 7. Shared albums (was none) · album links w/ likes, comments, contributions & owner activity. e524785.
-- [x] 8. A library shared with family (was none) · Shared Library through a shared folder. 7bee02c.
+- [~] 6. Sharing to other people and links (was none, now partial) · opt-in guest server, links, QR, web gallery, Mac share services. e524785.
+- [~] 7. Shared albums (was none, now partial) · album links w/ likes, comments, contributions & owner activity. e524785. [>] invitations, guest save to library, notifications.
+- [~] 8. A library shared with family (was none, now partial) · Shared Library through a shared folder. 7bee02c. [>] invitations, setup rules, suggestions.
+- [x] 10. Independent audit before publishing · 11 findings, all fixed in 417816a & a136875; the five lowered grades are kept as the audit gave them.
 - [~] 9. Syncing the library across devices (was none, now partial) · folder sync between computers, last writer wins per photo. 7bee02c. [>] phones as sync peers & Optimize Storage, recorded in DEV_PLAN Next.
