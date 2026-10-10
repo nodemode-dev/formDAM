@@ -291,6 +291,7 @@ export function loadThumb(img: HTMLImageElement, mediaId: number, size: number):
 }
 
 export const tileHooks: { ctx: Array<(item: Media) => CtxEntry[]> } = { ctx: [] };
+let selectAnchor: number | null = null;
 
 export function paintTileMeta(tile: HTMLElement, item: Media): void {
   const thumb = tile.querySelector<HTMLImageElement>(":scope > img");
@@ -380,9 +381,19 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
     });
     tile.append(check);
   }
-  tile.addEventListener("click", () => {
-    if (state.selection.size > 0 && selectable) {
+  tile.addEventListener("click", (event) => {
+    if (selectable && event.shiftKey && selectAnchor !== null) {
+      const ids = context();
+      const a = ids.indexOf(selectAnchor);
+      const b = ids.indexOf(item.id);
+      if (a >= 0 && b >= 0) {
+        for (const id of ids.slice(Math.min(a, b), Math.max(a, b) + 1)) if (!state.selection.has(id)) toggleSelect(id);
+        return;
+      }
+    }
+    if (selectable && (event.metaKey || event.ctrlKey || state.selection.size > 0)) {
       toggleSelect(item.id);
+      selectAnchor = item.id;
       return;
     }
     const ids = context();

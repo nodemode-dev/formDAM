@@ -6,6 +6,7 @@ import { mountPetsPage, mountSubjectsPage, registerDiscover } from "./ui/compone
 import { registerFind } from "./ui/components/find.js";
 import { registerEditor } from "./ui/components/editor.js";
 import { registerOutputs } from "./ui/components/outputs.js";
+import { mountMemoriesPage, mountMemoryPage, registerCurate } from "./ui/components/curate.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -122,6 +123,7 @@ registerDiscover();
 registerFind();
 registerEditor();
 registerOutputs();
+registerCurate();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;
@@ -210,6 +212,10 @@ function render(): void {
     teardown = mountPlacesPage(plainShell("Places"));
   } else if (view === "trips") {
     teardown = mountTripsPage(plainShell("Trips"));
+  } else if (view === "memories") {
+    teardown = mountMemoriesPage(plainShell("Memories"));
+  } else if (view === "memory") {
+    teardown = mountMemoryPage(plainShell("Memory"), Number(param));
   } else if (view === "pets") {
     teardown = mountPetsPage(plainShell("Pets"));
   } else if (view === "subjects") {

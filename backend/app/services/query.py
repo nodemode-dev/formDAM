@@ -154,6 +154,11 @@ def rule_sql(rule: Dict[str, Any]) -> Tuple[str, List[Any]]:
     if field == "subject":
         clause = "m.id IN (SELECT media_id FROM media_labels WHERE label=?)"
         return (f"NOT ({clause})" if neg else clause), [str(value)]
+    if field == "group":
+        people = [int(p) for p in str(value or "").split("-") if p.isdigit()][:6] or [-1]
+        return " AND ".join("m.id IN (SELECT media_id FROM faces WHERE person_id=?)" for _ in people), people
+    if field == "memory":
+        return "m.id IN (SELECT media_id FROM memory_items WHERE memory_id=?)", [int(value)]
     if field == "search":
         fields = rule.get("fields")
         return text_sql(str(value or ""), list(fields) if isinstance(fields, list) else None)

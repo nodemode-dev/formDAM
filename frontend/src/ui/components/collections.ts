@@ -10,6 +10,7 @@ import { specHash } from "./organize.js";
 import { mediaTypeCards } from "./pages.js";
 import { placesStrip, tripsStrip } from "./places.js";
 import { contentCards, petsStrip } from "./discover.js";
+import { groupsStrip, memoriesStrip } from "./curate.js";
 
 function countCard(label: string, icon: IconName, key: string, hash: string, locked = false): HTMLElement {
   const count = h("span", { class: "card-count" }, "");
@@ -50,6 +51,10 @@ export function mountCollections(host: HTMLElement): () => void {
   const disposePets = petsStrip(petsBody);
   const contentBody = h("div", { class: "cards-grid" });
   const disposeContent = contentCards(contentBody);
+  const memoriesBody = h("div", { class: "strip-reserve tall" });
+  const disposeMemories = memoriesStrip(memoriesBody);
+  const groupsBody = h("div", { class: "strip-reserve" });
+  const disposeGroups = groupsStrip(groupsBody);
   const utilCards = h("div", { class: "cards-grid" },
     countCard("Favorites", "heart", "favorites", "#/f/favorites"),
     countCard("Recently Deleted", "trash", "trash", "#/trash", true),
@@ -91,7 +96,12 @@ export function mountCollections(host: HTMLElement): () => void {
       body: contentBody,
     },
     { key: "utilities", title: "Utilities", extras: [], body: utilCards },
-    { key: "memories", title: "Memories", extras: [], body: h("div", { class: "empty-center" }, emptyState("sparkle", "No Memories Yet", "Automatic Memories are on the roadmap; nothing is generated in this build.")) },
+    {
+      key: "memories", title: "Memories",
+      extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/memories") }, "See All")],
+      body: memoriesBody,
+    },
+    { key: "groups", title: "Groups", extras: [], body: groupsBody },
     {
       key: "places", title: "Places",
       extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/places") }, iconEl("map"), "Map")],
@@ -289,6 +299,8 @@ export function mountCollections(host: HTMLElement): () => void {
     disposeTrips();
     disposePets();
     disposeContent();
+    disposeMemories();
+    disposeGroups();
     offs.forEach((off) => off());
   };
 }

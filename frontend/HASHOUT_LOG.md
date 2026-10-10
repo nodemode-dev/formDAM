@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-10-10
+### ui/components/curate.ts + grid multi-select · memories, groups, slideshow, compare
+- refers-to: curate.memoriesStrip/mountMemoriesPage/mountMemoryPage/groupsStrip/Music/playMemory/openSlideshow/openCompare/createMemoryFlow/registerCurate; grid.ts tile click (Cmd/Ctrl-click toggle, Shift-click range, selectAnchor); icons-extra pause; collections.ts Memories & Groups sections (replaced the "Automatic Memories are on the roadmap" placeholder); sidebar.ts Memories row; main.ts memories & memory routes, registerCurate
+- kind: rationale + removed code
+- logged: zip v1.22.0 · 2026-10-10
+
+Memory music is generated w/ WebAudio (a four-chord pad plus an arpeggio through a low-pass & a feedback delay; tempo, voicing & delay differ per theme), so a memory has a soundtrack w/o shipping licensed audio; a chosen local file plays through the engine instead. The slideshow keeps two absolutely positioned layers & crossfades by opacity once the next image has decoded, w/ a slow Ken Burns scale-and-drift per still, preloads the following item, plays videos muted, & goes fullscreen when allowed; space pauses, arrows step, Esc leaves. Compare shows 2 to 4 items w/ one shared transform (linked zoom & pan, wheel zoom around the cursor, 100% from the focused pane) or per-pane transforms when unlinked; ratings, reject & favorite keys apply to the focused pane, as in Bridge's Review & Lightroom's Survey. The grid gained Cmd/Ctrl-click to toggle & Shift-click to extend a selection; before this, a selection could only start from the tile check button. Removed from collections.ts: the Memories emptyState placeholder body.
 ### ui/components/outputs.ts · File Info, Export, Contact Sheet, Print, Workflows
 - refers-to: outputs.pickFolder/fileInfoFlow/exportFlow/pdfModal/contactSheetFlow/printFlow/workflowsFlow/newWorkflowFlow/outputEntries/registerOutputs; main.ts registerOutputs; parity.css fileinfo, pdf-frame, wf-step rules
 - kind: rationale
