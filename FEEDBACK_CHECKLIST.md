@@ -574,3 +574,11 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 
 - [x] 1. The bundled engine's traceback: sqlite3.OperationalError: no such column: live_of, in init_db · The catalog setup created the Live Photos index before the migration that adds its column, so any catalog older than Live Photos (the owner's) crashed the engine at startup. Fixed in db.py; verified on real catalogs at schemas 3, 2, 1 & w/o a version row, & by starting the engine from source & frozen on a schema-3 library in the old DAMp folder. Round 68 closes w/ this.
 - [x] 2. setup/build_macos_app stopped at the face models: Could not resolve host: media.githubusercontent.com · a network/DNS failure on the Mac; the download now retries transient failures, removes a partial file & says plainly what to do; models already present & verified are never re-downloaded.
+
+## Round 70 · after zip v1.21.2 (zip DAM_v1.22.0; app reports v1.13.9)
+
+- [x] 1. Like the rest of the form family it needs git commits · the tree is a git repo on main w/ one commit per phase (12 on top of the imported v1.21.2) by nodemode-ai, origin set to git@github.com:nodemode-ai/formdam.git.
+- [x] 2. SEDO · every change to an existing file is a single-region hand edit; new modules for new features.
+- [x] 3. A real sidecar · DEV_PLAN, BUILD_NOTES copy, root HASHOUT_LOG, TEST_PLAN & dev-wise ship in DAM_planning_docs_sidecar_v1.22.0.zip.
+- [x] 4. Close the parity list's partials & get the build to at least 85 percent · re-graded on the same 77 rows: 92 percent (68 full, 5 partial, 4 none), from 33. [~] still partial: media types beyond the ten detected, species & landmark identification, generative Clean Up, RAW-specific develop controls, Edit With round-trips. [>] still none: sharing & links, shared albums, a family library, sync (DAM is loopback-only by design today).
+- [x] 5. Pull in FormLit's DAM features where they close gaps · adapted (Apache-2.0, attributed): the rename token engine, EXIF reading, XMP build, parse & JPEG embedding.
