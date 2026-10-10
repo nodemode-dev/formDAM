@@ -71,8 +71,11 @@ export async function api<T>(path: string, init?: RequestInit, albumId?: number)
   return (await res.json()) as T;
 }
 
+export const thumbVersions = new Map<number, number>();
+
 export function thumbUrl(mediaId: number, size = 384): string {
-  return `/api/media/${mediaId}/thumb?s=${size}`;
+  const version = thumbVersions.get(mediaId);
+  return `/api/media/${mediaId}/thumb?s=${size}${version ? `&v=${Math.round(version)}` : ""}`;
 }
 
 export async function apiUpload<T>(path: string, form: FormData): Promise<T> {

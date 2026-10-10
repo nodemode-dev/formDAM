@@ -4,6 +4,7 @@ import { mountImportsPage, mountKeywordsPage } from "./ui/components/pages.js";
 import { mountPlacesPage, mountTripsPage, registerPlaces } from "./ui/components/places.js";
 import { mountPetsPage, mountSubjectsPage, registerDiscover } from "./ui/components/discover.js";
 import { registerFind } from "./ui/components/find.js";
+import { registerEditor } from "./ui/components/editor.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -118,6 +119,7 @@ registerOrganize();
 registerPlaces();
 registerDiscover();
 registerFind();
+registerEditor();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;

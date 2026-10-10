@@ -30,6 +30,8 @@ export const viewerHooks: {
   editDate?: (id: number) => void;
   onShow?: (id: number) => void;
   refreshInfo?: () => void;
+  reloadStill?: () => void;
+  videoReady?: (video: HTMLVideoElement, id: number) => void;
   toolbar: Array<(id: () => number | null) => HTMLElement>;
   keys: Array<(event: KeyboardEvent, id: number) => boolean>;
 } = { toolbar: [], keys: [] };
@@ -372,6 +374,11 @@ export function mountViewer(host: HTMLElement): void {
     info = createInfoPanel((id) => viewerHooks.editLocation?.(id), (id) => viewerHooks.editDate?.(id));
     const panel = info;
     viewerHooks.refreshInfo = () => panel.refresh();
+    viewerHooks.reloadStill = () => {
+      const id = currentId();
+      const item = id === null ? undefined : state.byId.get(id);
+      if (id !== null && item && item.kind === "image") showImage(id, item.name);
+    };
     infoPanel = info.el;
     infoPanel.classList.toggle("hidden", !infoOpen);
     stripSlot = h("div", { class: "strip-slot" });
@@ -379,6 +386,7 @@ export function mountViewer(host: HTMLElement): void {
     const top = h("div", { class: "viewer-top" },
       closeBtn,
       h("div", { class: "viewer-title" }, vDate, vPos),
+      ...viewerHooks.toolbar.map((fn) => fn(currentId)),
       infoBtn, resetBtn, downloadLink, favBtn, hideBtn, trashBtn);
     const main = h("div", { class: "viewer-main" }, stage, stripSlot, infoPanel);
     root = h("div", { class: "viewer" }, top, main);
@@ -440,7 +448,9 @@ export function mountViewer(host: HTMLElement): void {
     imgB.classList.remove("active");
     stopLive();
     videoHolder.classList.remove("hidden");
-    videoHolder.replaceChildren(h("video", { src: fileUrl(id), controls: true, autoplay: true, playsinline: true }));
+    const video = h("video", { src: fileUrl(id), controls: true, autoplay: true, playsinline: true }) as HTMLVideoElement;
+    videoHolder.replaceChildren(video);
+    viewerHooks.videoReady?.(video, id);
   }
 
   function update(): void {

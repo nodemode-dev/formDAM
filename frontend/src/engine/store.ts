@@ -1,5 +1,5 @@
 import { prefGet, prefSet } from "./prefstore.js";
-import { api } from "./api.js";
+import { api, thumbVersions } from "./api.js";
 import type {
   Album, DupSet, FilterName, JobState, LibrarySummary, Media, MediaPage, PeopleStatus, PeriodSummary, Person,
 } from "./types.js";
@@ -88,7 +88,10 @@ export async function loadMore(filter: FilterName): Promise<void> {
   const params = new URLSearchParams({ spec: JSON.stringify(specFor(filter)), limit: "400" });
   if (page.next) params.set("cursor", JSON.stringify(page.next));
   const data = await api<MediaPage>(`/browse?${params.toString()}`);
-  for (const item of data.items) state.byId.set(item.id, item);
+  for (const item of data.items) {
+    state.byId.set(item.id, item);
+    if (item.edited_ts) thumbVersions.set(item.id, item.edited_ts);
+  }
   page.items.push(...data.items);
   page.next = data.next;
   page.loading = false;

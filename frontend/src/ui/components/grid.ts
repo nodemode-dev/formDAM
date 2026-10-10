@@ -293,6 +293,12 @@ export function loadThumb(img: HTMLImageElement, mediaId: number, size: number):
 export const tileHooks: { ctx: Array<(item: Media) => CtxEntry[]> } = { ctx: [] };
 
 export function paintTileMeta(tile: HTMLElement, item: Media): void {
+  const thumb = tile.querySelector<HTMLImageElement>(":scope > img");
+  const fresh = thumbUrl(item.id, 384);
+  if (thumb && thumb.dataset.thumbSrc && thumb.dataset.thumbSrc !== fresh) {
+    thumb.dataset.thumbSrc = fresh;
+    if (thumb.getAttribute("src")) thumb.src = fresh;
+  }
   let meta = tile.querySelector<HTMLElement>(":scope > .tile-meta");
   if (!meta) {
     meta = h("div", { class: "tile-meta" });
