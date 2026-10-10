@@ -9,6 +9,7 @@ import { promptText } from "../prompt.js";
 import { toast } from "../toast.js";
 import { loadImage } from "./grid.js";
 import { pickFolder } from "./outputs.js";
+import { openPackageFlow } from "./packages.js";
 
 interface LibraryEntry { path: string; name: string; active: boolean; exists: boolean; opened_ts?: number }
 interface RepairReport { integrity: string; finished?: number; deep: boolean; counts: Record<string, number>; missing: Array<{ name: string; path: string }>; offline: Array<{ name: string; path: string }>; orphans: string[] }
@@ -360,6 +361,12 @@ export function registerLibraryDrops(): void {
     }
     if (!event.dataTransfer.items?.length) return;
     event.preventDefault();
+    const dropped = [...event.dataTransfer.files];
+    const zips = dropped.filter((f) => f.name.toLowerCase().endsWith(".zip"));
+    for (const zip of zips) {
+      void openPackageFlow(zip).then((ok) => { if (!ok) toast(`${zip.name} is not a DAM share package`, "error"); });
+    }
+    if (zips.length && zips.length === dropped.length) return;
     void collectEntries(event.dataTransfer.items).then((files) => uploadAll(files, albumId));
   });
 }

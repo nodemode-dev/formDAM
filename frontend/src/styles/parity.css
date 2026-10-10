@@ -44,14 +44,14 @@
 .exif-v { color: var(--text-muted); overflow-wrap: anywhere; }
 .info-v { white-space: pre-line; }
 .share-form, .share-result { display: flex; flex-direction: column; gap: var(--space-3); }
-.share-note { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border-radius: 12px; background: var(--glass-bg-2); }
-.share-qr { width: 180px; height: 180px; align-self: center; border-radius: 10px; background: #fff; image-rendering: pixelated; }
 .share-settings { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: 14px; max-width: 640px; }
-.share-row { cursor: pointer; }
-.share-row.active { outline: 1px solid var(--accent); }
 .share-kind { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
-.share-unread { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #111); }
-.share-act-pane { display: flex; flex-direction: column; gap: var(--space-2); max-width: 640px; }
+.field-error { min-height: 1.3em; margin: 0; font-size: 12.5px; color: var(--danger, #ff5a52); }
+.pkg-pw-row { align-items: flex-end; }
+.pkg-pw-row .field { flex: 1 1 auto; }
+.pkg-path { font-size: 12px; color: var(--text-muted); word-break: break-all; }
+.pkg-password { font: 600 15px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; padding: 8px 10px; border-radius: 10px; background: var(--glass-bg-2); user-select: all; }
+.pkg-lede { max-width: 720px; margin: 0 0 var(--space-3); }
 .share-activity { display: flex; flex-direction: column; gap: 4px; }
 .sync-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-3); }
 .sync-cards .share-settings { max-width: none; }

@@ -12,3 +12,4 @@ rapidocr-onnxruntime
 pyobjc-framework-ImageCaptureCore
 pyobjc-framework-Quartz
 cryptography==50.0.1
+pyzipper==0.4.0

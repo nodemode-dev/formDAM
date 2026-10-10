@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### ui/components/packages.ts + sharing.ts, albums.ts, libmanage.ts edits · encrypted packages in the window
+- refers-to: packages.packageFlow, sentPanel, openPackageFlow, notesFlow, mountPackageList, waitJob, seg; sharing.shareEntries, mountSharedPage packages section & Open Package, registerSharing tile entry; albums.mountAlbumDetail shareBtn & notesBtn; libmanage.registerLibraryDrops zip routing; parity.css .field-error, .pkg-*
+- kind: rationale + replaced code
+- logged: zip v1.24.0 · 2026-10-10
+
+Share as Encrypted Package replaces Share Link everywhere it was offered (tile menu, selection bar, viewer, album header). The form pre-fills a strong password the user can replace, and the result shows the file, the password in a monospace block with Copy, Show in Finder, and on the Mac AirDrop, Mail and Messages for the file. A .zip dropped anywhere in the window, or chosen with Open Package on the Sharing page, is inspected first; a package opens a password prompt whose error line keeps its height, so a wrong password never moves the form. The album header gains Notes. Replaced: the link form, guest server card, link list and guest activity pane.
 ### sharing.ts sync cards, Move to Shared Library, library view switch
 - refers-to: sharing.syncCard, moveLibrary, mountSharedPage sync section & device name, registerSharing tile entry; organize.openQuickFilters Both/Personal/Shared; organize FLAG_VALUES shared & personal library
 - kind: rationale

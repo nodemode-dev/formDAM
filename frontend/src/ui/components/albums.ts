@@ -16,7 +16,7 @@ import { patchList, setText } from "../keyed.js";
 import { promptText } from "../prompt.js";
 import { loadFolders, moveAlbumFlow, newFolderFlow, smartAlbumFlow } from "./organize.js";
 import { isPinned, togglePin } from "./sidebar.js";
-import { shareAlbumFlow } from "./sharing.js";
+import { notesFlow, packageFlow } from "./packages.js";
 
 export function unlockAlbumFlow(album: Album): Promise<boolean> {
   return new Promise((resolve) => {
@@ -275,12 +275,18 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
       toast("Private albums are never shared", "error");
       return;
     }
-    void shareAlbumFlow(albumId, title.textContent ?? "Shared Album");
+    if (meta?.is_smart) {
+      toast("Smart albums are shared by selecting their photos", "error");
+      return;
+    }
+    void packageFlow([], { id: albumId, name: title.textContent ?? "Shared Album" });
   });
+  const notesBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Album Notes", title: "Album Notes" }, iconEl("note"));
+  notesBtn.addEventListener("click", () => void notesFlow(albumId, title.textContent ?? "Album"));
   const pad = h(
     "div",
     { class: "view-pad" },
-    h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), sortBtn, shareBtn, renameBtn, deleteBtn),
+    h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), sortBtn, notesBtn, shareBtn, renameBtn, deleteBtn),
     grid,
   );
   host.append(pad);

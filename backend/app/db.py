@@ -133,7 +133,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -155,6 +155,22 @@ SYNC_MEDIA_COLUMNS = ("favorite, rating, label, rejected, title, caption, alt_te
                       "created_ts, lat, lon, location_hidden, shared_lib, private, trim_in, trim_out")
 
 MIGRATIONS = {
+    11: [
+        "ALTER TABLE media ADD COLUMN origin_sha TEXT",
+        "CREATE INDEX IF NOT EXISTS idx_media_origin ON media(origin_sha)",
+        "ALTER TABLE albums ADD COLUMN share_uuid TEXT",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_albums_share_uuid ON albums(share_uuid)",
+        """CREATE TABLE IF NOT EXISTS album_notes(
+             id TEXT PRIMARY KEY, album_id INTEGER NOT NULL, author TEXT NOT NULL, text TEXT NOT NULL, ts REAL NOT NULL,
+             media_sha TEXT, mine INTEGER NOT NULL DEFAULT 0)""",
+        "CREATE INDEX IF NOT EXISTS idx_album_notes ON album_notes(album_id, ts)",
+        """CREATE TABLE IF NOT EXISTS share_packages(
+             id INTEGER PRIMARY KEY, package_id TEXT NOT NULL, direction TEXT NOT NULL, kind TEXT NOT NULL, title TEXT NOT NULL,
+             album_id INTEGER, stack_id INTEGER, count INTEGER NOT NULL DEFAULT 0, sender TEXT, path TEXT, created_ts REAL NOT NULL)""",
+        "DROP TABLE IF EXISTS share_items",
+        "DROP TABLE IF EXISTS share_activity",
+        "DROP TABLE IF EXISTS shares",
+    ],
     10: [
         "ALTER TABLE media ADD COLUMN meta_ts REAL NOT NULL DEFAULT 0",
         "ALTER TABLE media ADD COLUMN shared_lib INTEGER NOT NULL DEFAULT 0",

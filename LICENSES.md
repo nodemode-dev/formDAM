@@ -32,6 +32,8 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | pyobjc-core, pyobjc-framework-Cocoa, pyobjc-framework-ImageCaptureCore, pyobjc-framework-Quartz | MIT | Python bridge to Apple's ImageCaptureCore (the Photos.app device-import framework) for iPhone/iPad import + ImageIO thumbnail encode for the device browse grid; macOS only |
 | YuNet model | MIT | bundled via --add-data |
 | SFace model | Apache-2.0 | bundled via --add-data |
+| pyzipper 0.4.0 | MIT | AES-256 (WinZip AE-2) zip writing and reading for encrypted share packages, services/packagesvc.py |
+| pycryptodomex (pyzipper dependency) | BSD-2-Clause and public domain | AES and HMAC under pyzipper |
 | LaMa inpainting (opencv/inpainting_lama, inpainting_lama_2025jan.onnx, revision aee6d22) | Apache-2.0 | Clean Up object removal in services/cleanup.py; fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the other models. Without it Clean Up falls back to OpenCV Telea |
 | DAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
 
