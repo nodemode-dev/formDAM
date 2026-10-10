@@ -183,7 +183,7 @@ export function clearSelection(): void {
 }
 
 export type SortOrder =
-  | "newest" | "oldest" | "added" | "added_oldest" | "name" | "name_desc" | "size" | "size_small" | "rating" | "edited";
+  | "newest" | "oldest" | "added" | "added_oldest" | "name" | "name_desc" | "size" | "size_small" | "rating" | "edited" | "viewed";
 
 export interface QueryRule {
   field: string;

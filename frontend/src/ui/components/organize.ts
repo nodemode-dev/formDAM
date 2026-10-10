@@ -544,6 +544,8 @@ function tileEntries(item: Media): CtxEntry[] {
     entries.push(
       { label: "Open Stack", icon: "stack", action: () => navigate(specHash({ rules: [{ field: "stack", value: item.stack_id }], expand_stacks: true, title: "Stack" } as QuerySpec)) },
       { label: "Unstack", icon: "layers", action: async () => { await api(`/stacks/${item.stack_id}`, { method: "DELETE" }); invalidateMedia(); } },
+      { label: "Make Stack Top", icon: "stack", action: async () => { await api(`/stacks/${item.stack_id}/top`, { method: "POST", body: JSON.stringify({ media_id: item.id }) }); invalidateMedia(); toast("Stack top set"); } },
+      { label: "Remove from Stack", icon: "minus", action: async () => { await api(`/stacks/${item.stack_id}/remove`, { method: "POST", body: JSON.stringify({ ids }) }); invalidateMedia(); } },
     );
   } else if (ids.length > 1) {
     entries.push({ label: "Stack", icon: "stack", action: () => void stackFlow(ids) });

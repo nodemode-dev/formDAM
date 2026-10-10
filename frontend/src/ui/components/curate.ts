@@ -1,6 +1,6 @@
 import { api, fileUrl, stillUrl, thumbUrl } from "../../engine/api.js";
 import { countFmt, dayLabel } from "../../engine/format.js";
-import { navigate, on, pollJob, saveMeta, specKey, state, type QuerySpec } from "../../engine/store.js";
+import { emitTopic, invalidateMedia, navigate, on, pollJob, saveMeta, specKey, state, type QuerySpec } from "../../engine/store.js";
 import type { Media } from "../../engine/types.js";
 import type { CtxEntry } from "../contextmenu.js";
 import { h } from "../dom.js";
@@ -494,6 +494,15 @@ export function registerCurate(): void {
   tileHooks.ctx.push((item) => {
     const ids = state.selection.has(item.id) && state.selection.size > 1 ? [...state.selection] : [item.id];
     const entries: CtxEntry[] = [{ label: "Create Memory...", icon: "memory", action: () => void createMemoryFlow(ids) }];
+    if (state.route.view === "memory") {
+      const memoryId = Number(state.route.param);
+      entries.push({ label: "Remove from Memory", icon: "minus", action: async () => {
+        await api(`/memories/${memoryId}/remove`, { method: "POST", body: JSON.stringify({ ids }) });
+        invalidateMedia();
+        emitTopic("media");
+        toast(`Removed ${countFmt(ids.length)} from this memory`);
+      } });
+    }
     if (ids.length >= 2) entries.push({ label: "Compare", icon: "compare", action: () => openCompare(ids) });
     return entries;
   });

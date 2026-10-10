@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.19.0) · 2026-10-10
+### library sort menu + stack and memory tile entries · gaps found by the independent grade audit
+- refers-to: library.ts sort menu (First added, Name Z to A, Smallest first, Recently viewed); store.ts SortOrder viewed; organize.ts tileEntries Make Stack Top, Remove from Stack; curate.ts registerCurate Remove from Memory
+- kind: rationale
+- logged: zip v1.22.0 · 2026-10-10
+
+A read-only audit of the parity grades found engine features w/o an interface path. Wired here because each is one menu entry: the four sort orders the engine already had, choosing a stack's top & taking items out of a stack, & removing items from a memory (shown only on a memory page). Removal relies on invalidateMedia plus the media topic: the grid refetches the page & appendItems drops tiles no longer in it, so nothing is rebuilt. Left engine-only & said so on the comparison page: pet merge, group hiding, template deletion, consolidate by moving, auto-stacking.
 ### infopanel Text in Photo + curate Describe a Memory + libmanage disk ratings
 - refers-to: infopanel.createInfoPanel ocrSection (Copy); curate.mountMemoriesPage describe button; libmanage.paintDiskMeta, mountDiskPage keys handler
 - kind: rationale

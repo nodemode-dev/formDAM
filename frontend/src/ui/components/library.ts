@@ -54,8 +54,12 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
       { label: "Newest first", icon: "sortNewest", selected: state.sort === "newest", action: () => setSort("newest") },
       { label: "Oldest first", icon: "sortOldest", selected: state.sort === "oldest", action: () => setSort("oldest") },
       { label: "Recently added", icon: "save", selected: state.sort === "added", action: () => setSort("added") },
-      { label: "Name", icon: "sortName", selected: state.sort === "name", action: () => setSort("name") },
+      { label: "First added", icon: "save", selected: state.sort === "added_oldest", action: () => setSort("added_oldest") },
+      { label: "Name A to Z", icon: "sortName", selected: state.sort === "name", action: () => setSort("name") },
+      { label: "Name Z to A", icon: "sortName", selected: state.sort === "name_desc", action: () => setSort("name_desc") },
       { label: "Largest first", icon: "sortSize", selected: state.sort === "size", action: () => setSort("size") },
+      { label: "Smallest first", icon: "sortSize", selected: state.sort === "size_small", action: () => setSort("size_small") },
+      { label: "Recently viewed", icon: "eye", selected: state.sort === "viewed", action: () => setSort("viewed") },
       { label: "Highest rated", icon: "star", selected: state.sort === "rating", action: () => setSort("rating") },
       { label: "Recently edited", icon: "wand", selected: state.sort === "edited", action: () => setSort("edited") },
     ]);
