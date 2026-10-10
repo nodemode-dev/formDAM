@@ -1,0 +1,10 @@
+fastapi==0.121.1
+uvicorn==0.32.1
+pillow==12.3.0
+numpy>=1.26
+opencv-python-headless>=4.10
+python-multipart
+rapidocr-onnxruntime
+pyobjc-framework-ImageCaptureCore
+pyobjc-framework-Quartz
+cryptography==50.0.1

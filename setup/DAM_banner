@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+# DAM_banner - boot banner for DAM: the DAM icon itself (the play-triangle
+# plate, the m mark and its ball) drawn in ASCII, not the word.
+# Self-contained: no figlet, no network, pure bash and printf (bash 3.2 safe).
+#
+#   setup/DAM_banner               print the banner (./DAM runs it first)
+#   DAM_VERSION=v1.13.9 setup/DAM_banner
+#
+# Environment:
+#   NO_COLOR=1                     force monochrome (no-color.org convention)
+#   DAM_BANNER=0                   suppress the banner entirely
+#   DAM_BANNER_COLOR=255;154;56    paint the mark in one RGB instead of the icon's red-to-yellow gradient
+#   DAM_BANNER_CLEAR=1             clear the screen before painting
+#   DAM_VERSION=v1.13.9            version string for the subtitle (default: frontend/package.json)
+
+[ "${DAM_BANNER:-1}" = "0" ] && exit 0
+
+# --- terminal size ------------------------------------------------------------
+cols="${COLUMNS:-0}"
+if [ "$cols" -le 0 ] 2>/dev/null; then
+  cols="$(tput cols 2>/dev/null || echo 80)"
+fi
+case "$cols" in ''|*[!0-9]*) cols=80 ;; esac
+lines="${LINES:-0}"
+if [ "$lines" -le 0 ] 2>/dev/null; then
+  lines="$(tput lines 2>/dev/null || echo 40)"
+fi
+case "$lines" in ''|*[!0-9]*) lines=40 ;; esac
+
+# --- colour capability --------------------------------------------------------
+DIM=""
+RESET=""
+MARK=()
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
+  case "${COLORTERM:-}" in
+    truecolor|24bit)
+      DIM=$'\033[38;2;115;115;115m'
+      for k in 0 1 2 3 4 5 6 7; do
+        if [ -n "${DAM_BANNER_COLOR:-}" ]; then
+          MARK[k]=$'\033[38;2;'"$DAM_BANNER_COLOR"'m'
+        else
+          MARK[k]=$'\033[38;2;255;'"$(( 231 - 190 * k / 7 ))"';'"$(( 88 - 44 * k / 7 ))"'m'
+        fi
+      done
+      ;;
+    *)
+      depth="$(tput colors 2>/dev/null || echo 8)"
+      if [ "$depth" -ge 256 ] 2>/dev/null; then
+        DIM=$'\033[38;5;244m'
+        k=0
+        for code in 226 220 214 214 208 202 202 196; do
+          MARK[k]=$'\033[38;5;'"$code"'m'
+          k=$((k + 1))
+        done
+      else
+        DIM=$'\033[90m'
+        for k in 0 1 2 3; do MARK[k]=$'\033[33m'; done
+        for k in 4 5 6 7; do MARK[k]=$'\033[31m'; done
+      fi
+      ;;
+  esac
+  RESET=$'\033[0m'
+fi
+
+# --- art ----------------------------------------------------------------------
+art_wide() {
+cat <<'ART'
+  .-'''-._
+ /        `-._
+|            `-._
+|    d8888888b   `-._
+|   d88888888888b   `-._
+|   8888888888888888b   `-._
+|   8888888888888888888b   `-._
+|   888888P   Y888888888888b   `-._
+|   888888     888888888888888b   `-._
+|   888888     888888888888888888b   `-.
+|   888888     888888P   Y88888888b    \
+|   888888     888888     88888888P    /
+|   888888     888888     8888888P   .-'
+|   888888     888888     Y8888P  _.-'
+|   888888     888888          _.-'
+|   Y8888P     88888P      _.-'
+|              Y888P    _.-'
+|    d88b           _.-'
+|   888888       _.-'
+|    Y88P    _.-'
+ \        _.-'
+  '-...-'`
+ART
+}
+
+art_mid() {
+cat <<'ART'
+  .-''-._
+ /      `-._
+|  d88888b `-._
+| d8888888888b `-._
+| 88888888888888b  `-._
+| 88888P Y8888888888b `-._
+| 88888   8888888888888b `-.
+| 88888   88888P Y888888   )
+| 88888   88888   88888P .-'
+| Y888P   88888   Y8P _.-'
+|         Y888P    _.-'
+| d888b        _.-'
+| Y888P    _.-'
+ \      _.-'
+  '-..-'`
+ART
+}
+
+art_small() {
+cat <<'ART'
+  .-._
+ /    `-._
+|  d8b   `-._
+| d88888b   `-._
+| 888P Y8888b  `-._
+| 888  888P Y88b   )
+| Y8P  888  Y8P  .-'
+|      888    _.-'
+| d8b  Y8P _.-'
+| Y8P   _.-'
+ \   _.-'
+  '-'`
+ART
+}
+
+W_WIDE=40;  H_WIDE=22
+W_MID=28;   H_MID=15
+W_SMALL=20; H_SMALL=12
+
+if   [ "$cols" -ge "$W_WIDE" ] && [ "$lines" -ge $((H_WIDE + 6)) ]; then art=art_wide;  width=$W_WIDE;  rows=$H_WIDE
+elif [ "$cols" -ge "$W_MID" ] && [ "$lines" -ge $((H_MID + 6)) ]; then art=art_mid;   width=$W_MID;   rows=$H_MID
+elif [ "$cols" -ge "$W_SMALL" ]; then art=art_small; width=$W_SMALL; rows=$H_SMALL
+else art=""; width=3; rows=1
+fi
+
+pad=$(( (cols - width) / 2 ))
+[ "$pad" -lt 0 ] && pad=0
+indent=""
+[ "$pad" -gt 0 ] && indent="$(printf '%*s' "$pad" '')"
+
+[ "${DAM_BANNER_CLEAR:-0}" = "1" ] && [ -t 1 ] && printf '\033[2J\033[H'
+
+printf '\n'
+
+paint() {
+  local line="$1" r="$2" out="" last="" i ch cls den
+  den=$(( 2 * (rows - 1) * (width - 1) ))
+  for (( i = 0; i < ${#line}; i++ )); do
+    ch="${line:i:1}"
+    case "$ch" in
+      " ") cls="" ;;
+      [[:alnum:]])
+        cls=$(( (700 * (r * (width - 1) + (width - 1 - i) * (rows - 1)) - 165 * den) / (62 * den) ))
+        [ "$cls" -lt 0 ] && cls=0
+        [ "$cls" -gt 7 ] && cls=7
+        ;;
+      *) cls="e" ;;
+    esac
+    if [ -n "$cls" ] && [ "$cls" != "$last" ]; then
+      if [ "$cls" = "e" ]; then out+="$DIM"; else out+="${MARK[cls]}"; fi
+      last="$cls"
+    fi
+    out+="$ch"
+  done
+  printf '%s%s%s\n' "$indent" "$out" "$RESET"
+}
+
+if [ -n "$art" ]; then
+  r=0
+  "$art" | while IFS= read -r line; do
+    paint "$line" "$r"
+    r=$((r + 1))
+  done
+else
+  printf '%s%s%s%s\n' "$indent" "${MARK[4]:-}" "DAM" "$RESET"
+fi
+
+# --- subtitle -----------------------------------------------------------------
+ver="${DAM_VERSION:-}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -z "$ver" ] && [ -r "$ROOT/frontend/package.json" ]; then
+  ver="v$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/frontend/package.json" | head -1)"
+fi
+[ "$ver" = "v" ] && ver=""
+
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+  *UTF-8*|*utf8*|*UTF8*|*utf-8*) SEP="·" ;;
+  *)                             SEP="|" ;;
+esac
+
+if [ "$cols" -ge 40 ]; then
+  sub="local-first photo & video library"
+elif [ "$cols" -ge 22 ]; then
+  sub="photo & video library"
+else
+  sub=""
+fi
+
+if [ -n "$ver" ]; then
+  if [ -n "$sub" ] && [ $(( ${#sub} + ${#ver} + 5 )) -le "$cols" ]; then
+    sub="$sub  $SEP  $ver"
+  else
+    sub="$ver"
+  fi
+fi
+
+sublen=${#sub}
+subpad=$(( (cols - sublen) / 2 ))
+[ "$subpad" -lt 0 ] && subpad=0
+subindent=""
+[ "$subpad" -gt 0 ] && subindent="$(printf '%*s' "$subpad" '')"
+
+rulewidth=$width
+[ "$rulewidth" -gt "$cols" ] && rulewidth=$cols
+rule="$(printf '%*s' "$rulewidth" '' | tr ' ' '-')"
+
+printf '%s%s%s%s\n' "$indent" "$DIM" "$rule" "$RESET"
+[ -n "$sub" ] && printf '%s%s%s%s\n' "$subindent" "$DIM" "$sub" "$RESET"
+printf '\n'

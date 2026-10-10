@@ -1,0 +1,175 @@
+#!/bin/sh
+# Builds the DAM macOS desktop app (Tauri shell + PyInstaller engine).
+# Run this ON macOS: setup/build_macos_app (it resolves the repo root itself)
+set -e
+cd "$(dirname "$0")/.."
+
+say() { printf '\n== %s ==\n' "$1"; }
+
+say "Checking prerequisites"
+command -v python3 >/dev/null || { echo "python3 is required (https://python.org)"; exit 1; }
+command -v npm >/dev/null || { echo "npm is required (https://nodejs.org)"; exit 1; }
+command -v cargo >/dev/null || { echo "Rust is required: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; exit 1; }
+xcode-select -p >/dev/null 2>&1 || { echo "Xcode command line tools are required: xcode-select --install"; exit 1; }
+cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; }
+
+say "Fetching face models (sha256-verified)"
+MODELS=backend/models
+mkdir -p "$MODELS"
+fetch_model() {
+  name="$1"; url="$2"; sha="$3"; target="$MODELS/$name"
+  if [ -f "$target" ] && echo "$sha  $target" | shasum -a 256 -c - >/dev/null 2>&1; then
+    echo "model ok: $name"
+    return
+  fi
+  curl -fSL --retry 4 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o "$target" "$url" || {
+    rm -f "$target"
+    echo "could not download $name (network or DNS); nothing else changed, rerun setup/build_macos_app when the connection is back"
+    exit 1
+  }
+  echo "$sha  $target" | shasum -a 256 -c - >/dev/null || { echo "checksum mismatch for $name"; exit 1; }
+}
+fetch_model face_detection_yunet_2023mar.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx \
+  8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4
+fetch_model face_recognition_sface_2021dec.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx \
+  0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79
+
+say "Building the frontend"
+cd frontend
+[ -d node_modules ] || npm install
+npm run build
+cd ..
+
+say "Building the engine (Python -> single binary)"
+cd backend
+rm -rf .venv-package
+python3 -m venv .venv-package
+. .venv-package/bin/activate
+pip install --upgrade pip >/dev/null
+pip install -r requirements_macos.txt pillow-heif pyinstaller
+pyinstaller --clean --noconfirm --onedir --name dam-backend \
+  --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
+  --collect-all cv2 --collect-all numpy \
+  --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
+  --collect-all ImageCaptureCore --collect-all Quartz \
+  --hidden-import objc --hidden-import Foundation --hidden-import PyObjCTools.AppHelper \
+  --exclude-module pymobiledevice3 \
+  --hidden-import app.main \
+  --add-data "../frontend/dist:frontend_dist" \
+  --add-data "models:models" \
+  desktop_entry.py
+./dist/dam-backend/dam-backend --selfcheck
+deactivate
+cd ..
+
+say "Placing the engine tree (onedir: no per-launch extraction, fast cold start)"
+rm -rf src-tauri/binaries/dam-backend
+mkdir -p src-tauri/binaries
+cp -R backend/dist/dam-backend src-tauri/binaries/dam-backend
+codesign --force --deep -s - src-tauri/binaries/dam-backend/dam-backend 2>/dev/null || true
+echo "engine: src-tauri/binaries/dam-backend/ (bundled via resources)"
+
+say "Generating app icons from src-tauri/icons/icon.png"
+cargo tauri icon src-tauri/icons/icon.png
+say "Restoring the provided .icns (tauri's generated one flattens the transparent background)"
+cp src-tauri/icons/source/icon.icns src-tauri/icons/icon.icns
+
+say "Ensuring Info.plist carries the device-import usage string"
+python3 - << 'PYPLIST'
+import pathlib, plistlib
+path = pathlib.Path("src-tauri/Info.plist")
+data = plistlib.loads(path.read_bytes()) if path.exists() else {}
+want = "DAM reads photos & videos from a connected iPhone, iPad or camera to import them into your library."
+if data.get("NSRemovableVolumesUsageDescription") != want:
+    data["NSRemovableVolumesUsageDescription"] = want
+    path.write_bytes(plistlib.dumps(data))
+print("   NSRemovableVolumesUsageDescription set")
+PYPLIST
+
+IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
+if [ -n "$IDENTITY" ]; then
+  say "Developer ID found; tauri will sign the bundle as: $IDENTITY"
+  export APPLE_SIGNING_IDENTITY="$IDENTITY"
+else
+  say "No Developer ID certificate in the keychain; tauri will ad-hoc sign (fine for local use)"
+fi
+
+if [ -d "src-tauri/icons/DAM.icon" ] && xcrun --find actool >/dev/null 2>&1; then
+  say "Icon Composer document found; compiling the modern .icon (this is what removes the macOS 26 Dock backing)"
+  rm -rf src-tauri/icons/iconassets
+  mkdir -p src-tauri/icons/iconassets
+  if xcrun actool src-tauri/icons/DAM.icon --compile src-tauri/icons/iconassets \
+       --app-icon DAM --output-partial-info-plist src-tauri/icons/iconassets/partial.plist \
+       --platform macosx --minimum-deployment-target 26.0 >/dev/null 2>&1 \
+     && [ -f "src-tauri/icons/iconassets/Assets.car" ]; then
+    python3 - << 'PYWIRE'
+import json, pathlib
+conf = pathlib.Path("src-tauri/tauri.conf.json")
+data = json.loads(conf.read_text())
+res = data.setdefault("bundle", {}).setdefault("resources", [])
+if "icons/iconassets/Assets.car" not in res:
+    res.append("icons/iconassets/Assets.car")
+    conf.write_text(json.dumps(data, indent=2) + "\n")
+import plistlib
+plist = pathlib.Path("src-tauri/Info.plist")
+data = plistlib.loads(plist.read_bytes()) if plist.exists() else {}
+if data.get("CFBundleIconName") != "DAM":
+    data["CFBundleIconName"] = "DAM"
+    plist.write_bytes(plistlib.dumps(data))
+print("   Assets.car wired into the bundle + CFBundleIconName=DAM")
+PYWIRE
+  else
+    say "actool could not compile DAM.icon; continuing w/ the legacy icns"
+  fi
+fi
+
+say "Building the app bundle (this compiles Rust; first run takes a while)"
+export CARGO_TARGET_DIR="$PWD/src-tauri/target.nosync"
+export CARGO_ENCODED_RUSTFLAGS=""
+export RUSTC_WRAPPER=""
+unset RUSTFLAGS CARGO_BUILD_RUSTFLAGS CARGO_BUILD_TARGET
+if ! cargo tauri build --bundles app -- --locked; then
+  say "Rust build failed; clearing the release cache once & retrying"
+  cargo clean --release --manifest-path src-tauri/Cargo.toml
+  if ! cargo tauri build --bundles app -- --locked; then
+    say "Rust build failed twice; toolchain details for the report"
+    rustc -vV || true
+    cargo -V || true
+    [ -f "$HOME/.cargo/config.toml" ] && cat "$HOME/.cargo/config.toml"
+    echo "Try: rustup update stable && rustup default stable, then rerun setup/build_macos_app"
+    exit 1
+  fi
+fi
+
+APP="$CARGO_TARGET_DIR/release/bundle/macos/DAM.app"
+say "Verifying the bundled icns (placed BEFORE the build now, so tauri's signature stays untouched)"
+if diff -q src-tauri/icons/source/icon.icns "$APP/Contents/Resources/icon.icns" >/dev/null 2>&1; then
+  echo "   icon.icns is byte-identical to your provided file & the signature is tauri's own"
+else
+  echo "   WARNING: bundled icns differs; the packager will repair & re-sign"
+fi
+
+say "Packaging the DMG (auto-opening blessed window, volume icon, your icns enforced)"
+setup/package_dmg "$APP" "$CARGO_TARGET_DIR/release/bundle"
+
+say "Done"
+echo "App:  $APP  (icon.icns byte-identical to your provided file)"
+echo "DMG:  see the packager line above"
+echo
+echo "Already installed a copy in /Applications? Stamp its icon in place any time:"
+echo "  setup/apply_icon"
+echo
+echo "Icon: your transparent icns ships byte-exact. (Optional: an Icon Composer DAM.icon in src-tauri/icons/ upgrades to the modern format on the next build.)"
+echo
+if [ -n "$IDENTITY" ]; then
+  echo "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)"
+else
+  echo "Ad-hoc signed (no Developer ID certificate found). First launch: right-click > Open."
+  echo "To sign for real: enroll at developer.apple.com, create a Developer ID Application"
+  echo "certificate in Xcode > Settings > Accounts, & rebuild: it is picked up automatically."
+fi
+echo
+echo "ffmpeg stays a user-supplied PATH binary (video features need it):"
+echo "  brew install ffmpeg"

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# DAM - macOS/Linux launcher for the local browser build. Banner, install (idempotent), boot.
+# Every step lives in setup/; this file only sequences them.
+set -e
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+
+chmod +x setup/DAM_banner setup/DAM_oc_install setup/DAM_boot 2>/dev/null || true
+
+# Boot banner. Never allowed to fail the launch: cosmetics do not gate startup.
+bash setup/DAM_banner || true
+
+setup/DAM_oc_install
+exec setup/DAM_boot

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# DAM boot: the engine and the interface dev server, from the repo root, then the browser.
+# Lives in setup/; resolves the repo root itself.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' frontend/package.json | head -1)"
+UI="http://127.0.0.1:5173"
+
+echo "==================================================="
+echo "  DAM v${VERSION} - Boot"
+echo "==================================================="
+
+if [ ! -f backend/app/main.py ]; then
+  echo "Error: backend/app/main.py not found under $ROOT"
+  exit 1
+fi
+if [ ! -d backend/venv ]; then
+  echo "Error: the engine is not installed. Run setup/DAM_oc_install"
+  exit 1
+fi
+if [ ! -d frontend/node_modules ]; then
+  echo "Error: the interface is not installed. Run setup/DAM_oc_install"
+  exit 1
+fi
+
+# Settings reach the engine through the environment, never the interface.
+if [ -f backend/.env ]; then
+  set -a
+  . ./backend/.env
+  set +a
+fi
+
+echo ""
+echo "Booting the engine..."
+( cd backend && ./boot_backend ) &
+BACKEND_PID=$!
+
+sleep 2
+
+echo ""
+echo "Booting the interface..."
+( cd frontend && ./boot_frontend ) &
+FRONTEND_PID=$!
+
+echo ""
+echo "==========================================="
+echo "    Services running:"
+echo "    - Engine:    http://127.0.0.1:8000"
+echo "    - Interface: ${UI}"
+echo "==========================================="
+echo ""
+echo "Press Ctrl+C to stop both"
+
+OPENER_PID=""
+if [ "${DAM_OPEN:-1}" != "0" ]; then
+  (
+    for _ in $(seq 1 90); do
+      if curl -fsS -o /dev/null "$UI" 2>/dev/null; then
+        if command -v open >/dev/null 2>&1; then
+          open "$UI"
+        elif command -v xdg-open >/dev/null 2>&1; then
+          xdg-open "$UI" >/dev/null 2>&1
+        fi
+        exit 0
+      fi
+      sleep 1
+    done
+  ) &
+  OPENER_PID=$!
+fi
+
+trap 'kill $BACKEND_PID $FRONTEND_PID $OPENER_PID 2>/dev/null; exit' INT TERM
+wait

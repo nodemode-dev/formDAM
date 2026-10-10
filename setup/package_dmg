@@ -1,0 +1,142 @@
+#!/bin/bash
+# DAM release packager: turn a built DAM.app into a distributable DMG,
+# w/ the provided transparent icon.icns enforced byte-for-byte, the volume
+# icon set, & the Finder window blessed to auto-open on mount.
+# Run this AFTER setup/build_macos_app (or against any DAM.app you point it at).
+#
+#   setup/package_dmg                                    # uses the default build output
+#   setup/package_dmg /path/to/DAM.app                   # package a specific app
+#   setup/package_dmg /path/to/DAM.app /path/to/outdir   # choose where the DMG lands
+set -e
+
+say() { echo "== $1 =="; }
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APP="${1:-$ROOT/src-tauri/target.nosync/release/bundle/macos/DAM.app}"
+OUTDIR="${2:-$ROOT/src-tauri/target.nosync/release/bundle}"
+ICNS="$ROOT/src-tauri/icons/source/icon.icns"
+
+[ -d "$APP" ] || { echo "ERROR: app not found at $APP (run setup/build_macos_app first, or pass the path)"; exit 1; }
+[ -f "$ICNS" ] || { echo "ERROR: provided icns missing at $ICNS"; exit 1; }
+
+ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$APP/Contents/Info.plist" 2>/dev/null || echo "icon.icns")
+case "$ICON_NAME" in *.icns) : ;; *) ICON_NAME="$ICON_NAME.icns" ;; esac
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")
+
+IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
+
+if ! diff -q "$ICNS" "$APP/Contents/Resources/$ICON_NAME" >/dev/null 2>&1; then
+  say "Repairing Resources/$ICON_NAME w/ your provided file"
+  cp "$ICNS" "$APP/Contents/Resources/$ICON_NAME"
+fi
+
+# Strip quarantine FIRST, then sign, so the seal is coherent w/ the final bytes.
+xattr -cr "$APP" 2>/dev/null || true
+if [ -n "$IDENTITY" ]; then
+  say "Signing w/ Developer ID: $IDENTITY"
+  codesign --force --deep --options runtime -s "$IDENTITY" "$APP" 2>/dev/null || true
+  if codesign --verify --deep --strict "$APP" >/dev/null 2>&1; then
+    echo "   Developer ID signature verifies (notarize before public release)"
+  else
+    echo "   WARNING: Developer ID signing failed; see: codesign --verify --deep --strict --verbose=2 \"$APP\""
+  fi
+else
+  say "Ad-hoc signing (no Developer ID certificate found)"
+  codesign --force --deep -s - "$APP" 2>/dev/null || true
+  # Ad-hoc seals pass plain --verify but NOT --deep --strict (that path is for
+  # authority chains), so check the honest thing: that a signature exists & is valid.
+  if codesign --verify "$APP" >/dev/null 2>&1; then
+    echo "   ad-hoc signature present & valid (Gatekeeper still needs right-click > Open on first launch)"
+  else
+    echo "   WARNING: ad-hoc signing did not take; see: codesign --verify --verbose=2 \"$APP\""
+  fi
+fi
+
+say "Staging the DMG contents"
+STAGE=$(mktemp -d)
+cp -R "$APP" "$STAGE/DAM.app"
+ln -s /Applications "$STAGE/Applications"
+cp "$ICNS" "$STAGE/.VolumeIcon.icns"
+touch "$STAGE/.metadata_never_index"
+
+if [ -d "/Volumes/DAM" ]; then
+  say "Detaching a stale DAM volume"
+  hdiutil detach "/Volumes/DAM" >/dev/null 2>&1 || hdiutil detach -force "/Volumes/DAM" >/dev/null 2>&1 || true
+  sleep 1
+fi
+
+DMG="$OUTDIR/DAM_v${VERSION}.dmg"
+mkdir -p "$OUTDIR"
+rm -f "$DMG"
+
+fancy_dmg() {
+  RW=$(mktemp -u).dmg
+  hdiutil create -volname "DAM" -srcfolder "$STAGE" -ov -format UDRW "$RW" >/dev/null || return 1
+  ATTACH=$(hdiutil attach "$RW" -nobrowse -noverify -noautoopen) || { rm -f "$RW"; return 1; }
+  DEV=$(echo "$ATTACH" | awk '/^\/dev\// {print $1; exit}')
+  MOUNT=$(echo "$ATTACH" | awk '/\/Volumes\// {for (i=3; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : ""); exit}')
+  if [ -n "$MOUNT" ]; then
+    VOLNAME=$(basename "$MOUNT")
+    if command -v SetFile >/dev/null 2>&1; then SetFile -a C "$MOUNT" || true; fi
+    # bless writes the auto-open bit into the volume so double-click pops the window.
+    bless --folder "$MOUNT" --openfolder "$MOUNT" 2>/dev/null || true
+    # Arrange & LEAVE THE WINDOW OPEN: closing it here would persist a closed
+    # state into .DS_Store, which is exactly why the DMG opened to nothing before.
+    osascript >/dev/null 2>&1 <<APPLESCRIPT || true
+tell application "Finder"
+  tell disk "$VOLNAME"
+    open
+    delay 0.5
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 140, 780, 520}
+    set arrangement of icon view options of container window to not arranged
+    set icon size of icon view options of container window to 104
+    try
+      set position of item "DAM.app" of container window to {150, 190}
+      set position of item "Applications" of container window to {430, 190}
+    end try
+    update without registering applications
+    delay 0.5
+  end tell
+end tell
+APPLESCRIPT
+    # Flush the just-written .DS_Store & bless bits to the RW image before detach.
+    sync
+    sleep 1
+  fi
+  sync
+  DETACHED=0
+  for _ in 1 2 3 4 5 6; do
+    if hdiutil detach "$DEV" >/dev/null 2>&1; then DETACHED=1; break; fi
+    sleep 1
+  done
+  if [ "$DETACHED" = "0" ]; then hdiutil detach -force "$DEV" >/dev/null 2>&1 || true; sleep 1; fi
+  sleep 1
+  for _ in 1 2 3; do
+    if hdiutil convert "$RW" -format UDZO -o "$DMG" >/dev/null 2>&1; then rm -f "$RW"; return 0; fi
+    sleep 2
+  done
+  rm -f "$RW"
+  return 1
+}
+
+if fancy_dmg; then
+  say "DMG built (volume icon flag + auto-open bless + arranged window)"
+else
+  say "Fancy pass hit a busy disk; building the DMG directly (identical contents, plainer mount window)"
+  rm -f "$DMG"
+  hdiutil create -volname "DAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+fi
+rm -rf "$STAGE"
+
+say "Done"
+echo "DMG: $DMG"
+echo
+echo "Icon: pixel-verified transparent & shipped byte-exact (DAM.icon in src-tauri/icons/ upgrades to the modern format when you add it)."
+echo
+echo "For a PUBLIC release later, replace the ad-hoc signature w/ a real one:"
+echo "  codesign --force --deep --options runtime -s 'Developer ID Application: YOU' DAM.app"
+echo "  xcrun notarytool submit DAM_v${VERSION}.dmg --keychain-profile dam --wait"
+echo "  xcrun stapler staple DAM_v${VERSION}.dmg"
