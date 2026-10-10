@@ -61,7 +61,9 @@ def render_still(media_id: int, src: Any, max_long: Optional[int]) -> Optional[I
     from . import decode
 
     row = q1("SELECT name FROM media WHERE id=?", (media_id,))
-    base = decode.open_image(src, row["name"] if row else "", max_long=None if max_long is None else max_long * 2, develop=True)
+    base = long_exposure(media_id, None if max_long is None else max_long * 2) if ops.get("effect") == "long_exposure" else None
+    if base is None:
+        base = decode.open_image(src, row["name"] if row else "", max_long=None if max_long is None else max_long * 2, develop=True)
     if base is None:
         return None
     out = apply_edits(base, ops)
@@ -302,3 +304,71 @@ def auto_enhance(img: Image.Image) -> Dict[str, Any]:
                   "warmth": round(float(np.clip((b - r) * 1.5, -0.3, 0.3)), 2),
                   "tint": round(float(np.clip((g - (r + b) / 2) * 1.5, -0.3, 0.3)), 2)},
     }
+
+
+LE_FRAMES = 90
+
+
+def long_exposure(media_id: int, max_long: Optional[int]) -> Optional[Image.Image]:
+    import os
+
+    from ..config import cache_dir
+
+    row = q1("SELECT live_video_id FROM media WHERE id=?", (media_id,))
+    if row is None or not row["live_video_id"]:
+        return None
+    folder = os.path.join(cache_dir(), "effects")
+    os.makedirs(folder, exist_ok=True)
+    out = os.path.join(folder, f"{media_id}_le.png")
+    if not os.path.isfile(out):
+        made = _average_frames(row["live_video_id"])
+        if made is None:
+            return None
+        made.save(out)
+    img = Image.open(out)
+    img.load()
+    if max_long and max(img.size) > max_long:
+        img.thumbnail((max_long, max_long), Image.Resampling.LANCZOS)
+    return img
+
+
+def _average_frames(video_id: int) -> Optional[Image.Image]:
+    import subprocess
+
+    import cv2
+
+    from ..dedup.visual import ffmpeg_path
+    from . import libraryfs
+
+    vrow = q1("SELECT rel_path, width, height FROM media WHERE id=?", (video_id,))
+    binary = ffmpeg_path()
+    if vrow is None or not binary:
+        return None
+    w, h = int(vrow["width"] or 0), int(vrow["height"] or 0)
+    if not (w and h):
+        return None
+    scale = min(1.0, 2048 / max(w, h))
+    w2, h2 = int(w * scale) // 2 * 2, int(h * scale) // 2 * 2
+    done = subprocess.run([binary, "-v", "error", "-i", libraryfs.abs_path(vrow["rel_path"]), "-frames:v", str(LE_FRAMES),
+                           "-vf", f"scale={w2}:{h2}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, timeout=120)
+    raw = done.stdout
+    size = w2 * h2 * 3
+    count = len(raw) // size
+    if count < 2:
+        return None
+    frames = np.frombuffer(raw[: count * size], dtype=np.uint8).reshape(count, h2, w2, 3)
+    ref = cv2.cvtColor(frames[count // 2], cv2.COLOR_RGB2GRAY)
+    small = cv2.resize(ref, (w2 // 4, h2 // 4)).astype(np.float32)
+    acc = np.zeros((h2, w2, 3), dtype=np.float64)
+    for frame in frames:
+        warp = np.eye(2, 3, dtype=np.float32)
+        try:
+            gray = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), (w2 // 4, h2 // 4)).astype(np.float32)
+            _, warp = cv2.findTransformECC(small, gray, warp, cv2.MOTION_TRANSLATION,
+                                           (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 1e-4), None, 3)
+            warp[:, 2] *= 4
+            frame = cv2.warpAffine(frame, warp, (w2, h2), flags=cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REFLECT)
+        except cv2.error:
+            pass
+        acc += frame
+    return Image.fromarray(np.clip(acc / count, 0, 255).astype(np.uint8), "RGB")

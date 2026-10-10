@@ -74,6 +74,7 @@ interface MediaType {
 const TYPE_ICONS: Record<string, IconName> = {
   video: "video", live: "play", selfie: "person", portrait: "camera", panorama: "fit", slomo: "clock",
   burst: "stack", raw: "file", screenshot: "screenshot", screen_recording: "stage",
+  timelapse: "clock", cinematic: "video", spatial: "cube", long_exposure: "wave", animated: "play",
 };
 
 export function mediaTypeCards(container: HTMLElement): () => void {

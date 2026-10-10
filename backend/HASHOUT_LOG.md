@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### exifmeta _image_kinds/_video_kinds + db v7 + editsvc long_exposure · the remaining Photos media types
+- refers-to: exifmeta._image_kinds, _video_kinds, read_image/read_video tails; metasvc.META_VER 2, apply kinds update, keep_location rule; db MIGRATIONS[7]; query FLAGS animated/timelapse/cinematic/spatial/long_exposure; browse.MEDIA_TYPES; editsvc.long_exposure, _average_frames, render_still effect branch; edit.py _store is_long_exposure + preview LE base
+- kind: rationale + replaced code
+- logged: zip v1.23.0 · 2026-10-10
+
+Animated: GIF, PNG & WebP w/ more than one frame. Spatial photos: a HEIC whose top-level images are two of the same size (the stereo pair; depth & gain maps are auxiliary, not top-level). Videos: every format & stream tag is scanned, so time-lapse is a capture-mode tag whose value is time-lapse (ExifTool shows Apple's as Track1 CaptureMode), cinematic is any cinematic key or a cinematic handler, spatial is a spatial or stereo key or Stereo 3D side data (MV-HEVC). These are tag rules, checked here on files written w/ those tags, not on iPhone originals. Long Exposure is what Photos does: an effect on a Live Photo, computed from up to 90 frames of the paired video, aligned by ECC translation to the middle frame & averaged, cached under cache/effects; the edit state carries effect=long_exposure, so it is revertible & pastes like any edit, & the item joins the Long Exposure type. META_VER 2 re-reads every item for the new kinds; the location rule changed so a rescan never overwrites a location the user set or removed. Replaced: `keep_location = row["lat"] is not None and row["meta_ver"] and row["meta_ver"] >= META_VER` (which would have re-read GPS on every version bump).
 ### routers/curate.py memory_from_prompt + curatesvc._pick near-duplicate rule + routers/library.py disk metadata · describe a memory, rate files on disk
 - refers-to: curate.memory_from_prompt (/memories/prompt); curatesvc._pick last-shot comparison; library._sidecar_record, disk_meta (/disk/meta), disk_browse rating & label
 - kind: rationale + replaced code

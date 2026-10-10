@@ -12,8 +12,9 @@ router = APIRouter()
 
 MEDIA_TYPES = [
     ("video", "Videos"), ("live", "Live Photos"), ("selfie", "Selfies"), ("portrait", "Portrait"),
-    ("panorama", "Panoramas"), ("slomo", "Slo-mo"), ("burst", "Bursts"), ("raw", "RAW"),
-    ("screenshot", "Screenshots"), ("screen_recording", "Screen Recordings"),
+    ("panorama", "Panoramas"), ("timelapse", "Time-lapse"), ("slomo", "Slo-mo"), ("cinematic", "Cinematic"),
+    ("burst", "Bursts"), ("spatial", "Spatial"), ("long_exposure", "Long Exposure"), ("animated", "Animated"),
+    ("raw", "RAW"), ("screenshot", "Screenshots"), ("screen_recording", "Screen Recordings"),
 ]
 
 

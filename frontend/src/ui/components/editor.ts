@@ -268,6 +268,16 @@ export function openEditor(item: Media): void {
   }
 
   const adjust = h("div", { class: "ed-pane" });
+  if (item.kind === "image" && item.live_video_id) {
+    const effect = h("select", { class: "field-input" }, h("option", { value: "" }, "Live (no effect)"), h("option", { value: "long_exposure" }, "Long Exposure")) as HTMLSelectElement;
+    effect.addEventListener("change", () => {
+      commit();
+      (s as Dict).effect = effect.value || undefined;
+      requestPreview(0);
+    });
+    sliderSync.push(() => { effect.value = String((s as Dict).effect ?? ""); });
+    adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, "Live Photo Effect"), effect));
+  }
   for (const sec of SLIDERS) {
     const rows = sec.rows.map(([key, label, min, max]) => slider(label, min, max, () => Number(group(sec.group)[key] ?? 0), (v) => { group(sec.group)[key] = v; }));
     adjust.append(h("div", { class: "ed-section" }, h("div", { class: "ed-sec-title" }, sec.title), ...rows));

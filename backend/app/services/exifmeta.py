@@ -184,7 +184,53 @@ def read_image(path: str) -> Dict[str, Any]:
         if key != "makernote" and out.get(key) in (None, "") and value not in (None, ""):
             out[key] = value
     out.update(_apple_makernote(pil.get("makernote") or b""))
+    out.update(_image_kinds(path))
     return {k: v for k, v in out.items() if v not in (None, "")}
+
+
+def _image_kinds(path: str) -> Dict[str, Any]:
+    found: Dict[str, Any] = {}
+    ext = path.rsplit(".", 1)[-1].lower()
+    if ext in ("gif", "png", "webp", "apng"):
+        try:
+            from PIL import Image
+
+            with Image.open(path) as img:
+                if getattr(img, "n_frames", 1) > 1:
+                    found["animated"] = True
+        except Exception:
+            pass
+    if ext in ("heic", "heif"):
+        try:
+            import pillow_heif
+
+            heif = pillow_heif.open_heif(path, convert_hdr_to_8bit=True)
+            sizes = {tuple(im.size) for im in heif}
+            if len(heif) >= 2 and len(sizes) == 1:
+                found["spatial"] = True
+        except Exception:
+            pass
+    return found
+
+
+def _video_kinds(data: Dict[str, Any]) -> Dict[str, Any]:
+    found: Dict[str, Any] = {}
+    blobs = [((data.get("format") or {}).get("tags") or {})]
+    for stream in data.get("streams", []):
+        blobs.append(stream.get("tags") or {})
+        for side in stream.get("side_data_list") or []:
+            if "stereo" in str(side.get("side_data_type", "")).lower():
+                found["spatial"] = True
+    for tags in blobs:
+        for key, value in tags.items():
+            k, v = key.lower(), str(value).lower()
+            if ("capture" in k and "mode" in k and "time" in v and "lapse" in v) or v in ("time-lapse", "timelapse"):
+                found["timelapse"] = True
+            if "cinematic" in k or ("handler" in k and "cinematic" in v):
+                found["cinematic"] = True
+            if "spatial" in k or ("stereo" in k and v not in ("0", "", "false")):
+                found["spatial"] = True
+    return found
 
 
 ISO6709 = re.compile(r"([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)([+-]\d+(?:\.\d+)?)?")
@@ -225,4 +271,5 @@ def read_video(path: str) -> Dict[str, Any]:
     out["model"] = tags.get("com.apple.quicktime.model") or tags.get("model") or ""
     out["content_id"] = tags.get("com.apple.quicktime.content.identifier") or ""
     out["software"] = tags.get("com.apple.quicktime.software") or tags.get("encoder") or ""
+    out.update(_video_kinds(data))
     return {k: v for k, v in out.items() if v not in (None, "")}

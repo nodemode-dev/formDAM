@@ -83,6 +83,7 @@ def _store(media_id: int, state: Dict[str, Any]) -> Dict[str, Any]:
         ex("UPDATE media SET edit_json=?, edited_ts=?, xmp_ts=NULL WHERE id=?", (json.dumps(clean), time.time(), media_id))
     else:
         ex("UPDATE media SET edit_json=NULL, edited_ts=NULL, xmp_ts=NULL WHERE id=?", (media_id,))
+    ex("UPDATE media SET is_long_exposure=? WHERE id=?", (1 if clean.get("effect") == "long_exposure" else 0, media_id))
     invalidate(media_id)
     row = q1("SELECT edit_json, edited_ts FROM media WHERE id=?", (media_id,))
     return {"id": media_id, "edit_json": row["edit_json"], "edited_ts": row["edited_ts"]}
@@ -149,7 +150,8 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     row = _row(media_id, request)
     if row["kind"] != "image":
         raise HTTPException(415, detail="Only stills preview")
-    base = _base(row, body.w)
+    base = editsvc.long_exposure(media_id, body.w) if body.state.get("effect") == "long_exposure" else None
+    base = base if base is not None else _base(row, body.w)
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     stages = [s for s in (body.stages or editsvc.STAGES) if s in editsvc.STAGES]

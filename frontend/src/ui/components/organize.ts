@@ -313,7 +313,8 @@ const FLAG_VALUES: Array<[string, string]> = [
   ["screenshot", "Screenshot"], ["screen_recording", "Screen Recording"], ["edited", "Edited"], ["rejected", "Rejected"],
   ["located", "Has location"], ["not_located", "No location"], ["not_in_album", "Not in an album"],
   ["has_keywords", "Has keywords"], ["no_keywords", "No keywords"], ["has_people", "Has people"], ["titled", "Has title"],
-  ["captioned", "Has caption"], ["has_text", "Has text"],
+  ["captioned", "Has caption"], ["has_text", "Has text"], ["timelapse", "Time-lapse"], ["cinematic", "Cinematic"],
+  ["spatial", "Spatial"], ["long_exposure", "Long Exposure"], ["animated", "Animated"],
 ];
 const NUM_OPS: Array<[string, string]> = [[">=", "at least"], ["<=", "at most"], ["=", "is"], [">", "above"], ["<", "below"]];
 const TEXT_OPS: Array<[string, string]> = [["contains", "contains"], ["is", "is"], ["starts", "starts with"], ["excludes", "does not contain"]];

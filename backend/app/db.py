@@ -133,7 +133,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -151,6 +151,8 @@ MEDIA_V5_COLUMNS = (
 )
 
 MIGRATIONS = {
+    7: [f"ALTER TABLE media ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0"
+        for col in ("is_animated", "is_timelapse", "is_cinematic", "is_spatial", "is_long_exposure")],
     6: [
         """CREATE TABLE IF NOT EXISTS pets(
              id INTEGER PRIMARY KEY, name TEXT, species TEXT NOT NULL, cover_media_id INTEGER,

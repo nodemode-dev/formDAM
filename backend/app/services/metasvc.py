@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional
 from ..db import ex, q, q1
 from . import exifmeta, libraryfs
 
-META_VER = 1
+META_VER = 2
 RAW_EXTS = {
     "dng", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "raf", "orf", "rw2", "rwl", "pef",
     "srw", "x3f", "3fr", "iiq", "erf", "kdc", "dcr", "mos", "mrw", "raw",
@@ -62,7 +62,7 @@ def apply(media_id: int, meta: Optional[Dict[str, Any]] = None) -> Optional[Dict
     lat, lon = meta.get("lat"), meta.get("lon")
     if lat is not None and lon is not None and not (-90 <= lat <= 90 and -180 <= lon <= 180):
         lat = lon = None
-    keep_location = row["lat"] is not None and row["meta_ver"] and row["meta_ver"] >= META_VER
+    keep_location = bool(row["meta_ver"])
     ex(
         """UPDATE media SET width=?, height=?, created_ts=?, created_src=?, make=?, model=?, lens=?, focal=?, focal35=?,
            aperture=?, shutter=?, iso=?, flash=?, orientation=?, lat=?, lon=?, alt=?, content_id=?, burst_id=?,
@@ -79,6 +79,9 @@ def apply(media_id: int, meta: Optional[Dict[str, Any]] = None) -> Optional[Dict
             json.dumps(meta.get("all") or {}) if meta.get("all") else None, META_VER, media_id,
         ),
     )
+    ex("UPDATE media SET is_animated=?, is_timelapse=?, is_cinematic=?, is_spatial=? WHERE id=?",
+       (1 if meta.get("animated") else 0, 1 if meta.get("timelapse") else 0, 1 if meta.get("cinematic") else 0,
+        1 if meta.get("spatial") else 0, media_id))
     if meta.get("content_id"):
         pair_live(media_id, meta["content_id"], row["kind"])
     for hook in list(_after_apply):
