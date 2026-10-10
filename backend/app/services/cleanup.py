@@ -96,9 +96,10 @@ def _inpaint(rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
     result = rgb.copy()
     for i in range(1, count):
         x, y, bw, bh, _ = stats[i]
-        side = int(max(bw, bh) * 2.2) + 32
+        big = max(bw, bh)
+        side = int(big + 2 * max(48, big * 0.5))
         cx, cy = x + bw / 2, y + bh / 2
-        x0, y0 = int(max(0, cx - side / 2)), int(max(0, cy - side / 2))
+        x0, y0 = int(max(0, min(w - side, cx - side / 2))), int(max(0, min(h - side, cy - side / 2)))
         x1, y1 = int(min(w, x0 + side)), int(min(h, y0 + side))
         region = (labels[y0:y1, x0:x1] == i).astype(np.uint8) * 255
         patch = result[y0:y1, x0:x1]

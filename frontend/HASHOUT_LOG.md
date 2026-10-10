@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.23.0) · 2026-10-10
+### ui/components/editor.ts Clean Up pane · Select Object, Show Distractions, face pixelation
+- refers-to: editor Spot, CleanInfo, Suggestion, Box4; cleanMode, cleanInfo, suggestions, pendingBox; modeRow, suggestBtn, suggestLabel, cleanStatus, loadCleanInfo, segmentWith, faceUnder; drawOverlay retouch branch; overlay pointerdown retouch branch; parity.css .ed-mask .ed-pixel .ed-suggest .ed-pending .ed-clean-status
+- kind: rationale
+- logged: zip v1.24.0 · 2026-10-10
+
+The Clean Up pane gains a Brush / Select Object switch and a Show Distractions button; both stay disabled until GET /media/{id}/cleanup (fetched once when the tab first opens) says the models are present, and the status line says so when they are not. Distractions draw as accent outlines in the existing 0..1 SVG overlay with a title per box; clicking one, or clicking the photo in Select Object mode, shows a marching dashed box at the spot while the engine outlines the object, then adds a mask spot drawn as a filled polygon path and asks for one preview. A used suggestion is dropped from the overlay. A brush stroke that lies mostly inside a detected face box is swapped for a pixelate spot drawn as a dashed box. The status line has a reserved min-height of two lines so messages never move the slider and buttons below; the probe checked every pane child's top before and after under 4x CPU and slow network. Only overlay children are replaced; the image, frame and pane are not rebuilt.
 ### ui/components/privacy.ts + settings Privacy pane
 - refers-to: privacy.privacyPane; settings PANES privacy entry
 - kind: rationale

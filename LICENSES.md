@@ -35,6 +35,8 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | pyzipper 0.4.0 | MIT | AES-256 (WinZip AE-2) zip writing and reading for encrypted share packages, services/packagesvc.py |
 | pycryptodomex (pyzipper dependency) | BSD-2-Clause and public domain | AES and HMAC under pyzipper |
 | LaMa inpainting (opencv/inpainting_lama, inpainting_lama_2025jan.onnx, revision aee6d22) | Apache-2.0 | Clean Up object removal in services/cleanup.py; fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the other models. Without it Clean Up falls back to OpenCV Telea |
+| EfficientSAM-Ti (opencv/image_segmentation_efficientsam, image_segmentation_efficientsam_ti_2025april.onnx, revision 1e79198) | Apache-2.0 | Clean Up Select Object and distraction outlines in services/cleanmodels.py; sha256-pinned like LaMa |
+| YOLOX-s (opencv/object_detection_yolox, object_detection_yolox_2022nov.onnx, revision 78c368f) | Apache-2.0 | Clean Up distraction suggestions (COCO classes) in services/cleanmodels.py; sha256-pinned like LaMa |
 | DAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
 
 ## Build-time only (never distributed)

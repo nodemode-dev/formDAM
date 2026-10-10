@@ -141,6 +141,13 @@ select.field-input { appearance: none; padding-right: 22px; background-image: li
 .ed-handle { fill: #fff; cursor: nwse-resize; }
 .ed-spot { fill: rgba(255, 255, 255, 0.18); stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .ed-stroke { stroke: rgba(255, 255, 255, 0.22); }
+.ed-mask { fill: rgba(255, 255, 255, 0.22); stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.ed-pixel { fill: rgba(255, 255, 255, 0.12); stroke: #fff; stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; pointer-events: none; }
+.ed-suggest { fill: rgba(255, 255, 255, 0.04); stroke: var(--accent); stroke-width: 2px; vector-effect: non-scaling-stroke; cursor: pointer; }
+.ed-suggest:hover { fill: rgba(255, 255, 255, 0.16); }
+.ed-pending { fill: none; stroke: #fff; stroke-width: 1.5px; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; pointer-events: none; animation: ed-march 0.6s linear infinite; }
+@keyframes ed-march { to { stroke-dashoffset: -8; } }
+.ed-clean-status { min-height: 2.6em; margin: 0; }
 .ed-text { font-family: system-ui, sans-serif; }
 .ed-side { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3); padding: var(--space-3); overflow-y: auto; border-radius: 14px; }
 .ed-tabs { align-self: stretch; justify-content: space-between; }

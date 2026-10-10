@@ -13,6 +13,10 @@ import { selectbarExtras } from "./selectbar.js";
 import { viewerHooks } from "./viewer.js";
 
 type Dict = Record<string, unknown>;
+type Box4 = [number, number, number, number];
+interface Spot { x?: number; y?: number; r?: number; points?: Array<[number, number]>; kind?: "mask" | "pixelate"; polygons?: Array<Array<[number, number]>>; box?: Box4; label?: string }
+interface CleanInfo { fill: boolean; segment: boolean; suggest: boolean; faces: boolean; faces_found: Box4[] }
+interface Suggestion { box: Box4; label: string; score: number }
 interface EditState {
   light?: Record<string, number>;
   color?: Record<string, number>;
@@ -22,7 +26,7 @@ interface EditState {
   levels?: { black?: number; white?: number; gamma?: number };
   curves?: { rgb?: number[][] };
   geometry?: { rotate?: number; flipH?: boolean; flipV?: boolean; straighten?: number; crop?: { x: number; y: number; w: number; h: number } };
-  retouch?: Array<{ x: number; y: number; r: number; points?: Array<[number, number]> }>;
+  retouch?: Spot[];
   markup?: Array<{ type: string; points: number[][]; color: string; width: number; text?: string; size?: number }>;
 }
 
@@ -128,6 +132,10 @@ export function openEditor(item: Media): void {
   let color = COLORS[0];
   let penWidth = 0.006;
   let brush = 0.025;
+  let cleanMode: "brush" | "select" = "brush";
+  let cleanInfo: CleanInfo | null = null;
+  let suggestions: Suggestion[] = [];
+  let pendingBox: Box4 | null = null;
 
   const img = h("img", { class: "ed-img", alt: item.name, draggable: false }) as HTMLImageElement;
   img.src = thumbUrl(item.id, 768);
@@ -425,9 +433,71 @@ export function openEditor(item: Media): void {
   clearSpots.addEventListener("click", () => { commit(); delete s.retouch; drawOverlay(); requestPreview(0); });
   const undoSpot = h("button", { class: "btn", type: "button" }, "Remove Last");
   undoSpot.addEventListener("click", () => { if (s.retouch?.length) { commit(); s.retouch.pop(); if (!s.retouch.length) delete s.retouch; drawOverlay(); requestPreview(0); } });
-  const cleanupHint = h("p", { class: "field-hint" }, "Click a blemish, or brush over a person, wire or object to remove it. The fill comes from the surrounding pixels.");
-  retouchPane.append(cleanupHint,
+  const cleanupHint = h("p", { class: "field-hint" }, "Click a blemish, or brush over a person, wire or object to remove it. Brush over a face to pixelate it. The fill comes from the surrounding pixels.");
+  const modeRow = h("div", { class: "seg" });
+  const brushMode = h("button", { type: "button", class: "active" }, "Brush") as HTMLButtonElement;
+  const selectMode = h("button", { type: "button", disabled: true, title: "Click an object to select and remove it" }, "Select Object") as HTMLButtonElement;
+  for (const [btn, mode] of [[brushMode, "brush"], [selectMode, "select"]] as const) {
+    btn.addEventListener("click", () => { cleanMode = mode; brushMode.classList.toggle("active", mode === "brush"); selectMode.classList.toggle("active", mode === "select"); });
+  }
+  modeRow.append(brushMode, selectMode);
+  const suggestLabel = h("span", {}, "Show Distractions");
+  const suggestBtn = h("button", { class: "btn", type: "button", disabled: true }, iconEl("wand"), suggestLabel) as HTMLButtonElement;
+  suggestBtn.addEventListener("click", () => {
+    if (suggestions.length) { suggestions = []; setText(suggestLabel, "Show Distractions"); setText(cleanStatus, ""); drawOverlay(); return; }
+    suggestBtn.disabled = true;
+    setText(cleanStatus, "Looking for distractions...");
+    api<{ objects: Suggestion[] }>(`/media/${item.id}/cleanup/suggest`).then((res) => {
+      suggestions = res.objects;
+      setText(cleanStatus, suggestions.length ? `${suggestions.length} found. Click an outline to remove it.` : "Nothing to suggest in this photo.");
+      if (suggestions.length) setText(suggestLabel, "Hide Distractions");
+      drawOverlay();
+    }).catch((err) => setText(cleanStatus, (err as { detail?: string }).detail ?? (err as Error).message))
+      .finally(() => { suggestBtn.disabled = false; });
+  });
+  const cleanStatus = h("p", { class: "field-hint ed-clean-status" }, "");
+  retouchPane.append(cleanupHint, modeRow, suggestBtn, cleanStatus,
     slider("Brush Size", 50, 800, () => brush * 100 * 100 / 100, (v) => { brush = v / 100; }), h("div", { class: "row-gap" }, undoSpot, clearSpots));
+
+  function loadCleanInfo(): void {
+    if (cleanInfo) return;
+    cleanInfo = { fill: false, segment: false, suggest: false, faces: false, faces_found: [] };
+    api<CleanInfo>(`/media/${item.id}/cleanup`).then((res) => {
+      cleanInfo = res;
+      selectMode.disabled = !res.segment;
+      suggestBtn.disabled = !res.suggest;
+      if (!res.segment && !res.suggest) setText(cleanStatus, "Object selection models are not installed. The brush still works.");
+    }).catch(() => { cleanInfo = null; });
+  }
+
+  function segmentWith(body: Dict, shown: Box4, used?: Suggestion): void {
+    if (pendingBox) return;
+    pendingBox = shown;
+    setText(cleanStatus, "Selecting...");
+    drawOverlay();
+    api<{ polygons: Array<Array<[number, number]>> }>(`/media/${item.id}/cleanup/segment`, { method: "POST", body: JSON.stringify(body) }).then((res) => {
+      pendingBox = null;
+      if (!res.polygons.length) { setText(cleanStatus, "Nothing selectable there. Try brushing over it."); drawOverlay(); return; }
+      commit();
+      s.retouch = [...(s.retouch ?? []), { kind: "mask", polygons: res.polygons, ...(used ? { label: used.label } : {}) }];
+      if (used) suggestions = suggestions.filter((sg) => sg !== used);
+      setText(cleanStatus, "");
+      drawOverlay();
+      requestPreview(0);
+    }).catch((err) => {
+      pendingBox = null;
+      setText(cleanStatus, (err as { detail?: string }).detail ?? (err as Error).message);
+      drawOverlay();
+    });
+  }
+
+  function faceUnder(points: Array<[number, number]>): Box4 | null {
+    for (const f of cleanInfo?.faces_found ?? []) {
+      const inside = points.filter(([x, y]) => x >= f[0] && x <= f[0] + f[2] && y >= f[1] && y <= f[1] + f[3]).length;
+      if (inside >= Math.max(1, points.length * 0.4)) return f;
+    }
+    return null;
+  }
 
   const markupPane = h("div", { class: "ed-pane hidden" });
   const toolRow = h("div", { class: "seg" });
@@ -456,6 +526,7 @@ export function openEditor(item: Media): void {
       tabs.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
       for (const [k, pane] of Object.entries(PANES)) pane.classList.toggle("hidden", k !== key);
       overlay.classList.toggle("interactive", key === "crop" || key === "retouch" || key === "markup");
+      if (key === "retouch") loadCleanInfo();
       drawOverlay();
       requestPreview(0);
     });
@@ -481,8 +552,23 @@ export function openEditor(item: Media): void {
     } else if (tab === "retouch") {
       const short = Math.min(natural.w, natural.h);
       for (const spot of s.retouch ?? []) {
-        nodes.push(spot.points && spot.points.length > 1 ? strokeNode(spot) : svgEl("ellipse", { class: "ed-spot", cx: spot.x, cy: spot.y, rx: (spot.r * short) / natural.w, ry: (spot.r * short) / natural.h }));
+        if (spot.kind === "mask") {
+          nodes.push(svgEl("path", { class: "ed-mask", "fill-rule": "evenodd", d: (spot.polygons ?? []).map((poly) => `M${poly.map(([x, y]) => `${x} ${y}`).join("L")}Z`).join(" ") }));
+        } else if (spot.kind === "pixelate" && spot.box) {
+          nodes.push(svgEl("rect", { class: "ed-pixel", x: spot.box[0], y: spot.box[1], width: spot.box[2], height: spot.box[3] }));
+        } else {
+          const r = spot.r ?? 0.02;
+          nodes.push(spot.points && spot.points.length > 1 ? strokeNode(spot) : svgEl("ellipse", { class: "ed-spot", cx: spot.x ?? 0, cy: spot.y ?? 0, rx: (r * short) / natural.w, ry: (r * short) / natural.h }));
+        }
       }
+      suggestions.forEach((sg, i) => {
+        const rect = svgEl("rect", { class: "ed-suggest", x: sg.box[0], y: sg.box[1], width: sg.box[2], height: sg.box[3], "data-sug": i });
+        const title = svgEl("title", {});
+        title.textContent = `Remove ${sg.label}`;
+        rect.append(title);
+        nodes.push(rect);
+      });
+      if (pendingBox) nodes.push(svgEl("rect", { class: "ed-pending", x: pendingBox[0], y: pendingBox[1], width: pendingBox[2], height: pendingBox[3] }));
     } else if (tab === "markup") {
       for (const shape of s.markup ?? []) nodes.push(shapeNode(shape));
     }
@@ -491,7 +577,7 @@ export function openEditor(item: Media): void {
 
   function strokeNode(spot: NonNullable<EditState["retouch"]>[number]): SVGElement {
     const short = Math.min(natural.w, natural.h);
-    const sw = (spot.r * 2 * short) / Math.max(natural.w, natural.h);
+    const sw = ((spot.r ?? 0.02) * 2 * short) / Math.max(natural.w, natural.h);
     return svgEl("polyline", { class: "ed-stroke", "stroke-width": sw, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round", points: (spot.points ?? []).map(([x, y]) => `${x},${y}`).join(" ") });
   }
 
@@ -536,6 +622,14 @@ export function openEditor(item: Media): void {
     overlay.addEventListener("pointercancel", release);
     const start = pointFrom(event);
     if (tab === "retouch") {
+      const sugIndex = (event.target as Element).getAttribute("data-sug");
+      const picked = sugIndex !== null ? suggestions[Number(sugIndex)] : undefined;
+      if (picked) { segmentWith({ box: picked.box }, picked.box, picked); return; }
+      if (cleanMode === "select") {
+        const d = 0.04;
+        segmentWith({ x: start[0], y: start[1] }, [Math.max(0, start[0] - d / 2), Math.max(0, start[1] - d / 2), d, d]);
+        return;
+      }
       commit();
       const round = (p: [number, number]): [number, number] => [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4];
       const spot = { x: round(start)[0], y: round(start)[1], r: brush, points: [round(start)] };
@@ -553,7 +647,9 @@ export function openEditor(item: Media): void {
       const up = () => {
         overlay.removeEventListener("pointermove", move);
         overlay.removeEventListener("pointerup", up);
-        if (spot.points.length < 3) delete (spot as { points?: unknown }).points;
+        const face = spot.points.length >= 3 ? faceUnder(spot.points) : null;
+        if (face && s.retouch) s.retouch[s.retouch.length - 1] = { kind: "pixelate", box: face };
+        else if (spot.points.length < 3) delete (spot as { points?: unknown }).points;
         drawOverlay();
         requestPreview(0);
       };

@@ -263,8 +263,17 @@ def _retouch(img: Image.Image, spots: List[Dict[str, Any]]) -> Image.Image:
     h, w = a.shape[:2]
     short = min(w, h)
     mask = np.zeros((h, w), dtype=np.uint8)
+    blur_boxes = []
     for spot in spots[:400]:
         try:
+            if spot.get("kind") == "pixelate":
+                blur_boxes.append([float(v) for v in spot["box"][:4]])
+                continue
+            if spot.get("kind") == "mask":
+                from .cleanmodels import fill_polygons
+
+                fill_polygons(mask, spot.get("polygons") or [], max(3, short // 90))
+                continue
             r = max(1.0, float(spot.get("r", 0.02)) * short)
             if spot.get("points"):
                 pts = np.array([[float(p[0]) * w, float(p[1]) * h] for p in spot["points"][:2000]], dtype=np.int32)
@@ -277,16 +286,23 @@ def _retouch(img: Image.Image, spots: List[Dict[str, Any]]) -> Image.Image:
         except (KeyError, TypeError, ValueError, IndexError):
             continue
         cv2.circle(mask, (int(cx), int(cy)), int(r), 255, -1)
-    if not mask.any():
+    if not mask.any() and not blur_boxes:
         return img
-    from . import cleanup
+    if mask.any():
+        from . import cleanup
 
-    filled = cleanup.inpaint(a, mask)
-    if filled is not None:
-        return Image.fromarray(filled)
-    radius = max(3, int(short * 0.01))
-    out = cv2.inpaint(cv2.cvtColor(a, cv2.COLOR_RGB2BGR), mask, radius, cv2.INPAINT_TELEA)
-    return Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB))
+        filled = cleanup.inpaint(a, mask)
+        if filled is None:
+            radius = max(3, int(short * 0.01))
+            filled = cv2.cvtColor(cv2.inpaint(cv2.cvtColor(a, cv2.COLOR_RGB2BGR), mask, radius, cv2.INPAINT_TELEA), cv2.COLOR_BGR2RGB)
+        a = filled
+    if blur_boxes:
+        from .cleanmodels import pixelate
+
+        a = np.array(a, copy=True)
+        for box in blur_boxes:
+            pixelate(a, box)
+    return Image.fromarray(a)
 
 
 def _color(value: Any) -> Tuple[int, int, int]:

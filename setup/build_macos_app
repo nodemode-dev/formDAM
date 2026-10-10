@@ -45,6 +45,12 @@ fetch_model clip_merges.txt "$CLIP_BASE/merges.txt" \
 fetch_model inpainting_lama_2025jan.onnx \
   https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx \
   7df918ac3921d3daf0aae1d219776cf0dc4e4935f035af81841b40adcf74fdf2
+fetch_model image_segmentation_efficientsam_ti_2025april.onnx \
+  https://huggingface.co/opencv/image_segmentation_efficientsam/resolve/1e791988b34b2098736003057da0f3e6bc826259/image_segmentation_efficientsam_ti_2025april.onnx \
+  4eb496e0a7259d435b49b66faf1754aa45a5c382a34558ddda9a8c6fe5915d77
+fetch_model object_detection_yolox_2022nov.onnx \
+  https://huggingface.co/opencv/object_detection_yolox/resolve/78c368f74ce73ee28fc7a1be418a598c71b58b52/object_detection_yolox_2022nov.onnx \
+  c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063
 
 say "Building the frontend"
 cd frontend

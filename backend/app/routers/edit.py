@@ -205,6 +205,73 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     return Response(buf.getvalue(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
+class SegmentIn(BaseModel):
+    x: Optional[float] = Field(None, ge=0, le=1)
+    y: Optional[float] = Field(None, ge=0, le=1)
+    box: Optional[List[float]] = Field(None, min_length=4, max_length=4)
+
+
+_analysis: "OrderedDict[tuple, Any]" = OrderedDict()
+
+
+def _analysis_base(row):
+    import numpy as np
+
+    base = _base(row, 1024, None, extedit.external_path(editsvc.edits_of(row["id"])))
+    if base is None:
+        raise HTTPException(404, detail="This file could not be decoded")
+    return np.asarray(base.convert("RGB"))
+
+
+def _analyse(row, kind: str):
+    from ..services import cleanmodels
+
+    key = (row["id"], kind, extedit.external_path(editsvc.edits_of(row["id"])) or "")
+    hit = _analysis.get(key)
+    if hit is not None:
+        return hit
+    rgb = _analysis_base(row)
+    value = cleanmodels.suggest(rgb) if kind == "suggest" else cleanmodels.faces(rgb)
+    _analysis[key] = value
+    while len(_analysis) > 32:
+        _analysis.popitem(last=False)
+    return value
+
+
+@router.get("/media/{media_id}/cleanup")
+def cleanup_info(media_id: int, request: Request):
+    from ..services import cleanmodels
+
+    row = _row(media_id, request)
+    if row["kind"] != "image":
+        raise HTTPException(415, detail="Clean Up works on photos")
+    have = cleanmodels.status()
+    return {"fill": cleanup.ready(), **have, "faces_found": _analyse(row, "faces") if have["faces"] else []}
+
+
+@router.get("/media/{media_id}/cleanup/suggest")
+def cleanup_suggest(media_id: int, request: Request):
+    from ..services import cleanmodels
+
+    row = _row(media_id, request)
+    if not cleanmodels.status()["suggest"]:
+        return {"objects": [], "ready": False}
+    return {"objects": _analyse(row, "suggest"), "ready": True}
+
+
+@router.post("/media/{media_id}/cleanup/segment")
+def cleanup_segment(media_id: int, body: SegmentIn, request: Request):
+    from ..services import cleanmodels
+
+    row = _row(media_id, request)
+    if not cleanmodels.status()["segment"]:
+        raise HTTPException(409, detail="The object selection model is not installed; brush over the object instead")
+    if body.box is None and (body.x is None or body.y is None):
+        raise HTTPException(400, detail="Give a point or a box")
+    points = [(body.x, body.y)] if body.x is not None and body.y is not None else []
+    return cleanmodels.segment(_analysis_base(row), points=points, box=body.box)
+
+
 @router.get("/media/{media_id}/raw-info")
 def raw_info(media_id: int, request: Request):
     row = _row(media_id, request)

@@ -37,6 +37,8 @@ if not exist models\clip_vit_b32_laion2b_int8.onnx curl -fSL -o models\clip_vit_
 if not exist models\clip_vocab.json curl -fSL -o models\clip_vocab.json %CLIP_BASE%/vocab.json
 if not exist models\clip_merges.txt curl -fSL -o models\clip_merges.txt %CLIP_BASE%/merges.txt
 if not exist models\inpainting_lama_2025jan.onnx curl -fSL -o models\inpainting_lama_2025jan.onnx https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx
+if not exist models\image_segmentation_efficientsam_ti_2025april.onnx curl -fSL -o models\image_segmentation_efficientsam_ti_2025april.onnx https://huggingface.co/opencv/image_segmentation_efficientsam/resolve/1e791988b34b2098736003057da0f3e6bc826259/image_segmentation_efficientsam_ti_2025april.onnx
+if not exist models\object_detection_yolox_2022nov.onnx curl -fSL -o models\object_detection_yolox_2022nov.onnx https://huggingface.co/opencv/object_detection_yolox/resolve/78c368f74ce73ee28fc7a1be418a598c71b58b52/object_detection_yolox_2022nov.onnx
 
 echo.
 echo ^>^> Setting up the interface...
