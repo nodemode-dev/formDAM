@@ -1,6 +1,7 @@
 import { api } from "../../engine/api.js";
 import { countFmt, fullStamp } from "../../engine/format.js";
-import { pollJob, state } from "../../engine/store.js";
+import { invalidateMedia, patchMedia, pollJob, state } from "../../engine/store.js";
+import type { Media } from "../../engine/types.js";
 import type { CtxEntry } from "../contextmenu.js";
 import { openContextMenu } from "../contextmenu.js";
 import { h } from "../dom.js";
@@ -140,6 +141,17 @@ export async function galleryFlow(ids: number[]): Promise<void> {
   pollJob(res.job_id, (job) => toast(`Web gallery written with ${countFmt(job.counts.written ?? 0)} item${(job.counts.written ?? 0) === 1 ? "" : "s"}${job.counts.skipped ? `, ${countFmt(job.counts.skipped)} private or unreadable skipped` : ""}`));
 }
 
+async function moveLibrary(ids: number[], shared: boolean): Promise<void> {
+  try {
+    const res = await api<{ changed: number; skipped: number }>("/media/shared-library", { method: "POST", body: JSON.stringify({ ids, shared }) });
+    patchMedia(ids, { shared_lib: shared ? 1 : 0 } as Partial<Media>);
+    invalidateMedia();
+    toast(`${countFmt(res.changed)} moved to the ${shared ? "Shared" : "Personal"} Library${res.skipped ? `, ${countFmt(res.skipped)} private or already there` : ""}`);
+  } catch (err) {
+    toast((err as Error).message, "error");
+  }
+}
+
 function shareEntries(ids: number[]): CtxEntry[] {
   const entries: CtxEntry[] = [
     { label: "Share Link...", icon: "link", action: () => void shareLinkFlow(ids) },
@@ -155,6 +167,54 @@ function shareEntries(ids: number[]): CtxEntry[] {
 }
 
 let refreshShared: (() => Promise<void>) | null = null;
+
+interface SyncChannel {
+  channel: "personal" | "shared"; folder: string; enabled: boolean; last_push: number; last_pull: number; error?: string | null; ts?: number;
+  pushed?: { media: number; objects: number; albums: number }; pulled?: { applied: number; imported: number; waiting: number };
+  devices: Array<{ id: string; name: string; seen: number; me: boolean }>;
+}
+interface SyncState { device: { id: string; name: string }; channels: Record<"personal" | "shared", SyncChannel> }
+
+function syncCard(channel: "personal" | "shared", heading: string, hint: string, onState: (s: SyncState) => void): { el: HTMLElement; paint: (s: SyncState) => void } {
+  const enabled = h("input", { type: "checkbox" }) as HTMLInputElement;
+  const folder = h("span", { class: "sync-folder" }, "");
+  const choose = h("button", { class: "btn", type: "button" }, "Choose Folder...");
+  const now = h("button", { class: "btn", type: "button" }, iconEl("sync"), "Sync Now");
+  const status = h("p", { class: "field-hint" }, "");
+  const peers = h("p", { class: "field-hint" }, "");
+  const el = h("div", { class: "share-settings glass-panel" },
+    h("div", { class: "sync-head" }, h("b", {}, heading)), h("p", { class: "field-hint" }, hint),
+    h("label", { class: "field-check" }, enabled, "On"), h("div", { class: "row-gap" }, choose, now), folder, status, peers);
+  const later = () => { for (const ms of [2500, 8000]) window.setTimeout(() => void api<SyncState>("/sync").then(onState).catch(() => undefined), ms); };
+  const put = async (body: Record<string, unknown>) => {
+    try {
+      onState(await api<SyncState>(`/sync/${channel}`, { method: "PUT", body: JSON.stringify(body) }));
+      later();
+    } catch (err) {
+      toast((err as Error).message, "error");
+      onState(await api<SyncState>("/sync"));
+    }
+  };
+  enabled.addEventListener("change", () => void put({ enabled: enabled.checked }));
+  choose.addEventListener("click", async () => {
+    const picked = await pickFolder(channel === "shared" ? "Shared Library folder" : "Sync folder");
+    if (picked) void put({ folder: picked, enabled: true });
+  });
+  now.addEventListener("click", () => void api("/sync/now", { method: "POST" }).then(() => { toast("Syncing"); later(); }));
+  const paint = (s: SyncState) => {
+    const c = s.channels[channel];
+    enabled.checked = c.enabled;
+    setText(folder, c.folder ? `Folder: ${c.folder}` : "No folder chosen");
+    now.classList.toggle("hidden", !c.enabled);
+    let line = c.enabled ? "Waiting for the first pass" : "Off";
+    if (c.error) line = `Problem: ${c.error}`;
+    else if (c.ts && c.pushed && c.pulled) line = `Last pass ${fullStamp(c.ts)}: sent ${countFmt(c.pushed.media)}, received ${countFmt(c.pulled.imported)} new & ${countFmt(c.pulled.applied)} changes${c.pulled.waiting ? `, ${c.pulled.waiting} still arriving` : ""}`;
+    setText(status, line);
+    const others = c.devices.filter((d) => !d.me);
+    setText(peers, others.length ? `${channel === "shared" ? "Participants" : "Other devices"}: ${others.map((d) => `${d.name} (seen ${fullStamp(d.seen)})`).join(", ")}` : "");
+  };
+  return { el, paint };
+}
 
 export function mountSharedPage(host: HTMLElement): () => void {
   const enabled = h("input", { type: "checkbox" }) as HTMLInputElement;
@@ -173,9 +233,18 @@ export function mountSharedPage(host: HTMLElement): () => void {
   const send = h("button", { class: "btn", type: "button" }, "Post");
   const actEmpty = h("p", { class: "field-hint hidden" }, "No comments, likes or additions yet.");
   const actPane = h("div", { class: "share-act-pane hidden" }, actHead, actEmpty, actList, reply, h("div", { class: "row-gap" }, send));
+  const deviceName = h("input", { class: "field-input compact", type: "text", maxlength: "60" }) as HTMLInputElement;
+  let paintSync: (s: SyncState) => void = () => undefined;
+  const personal = syncCard("personal", "Sync This Library", "Keeps this library the same on your other computers through a folder they all see: iCloud Drive, Dropbox, OneDrive, Syncthing, a NAS or an external drive. Originals, edits, favorites, ratings, keywords, captions, albums & deletions sync. Private, hidden & vaulted items never leave this computer.", (s) => paintSync(s));
+  const family = syncCard("shared", "Shared Library", "A second library shared with family through a folder you all can reach. Move photos into it from the photo menu; everyone sees, edits & deletes them. Moving a photo back to your Personal Library removes it from everyone else's.", (s) => paintSync(s));
+  paintSync = (s) => { personal.paint(s); family.paint(s); if (document.activeElement !== deviceName) deviceName.value = s.device.name; };
+  deviceName.addEventListener("change", () => void api<SyncState>("/sync/device", { method: "PUT", body: JSON.stringify({ name: deviceName.value || "This computer" }) }).then(paintSync));
   const pad = h("div", { class: "view-pad" },
     h("div", { class: "section-head" }, h("h2", {}, "Guest Server")), settingsCard,
-    h("div", { class: "section-head" }, h("h2", {}, "Shared Links & Albums")), empty, list, actPane);
+    h("div", { class: "section-head" }, h("h2", {}, "Shared Links & Albums")), empty, list, actPane,
+    h("div", { class: "section-head" }, h("h2", {}, "Sync & Shared Library")),
+    h("label", { class: "field sync-device" }, h("span", { class: "field-label" }, "This computer is called"), deviceName),
+    h("div", { class: "sync-cards" }, personal.el, family.el));
   host.append(pad);
   let alive = true;
   let selected: number | null = null;
@@ -267,10 +336,11 @@ export function mountSharedPage(host: HTMLElement): () => void {
   });
 
   async function refresh(): Promise<void> {
-    const [s, data] = await Promise.all([api<ShareSettings>("/sharing/settings"), api<{ shares: Share[] }>("/sharing")]);
+    const [s, data, sync] = await Promise.all([api<ShareSettings>("/sharing/settings"), api<{ shares: Share[] }>("/sharing"), api<SyncState>("/sync")]);
     if (!alive) return;
     native = s.native;
     paintSettings(s);
+    paintSync(sync);
     patchList(list, data.shares, (x) => String(x.id), row, (node, x) => paintRow(node, x));
     empty.classList.toggle("hidden", data.shares.length > 0);
   }
@@ -294,8 +364,10 @@ export function registerSharing(): void {
   } });
   tileHooks.ctx.push((item) => {
     const ids = state.selection.has(item.id) && state.selection.size > 1 ? [...state.selection] : [item.id];
+    const inShared = Boolean((item as { shared_lib?: number }).shared_lib);
     return [{ label: "Share Link...", icon: "link", action: () => void shareLinkFlow(ids) },
-      { label: "Web Gallery...", icon: "browser", action: () => void galleryFlow(ids) }];
+      { label: "Web Gallery...", icon: "browser", action: () => void galleryFlow(ids) },
+      { label: inShared ? "Move to Personal Library" : "Move to Shared Library", icon: "shared", action: () => void moveLibrary(ids, !inShared) }];
   });
   viewerHooks.toolbar.push((current) => {
     const btn = h("button", { class: "icon-btn", type: "button", "aria-label": "Share" }, iconEl("share"));

@@ -133,7 +133,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -150,7 +150,38 @@ MEDIA_V5_COLUMNS = (
     "clip_state INTEGER NOT NULL DEFAULT 0", "orig_created_ts REAL", "xmp_ts REAL",
 )
 
+SYNC_STAMP = "(julianday('now') - 2440587.5) * 86400.0"
+SYNC_MEDIA_COLUMNS = ("favorite, rating, label, rejected, title, caption, alt_text, edit_json, hidden, trashed_ts, "
+                      "created_ts, lat, lon, location_hidden, shared_lib")
+
 MIGRATIONS = {
+    10: [
+        "ALTER TABLE media ADD COLUMN meta_ts REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE media ADD COLUMN shared_lib INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE media ADD COLUMN shared_origin TEXT",
+        "ALTER TABLE albums ADD COLUMN uuid TEXT",
+        "ALTER TABLE albums ADD COLUMN meta_ts REAL NOT NULL DEFAULT 0",
+        "UPDATE albums SET uuid=lower(hex(randomblob(16))) WHERE uuid IS NULL",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_albums_uuid ON albums(uuid)",
+        "CREATE INDEX IF NOT EXISTS idx_media_meta_ts ON media(meta_ts)",
+        """CREATE TABLE IF NOT EXISTS sync_tombstones(uuid TEXT PRIMARY KEY, kind TEXT NOT NULL, ts REAL NOT NULL)""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_media_meta_ts AFTER UPDATE OF {SYNC_MEDIA_COLUMNS} ON media
+            WHEN NEW.meta_ts = OLD.meta_ts BEGIN UPDATE media SET meta_ts={SYNC_STAMP} WHERE id=NEW.id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_mk_add AFTER INSERT ON media_keywords
+            BEGIN UPDATE media SET meta_ts={SYNC_STAMP} WHERE id=NEW.media_id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_mk_del AFTER DELETE ON media_keywords
+            BEGIN UPDATE media SET meta_ts={SYNC_STAMP} WHERE id=OLD.media_id; END""",
+        """CREATE TRIGGER IF NOT EXISTS trg_album_uuid AFTER INSERT ON albums WHEN NEW.uuid IS NULL
+            BEGIN UPDATE albums SET uuid=lower(hex(randomblob(16))) WHERE id=NEW.id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_album_meta_ts AFTER UPDATE OF name ON albums WHEN NEW.meta_ts = OLD.meta_ts
+            BEGIN UPDATE albums SET meta_ts={SYNC_STAMP} WHERE id=NEW.id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_ai_add AFTER INSERT ON album_items
+            BEGIN UPDATE albums SET meta_ts={SYNC_STAMP} WHERE id=NEW.album_id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_ai_del AFTER DELETE ON album_items
+            BEGIN UPDATE albums SET meta_ts={SYNC_STAMP} WHERE id=OLD.album_id; END""",
+        f"""CREATE TRIGGER IF NOT EXISTS trg_album_gone AFTER DELETE ON albums WHEN OLD.uuid IS NOT NULL
+            BEGIN INSERT OR REPLACE INTO sync_tombstones(uuid, kind, ts) VALUES(OLD.uuid, 'album', {SYNC_STAMP}); END""",
+    ],
     9: [
         """CREATE TABLE IF NOT EXISTS shares(
              id INTEGER PRIMARY KEY, token TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, album_id INTEGER, title TEXT NOT NULL,

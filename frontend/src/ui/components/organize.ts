@@ -350,6 +350,7 @@ const FLAG_VALUES: Array<[string, string]> = [
   ["has_keywords", "Has keywords"], ["no_keywords", "No keywords"], ["has_people", "Has people"], ["titled", "Has title"],
   ["captioned", "Has caption"], ["has_text", "Has text"], ["timelapse", "Time-lapse"], ["cinematic", "Cinematic"],
   ["spatial", "Spatial"], ["long_exposure", "Long Exposure"], ["animated", "Animated"],
+  ["shared_library", "In Shared Library"], ["personal_library", "In Personal Library"],
 ];
 const NUM_OPS: Array<[string, string]> = [[">=", "at least"], ["<=", "at most"], ["=", "is"], [">", "above"], ["<", "below"]];
 const TEXT_OPS: Array<[string, string]> = [["contains", "contains"], ["is", "is"], ["starts", "starts with"], ["excludes", "does not contain"]];
@@ -539,13 +540,21 @@ export function openQuickFilters(anchor: HTMLElement): void {
     ["favorite", "Favorites"], ["photo", "Photos"], ["video", "Videos"], ["edited", "Edited"], ["raw", "RAW"],
     ["not_rejected", "Hide rejected"], ["located", "With location"], ["has_keywords", "With keywords"], ["not_in_album", "Not in an album"],
   ];
-  const entries: CtxEntry[] = flags.map(([flag, label]) => ({
+  const libs = ["personal_library", "shared_library"];
+  const others = () => state.quick.flags.filter((f) => !libs.includes(f));
+  const entries: CtxEntry[] = [
+    { label: "Both Libraries", selected: !state.quick.flags.some((f) => libs.includes(f)), action: () => setQuickFilter({ flags: others() }) },
+    { label: "Personal Library", selected: state.quick.flags.includes("personal_library"), action: () => setQuickFilter({ flags: [...others(), "personal_library"] }) },
+    { label: "Shared Library", selected: state.quick.flags.includes("shared_library"), action: () => setQuickFilter({ flags: [...others(), "shared_library"] }) },
+    "sep",
+  ];
+  entries.push(...flags.map(([flag, label]) => ({
     label, icon: "check" as const, selected: state.quick.flags.includes(flag),
     action: () => {
       const has = state.quick.flags.includes(flag);
       setQuickFilter({ flags: has ? state.quick.flags.filter((f) => f !== flag) : [...state.quick.flags, flag] });
     },
-  }));
+  })));
   entries.push("sep");
   for (let n = 1; n <= 5; n++) {
     entries.push({

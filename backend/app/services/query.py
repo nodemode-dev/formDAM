@@ -42,6 +42,7 @@ FLAGS = {
     "has_text": "COALESCE(m.ocr_text,'')<>''",
     "animated": "m.is_animated=1", "timelapse": "m.is_timelapse=1", "cinematic": "m.is_cinematic=1",
     "spatial": "m.is_spatial=1", "long_exposure": "m.is_long_exposure=1",
+    "shared_library": "m.shared_lib=1", "personal_library": "m.shared_lib=0",
 }
 TEXT_FIELDS = {
     "filename": "m.name", "title": "m.title", "caption": "m.caption", "camera": "(COALESCE(m.make,'')||' '||COALESCE(m.model,''))",

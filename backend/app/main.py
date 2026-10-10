@@ -8,7 +8,7 @@ from .config import VERSION, cache_dir, originals_dir
 from . import mediacodecs, upgrade_thumbs, wiring
 from .db import init_db, q, ex, setting_get, setting_set
 from .services import classify
-from .routers import albums, browse, curate, dedup, discover, edit, files, geo, importer, library, mediaapi, organize, output, people, render, sharing, system, trash
+from .routers import albums, browse, curate, dedup, discover, edit, files, geo, importer, library, mediaapi, organize, output, people, render, sharing, syncapi, system, trash
 from .security import local_only_guard
 
 
@@ -38,10 +38,13 @@ async def lifespan(app: FastAPI):
     _reclassify_screenshots()
     upgrade_thumbs.run_async()
     from . import shareserver
+    from .services import syncsvc
     try:
         shareserver.sync_state()
     except Exception:
         pass
+    housekeeping.register(syncsvc.ensure)
+    syncsvc.ensure()
     yield
     shareserver.stop()
 
@@ -63,7 +66,7 @@ wiring.connect()
 app = FastAPI(title="DAM", version=VERSION, lifespan=lifespan)
 app.middleware("http")(local_only_guard)
 
-for module in (system, importer, browse, render, edit, organize, files, geo, discover, output, curate, library, sharing, mediaapi, albums, people, trash, dedup):
+for module in (system, importer, browse, render, edit, organize, files, geo, discover, output, curate, library, sharing, syncapi, mediaapi, albums, people, trash, dedup):
     app.include_router(module.router, prefix="/api")
 
 _dist = os.environ.get(

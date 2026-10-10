@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### sharing.ts sync cards, Move to Shared Library, library view switch
+- refers-to: sharing.syncCard, moveLibrary, mountSharedPage sync section & device name, registerSharing tile entry; organize.openQuickFilters Both/Personal/Shared; organize FLAG_VALUES shared & personal library
+- kind: rationale
+- logged: zip v1.23.0 · 2026-10-10
+
+The Sharing page carries two sync cards (this library, the Shared Library) that paint from one /sync payload: folder, on switch, last pass & the other devices or participants. A change re-reads the state at 2.5 s & 8 s so the first pass shows without waiting for the 15 s refresh; every write is to text of an existing node. The photo menu flips an item between libraries & patches its shared_lib in place. The quick filter menu gains a three-way Both, Personal, Shared switch ahead of the other filters, kept exclusive by replacing either library flag.
 ### ui/components/sharing.ts + albums Share button + sidebar Sharing
 - refers-to: sharing.shareForm, serverNotice, resultPanel, shareLinkFlow, shareAlbumFlow, sendFiles, galleryFlow, shareEntries, mountSharedPage, registerSharing; albums.mountAlbumDetail shareBtn; sidebar PINNED Sharing; main route shared; icons-extra share, link, sync; parity.css .share-*
 - kind: rationale
