@@ -92,6 +92,10 @@ def _open_log():
 def main() -> int:
     if "--selfcheck" in sys.argv:
         return selfcheck()
+    if len(sys.argv) > 1 and sys.argv[1] == "--share":
+        from app import macshare
+
+        return macshare.run(sys.argv[2:])
     _open_log()
     os.environ.setdefault("DAM_DIST", os.path.join(resource_dir(), "frontend_dist"))
     os.environ.setdefault("DAM_MODELS", os.path.join(resource_dir(), "models"))

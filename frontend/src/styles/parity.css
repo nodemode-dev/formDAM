@@ -43,6 +43,17 @@
 .exif-k { color: var(--text-faint); overflow-wrap: anywhere; }
 .exif-v { color: var(--text-muted); overflow-wrap: anywhere; }
 .info-v { white-space: pre-line; }
+.share-form, .share-result { display: flex; flex-direction: column; gap: var(--space-3); }
+.share-note { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border-radius: 12px; background: var(--glass-bg-2); }
+.share-qr { width: 180px; height: 180px; align-self: center; border-radius: 10px; background: #fff; image-rendering: pixelated; }
+.share-settings { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: 14px; max-width: 640px; }
+.share-row { cursor: pointer; }
+.share-row.active { outline: 1px solid var(--accent); }
+.share-kind { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.share-unread { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #111); }
+.share-act-pane { display: flex; flex-direction: column; gap: var(--space-2); max-width: 640px; }
+.share-activity { display: flex; flex-direction: column; gap: 4px; }
+.share-act { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line, rgba(255,255,255,0.08)); }
 .lookup-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .lookup-card { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--glass-bg-2); }
 .lookup-name { font-size: 14px; font-weight: 600; color: var(--text); }

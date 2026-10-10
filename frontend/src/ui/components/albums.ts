@@ -16,6 +16,7 @@ import { patchList, setText } from "../keyed.js";
 import { promptText } from "../prompt.js";
 import { loadFolders, moveAlbumFlow, newFolderFlow, smartAlbumFlow } from "./organize.js";
 import { isPinned, togglePin } from "./sidebar.js";
+import { shareAlbumFlow } from "./sharing.js";
 
 export function unlockAlbumFlow(album: Album): Promise<boolean> {
   return new Promise((resolve) => {
@@ -267,10 +268,19 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
   });
   const renameBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Rename" }, iconEl("type"));
   const deleteBtn = h("button", { class: "icon-btn danger", type: "button", "aria-label": "Delete album" }, iconEl("trash"));
+  const shareBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Share Album", title: "Share Album" }, iconEl("shared"));
+  shareBtn.addEventListener("click", () => {
+    const meta = state.albums.find((a) => a.id === albumId);
+    if (meta?.is_private) {
+      toast("Private albums are never shared", "error");
+      return;
+    }
+    void shareAlbumFlow(albumId, title.textContent ?? "Shared Album");
+  });
   const pad = h(
     "div",
     { class: "view-pad" },
-    h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), sortBtn, renameBtn, deleteBtn),
+    h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), sortBtn, shareBtn, renameBtn, deleteBtn),
     grid,
   );
   host.append(pad);

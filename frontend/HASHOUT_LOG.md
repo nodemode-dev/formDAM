@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · DAM
 current: v1.13.9 (zip v1.22.0) · 2026-10-10
+### ui/components/sharing.ts + albums Share button + sidebar Sharing
+- refers-to: sharing.shareForm, serverNotice, resultPanel, shareLinkFlow, shareAlbumFlow, sendFiles, galleryFlow, shareEntries, mountSharedPage, registerSharing; albums.mountAlbumDetail shareBtn; sidebar PINNED Sharing; main route shared; icons-extra share, link, sync; parity.css .share-*
+- kind: rationale
+- logged: zip v1.23.0 · 2026-10-10
+
+Share is reachable from the selection bar, the tile menu, the viewer toolbar & an album's header. The share form carries the opt-in in place: when sharing is off it says what turning it on does & the button flips only that note, so the form never jumps. The QR image has its size set before it loads. The Sharing page patches its rows by share id & repaints only their sub-line & unread badge on the 15 s refresh; the activity list is keyed by activity id with its empty state outside the list so patching never meets an unkeyed node.
 ### organize Edit With round trip
 - refers-to: organize.startEditWith, roundTrips, openWithFlow
 - kind: rationale + replaced code

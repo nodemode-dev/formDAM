@@ -29,6 +29,9 @@ export const EXTRA_GLYPHS = {
   workflow: '<rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h4.5a2 2 0 0 1 2 2V15"/>',
   memory: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M3.5 15l4.5-4 3.5 3 3-2.5 6 4.5"/><path d="M16 3v5M13.5 5.5h5"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  share: '<path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8.5 10.5H6.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/>',
+  sync: '<path d="M19.5 9A8 8 0 0 0 5.2 7.2L4 8.5M4.5 15a8 8 0 0 0 14.3 1.8l1.2-1.3"/><path d="M4 4v4.5h4.5M20 20v-4.5h-4.5"/>',
 } as const;
 
 export type ExtraIcon = keyof typeof EXTRA_GLYPHS;

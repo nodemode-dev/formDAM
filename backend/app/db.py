@@ -133,7 +133,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -151,6 +151,21 @@ MEDIA_V5_COLUMNS = (
 )
 
 MIGRATIONS = {
+    9: [
+        """CREATE TABLE IF NOT EXISTS shares(
+             id INTEGER PRIMARY KEY, token TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, album_id INTEGER, title TEXT NOT NULL,
+             created_ts REAL NOT NULL, expires_ts REAL, password_hash TEXT,
+             allow_download INTEGER NOT NULL DEFAULT 1, allow_comments INTEGER NOT NULL DEFAULT 1,
+             allow_contrib INTEGER NOT NULL DEFAULT 0, include_location INTEGER NOT NULL DEFAULT 0,
+             revoked INTEGER NOT NULL DEFAULT 0, views INTEGER NOT NULL DEFAULT 0, seen_ts REAL NOT NULL DEFAULT 0)""",
+        """CREATE TABLE IF NOT EXISTS share_items(
+             share_id INTEGER NOT NULL, media_id INTEGER NOT NULL, position INTEGER NOT NULL DEFAULT 0,
+             PRIMARY KEY(share_id, media_id))""",
+        """CREATE TABLE IF NOT EXISTS share_activity(
+             id INTEGER PRIMARY KEY, share_id INTEGER NOT NULL, media_id INTEGER, kind TEXT NOT NULL, author TEXT NOT NULL,
+             text TEXT, ts REAL NOT NULL, owner INTEGER NOT NULL DEFAULT 0)""",
+        "CREATE INDEX IF NOT EXISTS idx_share_activity ON share_activity(share_id, ts)",
+    ],
     8: ["ALTER TABLE media ADD COLUMN lookup_state INTEGER NOT NULL DEFAULT 0", "ALTER TABLE media ADD COLUMN lookup_json TEXT"],
     7: [f"ALTER TABLE media ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0"
         for col in ("is_animated", "is_timelapse", "is_cinematic", "is_spatial", "is_long_exposure")],

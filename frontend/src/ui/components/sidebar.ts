@@ -24,6 +24,7 @@ const PINNED: RowSpec[] = [
   { label: "Memories", icon: "memory", hash: "#/memories" },
   { label: "Places", icon: "map", hash: "#/places" },
   { label: "Pets", icon: "paw", hash: "#/pets" },
+  { label: "Sharing", icon: "shared", hash: "#/shared" },
   { label: "Recently Deleted", icon: "trash", hash: "#/trash", locked: true },
 ];
 

@@ -7,6 +7,7 @@ import { registerFind } from "./ui/components/find.js";
 import { registerEditor } from "./ui/components/editor.js";
 import { registerOutputs } from "./ui/components/outputs.js";
 import { mountMemoriesPage, mountMemoryPage, registerCurate } from "./ui/components/curate.js";
+import { mountSharedPage, registerSharing } from "./ui/components/sharing.js";
 import { mountDiskPage, mountLibraryPage, registerLibraryDrops } from "./ui/components/libmanage.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
@@ -125,6 +126,7 @@ registerFind();
 registerEditor();
 registerOutputs();
 registerCurate();
+registerSharing();
 registerLibraryDrops();
 mountSelectBar(document.body);
 
@@ -226,6 +228,8 @@ function render(): void {
     teardown = mountPetsPage(plainShell("Pets"));
   } else if (view === "subjects") {
     teardown = mountSubjectsPage(plainShell("Subjects & Content"));
+  } else if (view === "shared") {
+    teardown = mountSharedPage(plainShell("Sharing"));
   } else {
     const shell = plainShell("Library");
     teardown = mountGrid(shell, "all", true);
