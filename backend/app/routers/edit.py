@@ -6,7 +6,7 @@ import tempfile
 import threading
 import time
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
@@ -208,10 +208,11 @@ def preview(media_id: int, body: PreviewIn, request: Request):
 class SegmentIn(BaseModel):
     x: Optional[float] = Field(None, ge=0, le=1)
     y: Optional[float] = Field(None, ge=0, le=1)
-    box: Optional[List[float]] = Field(None, min_length=4, max_length=4)
+    box: Optional[List[Annotated[float, Field(ge=0, le=1)]]] = Field(None, min_length=4, max_length=4)
 
 
 _analysis: "OrderedDict[tuple, Any]" = OrderedDict()
+_analysis_lock = threading.Lock()
 
 
 def _analysis_base(row):
@@ -226,15 +227,17 @@ def _analysis_base(row):
 def _analyse(row, kind: str):
     from ..services import cleanmodels
 
-    key = (row["id"], kind, extedit.external_path(editsvc.edits_of(row["id"])) or "")
-    hit = _analysis.get(key)
+    key = (row["id"], kind, extedit.external_path(editsvc.edits_of(row["id"])) or "", row["sha256"])
+    with _analysis_lock:
+        hit = _analysis.get(key)
     if hit is not None:
         return hit
     rgb = _analysis_base(row)
     value = cleanmodels.suggest(rgb) if kind == "suggest" else cleanmodels.faces(rgb)
-    _analysis[key] = value
-    while len(_analysis) > 32:
-        _analysis.popitem(last=False)
+    with _analysis_lock:
+        _analysis[key] = value
+        while len(_analysis) > 32:
+            _analysis.popitem(last=False)
     return value
 
 
