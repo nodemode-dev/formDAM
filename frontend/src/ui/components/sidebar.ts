@@ -22,6 +22,7 @@ const PINNED: RowSpec[] = [
   { label: "Screenshots", icon: "screenshot", hash: "#/f/screenshots" },
   { label: "People", icon: "people", hash: "#/people" },
   { label: "Places", icon: "map", hash: "#/places" },
+  { label: "Pets", icon: "paw", hash: "#/pets" },
   { label: "Recently Deleted", icon: "trash", hash: "#/trash", locked: true },
 ];
 
@@ -33,6 +34,7 @@ const UTILITIES: RowSpec[] = [
   { label: "Duplicates", icon: "dupes", hash: "#/dedup" },
   { label: "Imports", icon: "save", hash: "#/imports" },
   { label: "Keywords", icon: "tag", hash: "#/keywords" },
+  { label: "Subjects & Content", icon: "sparkle", hash: "#/subjects" },
   { label: "Import", icon: "upload", hash: "#/import" },
 ];
 

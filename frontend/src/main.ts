@@ -2,6 +2,8 @@ import { hydrateStatePrefs, loadAlbums, on, refreshSummary, specKey, state, sync
 import { registerOrganize } from "./ui/components/organize.js";
 import { mountImportsPage, mountKeywordsPage } from "./ui/components/pages.js";
 import { mountPlacesPage, mountTripsPage, registerPlaces } from "./ui/components/places.js";
+import { mountPetsPage, mountSubjectsPage, registerDiscover } from "./ui/components/discover.js";
+import { registerFind } from "./ui/components/find.js";
 import { initPrefs, prefGet } from "./engine/prefstore.js";
 import { applyTheme, loadTheme } from "./engine/theme.js";
 import { mountBackground } from "./theme/background.js";
@@ -114,6 +116,8 @@ app.append(content);
 mountViewer(document.body);
 registerOrganize();
 registerPlaces();
+registerDiscover();
+registerFind();
 mountSelectBar(document.body);
 
 let teardown: (() => void) | null = null;
@@ -202,6 +206,10 @@ function render(): void {
     teardown = mountPlacesPage(plainShell("Places"));
   } else if (view === "trips") {
     teardown = mountTripsPage(plainShell("Trips"));
+  } else if (view === "pets") {
+    teardown = mountPetsPage(plainShell("Pets"));
+  } else if (view === "subjects") {
+    teardown = mountSubjectsPage(plainShell("Subjects & Content"));
   } else {
     const shell = plainShell("Library");
     teardown = mountGrid(shell, "all", true);

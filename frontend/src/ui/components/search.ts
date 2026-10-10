@@ -1,20 +1,33 @@
 import { api } from "../../engine/api.js";
 import { prefGet, prefSet } from "../../engine/prefstore.js";
 import { countFmt } from "../../engine/format.js";
-import { pollJob, state } from "../../engine/store.js";
-import type { Media } from "../../engine/types.js";
+import { navigate, pollJob, specKey, type QuerySpec } from "../../engine/store.js";
 import { h } from "../dom.js";
-import { bindTileSize } from "../zoomctl.js";
 import { iconEl } from "../icons.js";
+import { patchList, setText } from "../keyed.js";
 import { toast } from "../toast.js";
-import { bindSelectionClasses, tileFor } from "./grid.js";
+import { clipCard } from "./discover.js";
+import { advancedFindFlow } from "./find.js";
+import { mountGrid } from "./grid.js";
+import { smartFromSpec, specHash } from "./organize.js";
 
 const SCOPES: Array<{ key: string; label: string }> = [
   { key: "name", label: "Filenames" },
+  { key: "title", label: "Titles" },
+  { key: "caption", label: "Captions" },
+  { key: "keywords", label: "Keywords" },
   { key: "ocr", label: "Text in image" },
   { key: "people", label: "People" },
+  { key: "places", label: "Places" },
+  { key: "dates", label: "Dates" },
   { key: "albums", label: "Albums" },
+  { key: "camera", label: "Camera" },
+  { key: "subjects", label: "Subjects" },
+  { key: "visual", label: "Looks like" },
 ];
+
+interface SuggestItem { label: string; count: number | null; rule: { field: string; op?: string; value?: unknown } }
+interface SuggestGroup { kind: string; title: string; items: SuggestItem[] }
 
 function loadScopes(): Set<string> {
   try {
@@ -33,17 +46,26 @@ export function mountSearchPage(host: HTMLElement, query: string): () => void {
   const chips = h("div", { class: "scope-chips chip-row" });
   const ocrCard = h("div", { class: "ocr-card glass-panel" });
   ocrCard.style.display = "none";
-  const grid = h("div", { class: "tile-grid" });
-  const unbindTiles = bindTileSize(grid);
-  const unbindSel = bindSelectionClasses(grid);
-  const pad = h("div", { class: "view-pad" },
-    h("div", { class: "section-head" }, h("h2", {}, `Results for "${query}"`), sub),
+  const suggestions = h("div", { class: "suggest-groups" });
+  const clip = clipCard(() => void run());
+  const results = h("div", { class: "search-results" });
+  const advanced = h("button", { class: "btn", type: "button" }, iconEl("sliders"), "Advanced Find");
+  advanced.addEventListener("click", () => advancedFindFlow([{ field: "visual", value: query }]));
+  const saveSmart = h("button", { class: "btn", type: "button" }, iconEl("smart"), "Save as Smart Album");
+  saveSmart.addEventListener("click", () => void smartFromSpec(query, currentSpec()));
+  const pad = h("div", { class: "view-pad search-head" },
+    h("div", { class: "section-head" }, h("h2", {}, `Results for "${query}"`), sub, h("span", { class: "head-spacer" }), advanced, saveSmart),
     chips,
+    suggestions,
     ocrCard,
-    grid,
+    clip.el,
   );
-  host.append(pad);
-  let items: Media[] = [];
+  host.append(pad, results);
+  let disposeGrid: (() => void) | null = null;
+
+  function currentSpec(): QuerySpec {
+    return { text: query, fields: [...scopes], title: `Results for "${query}"` } as QuerySpec;
+  }
 
   for (const scope of SCOPES) {
     const chip = h("button", { type: "button" }, scope.label);
@@ -99,31 +121,47 @@ export function mountSearchPage(host: HTMLElement, query: string): () => void {
       h("span", { class: "head-spacer" }), scanBtn);
   }
 
+  const empty = h("div", { class: "empty-center hidden" },
+    h("div", { class: "empty-card glass-panel" },
+      iconEl("search"),
+      h("span", { class: "empty-title" }, "No matches"),
+      h("span", { class: "empty-sub" }, "Adjust the scopes above, or run the text or visual scan if it is offered."),
+    ));
+  pad.append(empty);
+  let seq = 0;
+  let headReady: Promise<void> = Promise.resolve();
+
   async function run(): Promise<void> {
-    sub.textContent = "Searching...";
-    const fields = [...scopes].join(",");
-    const data = await api<{ items: Media[] }>(`/media/search?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}`);
-    items = data.items;
-    for (const item of items) state.byId.set(item.id, item);
-    sub.textContent = `${countFmt(items.length)} matches in ${[...scopes].map((k) => SCOPES.find((s) => s.key === k)?.label).join(", ")}`;
-    if (items.length === 0) {
-      grid.replaceChildren(
-        h("div", { class: "empty-center", style: "grid-column:1/-1" },
-          h("div", { class: "empty-card glass-panel" },
-            iconEl("search"),
-            h("span", { class: "empty-title" }, "No matches"),
-            h("span", { class: "empty-sub" }, "Adjust the scopes above, or run the text scan if it is offered."),
-          )),
-      );
-      return;
-    }
-    grid.replaceChildren(...items.map((item) => tileFor(item, () => items.map((m) => m.id), false)));
+    const mine = ++seq;
+    setText(sub, "Searching...");
+    const spec = currentSpec();
+    const [data] = await Promise.all([api<{ count: number }>(`/browse/count?spec=${encodeURIComponent(JSON.stringify(spec))}`), headReady]);
+    if (mine !== seq) return;
+    setText(sub, `${countFmt(data.count)} match${data.count === 1 ? "" : "es"} in ${[...scopes].map((k) => SCOPES.find((s) => s.key === k)?.label).join(", ")}`);
+    empty.classList.toggle("hidden", data.count > 0);
+    disposeGrid?.();
+    results.replaceChildren();
+    disposeGrid = data.count > 0 ? mountGrid(results, specKey(spec), false) : null;
   }
 
-  void refreshOcrCard();
+  async function suggest(): Promise<void> {
+    const data = await api<{ groups: SuggestGroup[] }>(`/search/suggest?text=${encodeURIComponent(query)}`);
+    patchList(suggestions, data.groups, (g) => g.kind, (g) => {
+      const row = h("div", { class: "chip-list" });
+      for (const item of g.items) {
+        const chip = h("button", { class: "chip big", type: "button" }, h("span", { class: "chip-text" }, item.label),
+          item.count !== null ? h("span", { class: "chip-count" }, countFmt(item.count)) : "");
+        chip.addEventListener("click", () => navigate(specHash({ rules: [item.rule], title: item.label, expand_stacks: true } as QuerySpec)));
+        row.append(chip);
+      }
+      return h("div", { class: "suggest-group" }, h("span", { class: "suggest-title" }, g.title), row);
+    });
+  }
+
+  headReady = Promise.all([refreshOcrCard(), clip.refresh(), suggest()]).then(() => undefined, () => undefined);
   void run();
   return () => {
-    unbindTiles();
-    unbindSel();
+    seq++;
+    disposeGrid?.();
   };
 }

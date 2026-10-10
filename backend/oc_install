@@ -39,6 +39,13 @@ fetch_model face_detection_yunet_2023mar.onnx \
 fetch_model face_recognition_sface_2021dec.onnx \
   https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx \
   0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79
+CLIP_BASE=https://huggingface.co/onnx-community/CLIP-ViT-B-32-laion2B-s34B-b79K-ONNX/resolve/de693d0
+fetch_model clip_vit_b32_laion2b_int8.onnx "$CLIP_BASE/onnx/model_quantized.onnx" \
+  2ac8410fe198fbd003cd97460bdd68653d99c33f53311881cd306190067aee9b
+fetch_model clip_vocab.json "$CLIP_BASE/vocab.json" \
+  5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363
+fetch_model clip_merges.txt "$CLIP_BASE/merges.txt" \
+  9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a
 
 if ! command -v ffmpeg > /dev/null 2>&1; then
   echo "note: ffmpeg not found on PATH. Video thumbnails, video dedup, & video face scanning need it (brew install ffmpeg / apt install ffmpeg)."

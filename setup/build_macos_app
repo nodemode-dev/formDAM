@@ -13,7 +13,7 @@ command -v cargo >/dev/null || { echo "Rust is required: curl --proto '=https' -
 xcode-select -p >/dev/null 2>&1 || { echo "Xcode command line tools are required: xcode-select --install"; exit 1; }
 cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; }
 
-say "Fetching face models (sha256-verified)"
+say "Fetching face and visual search models (sha256-verified)"
 MODELS=backend/models
 mkdir -p "$MODELS"
 fetch_model() {
@@ -35,6 +35,13 @@ fetch_model face_detection_yunet_2023mar.onnx \
 fetch_model face_recognition_sface_2021dec.onnx \
   https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx \
   0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79
+CLIP_BASE=https://huggingface.co/onnx-community/CLIP-ViT-B-32-laion2B-s34B-b79K-ONNX/resolve/de693d0
+fetch_model clip_vit_b32_laion2b_int8.onnx "$CLIP_BASE/onnx/model_quantized.onnx" \
+  2ac8410fe198fbd003cd97460bdd68653d99c33f53311881cd306190067aee9b
+fetch_model clip_vocab.json "$CLIP_BASE/vocab.json" \
+  5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363
+fetch_model clip_merges.txt "$CLIP_BASE/merges.txt" \
+  9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a
 
 say "Building the frontend"
 cd frontend
@@ -51,7 +58,7 @@ pip install --upgrade pip >/dev/null
 pip install -r requirements_macos.txt pillow-heif pyinstaller
 pyinstaller --clean --noconfirm --onedir --name dam-backend \
   --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
-  --collect-all cv2 --collect-all numpy \
+  --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread \
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
   --collect-all ImageCaptureCore --collect-all Quartz \
   --hidden-import objc --hidden-import Foundation --hidden-import PyObjCTools.AppHelper \

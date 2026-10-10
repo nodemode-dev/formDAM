@@ -305,7 +305,7 @@ const RULE_FIELDS: Array<[string, string]> = [
   ["flag", "Is"], ["rating", "Rating"], ["label", "Label"], ["keyword", "Keyword"], ["person", "Person"],
   ["album", "Album"], ["date", "Date"], ["recent_days", "In the last (days)"], ["filename", "Filename"],
   ["title", "Title"], ["caption", "Caption"], ["camera", "Camera"], ["lens", "Lens"], ["place", "Place"],
-  ["text", "Text in photo"], ["subject", "Subject"], ["iso", "ISO"], ["aperture", "Aperture"], ["focal", "Focal length"],
+  ["text", "Text in photo"], ["subject", "Subject"], ["visual", "Looks like"], ["iso", "ISO"], ["aperture", "Aperture"], ["focal", "Focal length"],
 ];
 const FLAG_VALUES: Array<[string, string]> = [
   ["favorite", "Favorite"], ["photo", "Photo"], ["video", "Video"], ["raw", "RAW"], ["live", "Live Photo"],
@@ -451,6 +451,16 @@ export function smartAlbumFlow(existing?: { id: number; name: string; rules?: { 
     );
     recount();
   });
+}
+
+export async function smartFromSpec(name: string, spec: QuerySpec & { text?: string; fields?: string[]; match?: string }): Promise<void> {
+  const title = await promptText("Save as Smart Album", name, "The album updates itself as matching items arrive.", "Save");
+  if (!title || !title.trim()) return;
+  const rules: QueryRule[] = [...(spec.rules ?? [])];
+  if (spec.text) rules.push({ field: "search", value: spec.text, fields: spec.fields } as QueryRule);
+  const res = await api<{ id: number }>("/smart-albums", { method: "POST", body: JSON.stringify({ name: title.trim(), rules, match: spec.match ?? "all" }) });
+  await loadAlbums();
+  navigate(`#/album/${res.id}`);
 }
 
 export async function loadFolders(): Promise<AlbumFolder[]> {

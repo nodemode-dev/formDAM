@@ -24,6 +24,8 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | pillow-heif | BSD-3-Clause (bindings) | bundles libheif (LGPL-3.0) & codecs as dynamic libs; acceptable under LGPL separability (dynamic link, replaceable); revisit before any store distribution |
 | exifread | BSD-3-Clause | EXIF, GPS & Apple maker-note read (metasvc) |
 | rawpy | MIT | RAW decode; the wheel bundles LibRaw (LGPL-2.1 OR CDDL-1.0) as a dynamic lib, same separability reasoning as libheif |
+| onnxruntime | MIT | runs the CLIP model for visual search, pets & content labels |
+| CLIP ViT-B/32 LAION-2B (onnx-community export of laion/CLIP-ViT-B-32-laion2B-s34B-b79K, int8, revision de693d0) + vocab.json + merges.txt | MIT | fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the face models. The BPE tokenizer in services/cliptok.py is written for DAM against the published vocab & merges |
 | GeoNames cities5000, admin1CodesASCII, countryInfo | CC BY 4.0 | backend/app/data/places.json.gz, reduced to name, coordinates, country, admin1 & population; offline reverse geocoding & place search. Attribution: "Place data from GeoNames (geonames.org), CC BY 4.0", shown under the Places page and in README |
 | Natural Earth admin-0 countries 1:50m | Public domain | backend/app/data/countries.json.gz, simplified outlines for the Places map & country fallback |
 | FormLit (nodemode-ai) | Apache-2.0 | rename token engine adapted into backend/app/services/renamesvc.py, with attribution in its HASHOUT entry; NOTICE obligations satisfied by this row |

@@ -9,6 +9,7 @@ import { loadImage, loadThumb } from "./grid.js";
 import { specHash } from "./organize.js";
 import { mediaTypeCards } from "./pages.js";
 import { placesStrip, tripsStrip } from "./places.js";
+import { contentCards, petsStrip } from "./discover.js";
 
 function countCard(label: string, icon: IconName, key: string, hash: string, locked = false): HTMLElement {
   const count = h("span", { class: "card-count" }, "");
@@ -45,6 +46,10 @@ export function mountCollections(host: HTMLElement): () => void {
   const tripsBody = h("div", { class: "strip-reserve" });
   const disposePlaces = placesStrip(placesBody);
   const disposeTrips = tripsStrip(tripsBody);
+  const petsBody = h("div", { class: "strip-reserve" });
+  const disposePets = petsStrip(petsBody);
+  const contentBody = h("div", { class: "cards-grid" });
+  const disposeContent = contentCards(contentBody);
   const utilCards = h("div", { class: "cards-grid" },
     countCard("Favorites", "heart", "favorites", "#/f/favorites"),
     countCard("Recently Deleted", "trash", "trash", "#/trash", true),
@@ -74,7 +79,17 @@ export function mountCollections(host: HTMLElement): () => void {
       body: peopleStrip,
     },
     { key: "albums", title: "Albums", extras: [newAlbumBtn], body: albumsStrip },
+    {
+      key: "pets", title: "Pets",
+      extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/pets") }, "See All")],
+      body: petsBody,
+    },
     { key: "media_types", title: "Media Types", extras: [], body: mediaCards },
+    {
+      key: "content", title: "Content",
+      extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/subjects") }, "Subjects")],
+      body: contentBody,
+    },
     { key: "utilities", title: "Utilities", extras: [], body: utilCards },
     { key: "memories", title: "Memories", extras: [], body: h("div", { class: "empty-center" }, emptyState("sparkle", "No Memories Yet", "Automatic Memories are on the roadmap; nothing is generated in this build.")) },
     {
@@ -272,6 +287,8 @@ export function mountCollections(host: HTMLElement): () => void {
     disposeTypes();
     disposePlaces();
     disposeTrips();
+    disposePets();
+    disposeContent();
     offs.forEach((off) => off());
   };
 }

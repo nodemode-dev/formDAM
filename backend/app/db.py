@@ -128,7 +128,7 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 MEDIA_V5_COLUMNS = (
     "make TEXT", "model TEXT", "lens TEXT", "focal REAL", "focal35 REAL", "aperture REAL", "shutter REAL",
@@ -146,6 +146,14 @@ MEDIA_V5_COLUMNS = (
 )
 
 MIGRATIONS = {
+    6: [
+        """CREATE TABLE IF NOT EXISTS pets(
+             id INTEGER PRIMARY KEY, name TEXT, species TEXT NOT NULL, cover_media_id INTEGER,
+             centroid BLOB NOT NULL, members INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, created_ts REAL NOT NULL)""",
+        "ALTER TABLE media ADD COLUMN pet_id INTEGER",
+        "CREATE INDEX IF NOT EXISTS idx_media_pet ON media(pet_id)",
+        "CREATE INDEX IF NOT EXISTS idx_media_clip_state ON media(clip_state)",
+    ],
     5: [f"ALTER TABLE media ADD COLUMN {col}" for col in MEDIA_V5_COLUMNS] + [
         "ALTER TABLE keywords ADD COLUMN parent_id INTEGER",
         "ALTER TABLE keywords ADD COLUMN shortcut TEXT",

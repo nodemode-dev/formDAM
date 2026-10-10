@@ -1,5 +1,6 @@
 # Adapted from formlit backend/app/services/metadata.py (Apache-2.0, nodemode-ai); see LICENSES.md.
 import json
+import logging
 import re
 import struct
 import subprocess
@@ -9,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from ..dedup.visual import ffprobe_path
 
+logging.getLogger("exifread").setLevel(logging.ERROR)
 APPLE_TAGS = {0x000B: "burst_id", 0x0011: "content_id", 0x0014: "capture_type", 0x002E: "camera_type"}
 CAPTURE_TYPES = {1: "ProRAW", 2: "Portrait", 10: "Photo", 11: "Manual Focus", 12: "Scene"}
 CAMERA_TYPES = {0: "Back Wide Angle", 1: "Back Normal", 6: "Front"}

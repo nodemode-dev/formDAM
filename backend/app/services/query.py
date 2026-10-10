@@ -154,6 +154,21 @@ def rule_sql(rule: Dict[str, Any]) -> Tuple[str, List[Any]]:
     if field == "subject":
         clause = "m.id IN (SELECT media_id FROM media_labels WHERE label=?)"
         return (f"NOT ({clause})" if neg else clause), [str(value)]
+    if field == "search":
+        fields = rule.get("fields")
+        return text_sql(str(value or ""), list(fields) if isinstance(fields, list) else None)
+    if field == "pet":
+        clause = "m.pet_id = ?"
+        return ("(m.pet_id IS NULL OR m.pet_id <> ?)" if neg else clause), [int(value)]
+    if field == "visual":
+        found = _visual_ids(str(value or ""))
+        clause = f"m.id IN ({','.join('?' * len(found))})" if found else "0=1"
+        return (f"NOT ({clause})" if neg and found else ("1=1" if neg else clause)), found
+    if field == "similar":
+        from . import clipsvc
+
+        found = [mid for mid, _ in clipsvc.similar(int(value))][:5000] or [-1]
+        return f"m.id IN ({','.join('?' * len(found))})", found
     if field == "batch":
         return "m.batch_id = ?", [int(value)]
     if field == "stack":
@@ -211,7 +226,7 @@ def where(spec: Dict[str, Any]) -> Tuple[str, List[Any]]:
     return " AND ".join(clauses), params
 
 
-TEXT_SCOPES = ("name", "title", "caption", "keywords", "ocr", "people", "albums", "places", "camera", "subjects", "dates")
+TEXT_SCOPES = ("name", "title", "caption", "keywords", "ocr", "people", "albums", "places", "camera", "subjects", "dates", "visual")
 
 
 def text_sql(text: str, fields: Optional[List[str]] = None) -> Tuple[str, List[Any]]:
@@ -263,7 +278,22 @@ def text_sql(text: str, fields: Optional[List[str]] = None) -> Tuple[str, List[A
                 params.extend([span_one[0], span_one[1]])
         if alts:
             out.append("(" + " OR ".join(alts) + ")")
-    return ("(" + " AND ".join(out) + ")") if out else "1=1", params
+    joined = ("(" + " AND ".join(out) + ")") if out else "1=1"
+    if "visual" in wanted and out:
+        found = _visual_ids(text)
+        if found:
+            joined = f"({joined} OR m.id IN ({','.join('?' * len(found))}))"
+            params.extend(found)
+    return joined, params
+
+
+def _visual_ids(text: str) -> List[int]:
+    from . import clipsvc
+
+    try:
+        return [mid for mid, _ in clipsvc.search(text)][:5000]
+    except Exception:
+        return []
 
 
 def page(spec: Dict[str, Any], limit: int = 400, cursor: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

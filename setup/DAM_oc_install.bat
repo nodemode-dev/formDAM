@@ -32,6 +32,10 @@ pip install -r requirements-dev.txt
 if not exist models mkdir models
 if not exist models\face_detection_yunet_2023mar.onnx curl -fSL -o models\face_detection_yunet_2023mar.onnx https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx
 if not exist models\face_recognition_sface_2021dec.onnx curl -fSL -o models\face_recognition_sface_2021dec.onnx https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx
+set CLIP_BASE=https://huggingface.co/onnx-community/CLIP-ViT-B-32-laion2B-s34B-b79K-ONNX/resolve/de693d0
+if not exist models\clip_vit_b32_laion2b_int8.onnx curl -fSL -o models\clip_vit_b32_laion2b_int8.onnx %CLIP_BASE%/onnx/model_quantized.onnx
+if not exist models\clip_vocab.json curl -fSL -o models\clip_vocab.json %CLIP_BASE%/vocab.json
+if not exist models\clip_merges.txt curl -fSL -o models\clip_merges.txt %CLIP_BASE%/merges.txt
 
 echo.
 echo ^>^> Setting up the interface...
