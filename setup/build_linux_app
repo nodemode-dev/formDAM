@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Builds the DAM Linux desktop app: the Tauri shell over the engine frozen with PyInstaller (onedir, bundled as a
+# resource), packaged as a .deb. Run it on Linux (Debian or Ubuntu) from anywhere: setup/build_linux_app
+# It mirrors build_macos_app step for step, without the macOS-only parts (device import, signing, icns, DMG).
+set -e
+cd "$(dirname "$0")/.."
+say() { printf '\n== %s ==\n' "$1"; }
+BUNDLES=${BUNDLES:-deb}
+
+say "Checking prerequisites"
+command -v python3 >/dev/null || { echo "python3 is required: sudo apt install python3 python3-venv"; exit 1; }
+command -v npm >/dev/null || { echo "npm is required (https://nodejs.org)"; exit 1; }
+command -v cargo >/dev/null || { echo "Rust is required: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; exit 1; }
+command -v sha256sum >/dev/null || { echo "sha256sum is required: sudo apt install coreutils"; exit 1; }
+pkg-config --exists webkit2gtk-4.1 || {
+  echo "Tauri's libraries are required. On Debian or Ubuntu:"
+  echo "  sudo apt install build-essential libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev"
+  exit 1
+}
+
+say "Fetching face and visual search models (sha256-verified)"
+MODELS=backend/models
+mkdir -p "$MODELS"
+fetch_model() {
+  name="$1"; url="$2"; sha="$3"; target="$MODELS/$name"
+  if [ -f "$target" ] && echo "$sha  $target" | sha256sum -c - >/dev/null 2>&1; then
+    echo "model ok: $name"
+    return
+  fi
+  curl -fSL --retry 4 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o "$target" "$url" || {
+    rm -f "$target"
+    echo "could not download $name (network or DNS); nothing else changed, rerun setup/build_linux_app when the connection is back"
+    exit 1
+  }
+  echo "$sha  $target" | sha256sum -c - >/dev/null || { echo "checksum mismatch for $name"; exit 1; }
+}
+fetch_model face_detection_yunet_2023mar.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx \
+  8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4
+fetch_model face_recognition_sface_2021dec.onnx \
+  https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx \
+  0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79
+CLIP_BASE=https://huggingface.co/onnx-community/CLIP-ViT-B-32-laion2B-s34B-b79K-ONNX/resolve/de693d0
+fetch_model clip_vit_b32_laion2b_int8.onnx "$CLIP_BASE/onnx/model_quantized.onnx" \
+  2ac8410fe198fbd003cd97460bdd68653d99c33f53311881cd306190067aee9b
+fetch_model clip_vocab.json "$CLIP_BASE/vocab.json" \
+  5047b556ce86ccaf6aa22b3ffccfc52d391ea4accdab9c2f2407da5b742d4363
+fetch_model clip_merges.txt "$CLIP_BASE/merges.txt" \
+  9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a
+fetch_model inpainting_lama_2025jan.onnx \
+  https://huggingface.co/opencv/inpainting_lama/resolve/aee6d22f0a13e5e35af1c9a1c3afd62841fc6f3f/inpainting_lama_2025jan.onnx \
+  7df918ac3921d3daf0aae1d219776cf0dc4e4935f035af81841b40adcf74fdf2
+fetch_model image_segmentation_efficientsam_ti_2025april.onnx \
+  https://huggingface.co/opencv/image_segmentation_efficientsam/resolve/1e791988b34b2098736003057da0f3e6bc826259/image_segmentation_efficientsam_ti_2025april.onnx \
+  4eb496e0a7259d435b49b66faf1754aa45a5c382a34558ddda9a8c6fe5915d77
+fetch_model object_detection_yolox_2022nov.onnx \
+  https://huggingface.co/opencv/object_detection_yolox/resolve/78c368f74ce73ee28fc7a1be418a598c71b58b52/object_detection_yolox_2022nov.onnx \
+  c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063
+fetch_model bioclip_image_int8.onnx \
+  https://huggingface.co/Virien/naturdex-bioclip-onnx/resolve/fa3c062ea31a6e1881b1977fe555b2d481dca730/bioclip-image-int8.onnx \
+  ae858e6a807b3a19d1e1f9ecbe3cc5302badf0a6a0cddcc5d1728cdf9d28517a
+BIO_DEMO=https://huggingface.co/spaces/imageomics/bioclip-demo/resolve/eeb91af989f1dffc405230a50b4c6214834c918b
+if [ ! -f "$MODELS/bioclip_species_int8.npy" ]; then
+  fetch_model txt_emb_species.npy "$BIO_DEMO/txt_emb_species.npy" 91ce02dff2433222e3138b8bf7eefa1dd74b30f4d406c16cd3301f66d65ab4ed
+  fetch_model txt_emb_species.json "$BIO_DEMO/txt_emb_species.json" 844e6fabc06cac072214d566b78f40825b154efa9479eb11285030ca038b2ece
+fi
+
+say "Building the frontend"
+cd frontend
+[ -d node_modules ] || npm install
+npm run build
+cd ..
+
+say "Building the engine (Python -> one folder)"
+cd backend
+rm -rf .venv-package
+python3 -m venv .venv-package
+. .venv-package/bin/activate
+pip install --upgrade pip >/dev/null
+pip install -r requirements.txt pillow-heif pyinstaller
+if [ ! -f models/bioclip_species_int8.npy ]; then
+  python -m app.services.species prepare models/txt_emb_species.npy models/txt_emb_species.json models
+  rm -f models/txt_emb_species.npy models/txt_emb_species.json
+fi
+pyinstaller --clean --noconfirm --onedir --name dam-backend \
+  --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
+  --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread \
+  --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
+  --hidden-import app.familyserver --collect-all pyzipper --collect-all Cryptodome \
+  --exclude-module pymobiledevice3 \
+  --hidden-import app.main \
+  --add-data "../frontend/dist:frontend_dist" \
+  --add-data "models:models" \
+  --add-data "app/data:app/data" \
+  desktop_entry.py
+./dist/dam-backend/dam-backend --selfcheck
+deactivate
+cd ..
+
+say "Placing the engine tree (onedir: no per-launch extraction, fast cold start)"
+rm -rf src-tauri/binaries/dam-backend
+mkdir -p src-tauri/binaries
+cp -R backend/dist/dam-backend src-tauri/binaries/dam-backend
+echo "engine: src-tauri/binaries/dam-backend/ (bundled via resources)"
+
+say "Building the app bundle (this compiles Rust; first run takes a while)"
+cd src-tauri
+npx --yes @tauri-apps/cli@2 build --bundles "$BUNDLES" -- --locked
+cd ..
+
+say "Done"
+ls -1 src-tauri/target/release/bundle/*/* 2>/dev/null | grep -E '\.(deb|AppImage)$' | sed 's/^/Package: /'
+echo
+echo "ffmpeg stays a user-supplied PATH binary (video features need it): sudo apt install ffmpeg"
