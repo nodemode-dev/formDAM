@@ -1,5 +1,5 @@
 # frontend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.24.0) · 2026-10-10
+current: v1.13.9 (zip v1.24.1) · 2026-10-13
 ### engine/session.ts + main.ts gate + .lockout-card · the window connects with the launcher's key
 - refers-to: session KEY_RE, openSession, showLockout hashchange; main.ts top-level gate before initPrefs; parity.css .lockout-card; packages.ts MIN_PASSWORD 16 and hint
 - kind: rationale

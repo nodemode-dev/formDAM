@@ -1,5 +1,11 @@
 # DAM build notes
 
+## zip v1.24.1 (2026-10-13) · app reports v1.13.9
+
+One root command for the desktop build. `./DAM desktop build` runs `setup/build_macos_app` on macOS and the new `setup/build_linux_app` elsewhere (2353c7b). The Linux script follows the macOS one step for step without the macOS-only parts (device import, signing, icns, DMG) and ends in a `.deb`.
+
+Not verified: on the build host the Linux script stopped at its first model download, because github.com and huggingface.co were not reachable from there. The engine freeze and the Tauri build in that script have not been run; the shell crate type-checks on Linux.
+
 ## zip v1.24.0 (2026-10-10) · app reports v1.13.9
 
 Round 72: the owner's direction on privacy and reach, plus the Look Up and Clean Up partials. Re-graded on the same 77 rows: 74.5 points, 97 percent (72 full, 5 partial, 0 none), from 96 percent at v1.23.0; Immich v3.3.1 stays at 65. The grades are the independent audit's. Clean Up is now full. Look Up stays partial: signs and books are not identified, only 1,500 landmarks compete without GPS, and accuracy on ordinary subjects is unmeasured. Sharing, shared albums and the family library stay partial by design: packages are files, not live links, and the family library works only on one network. Sync is unchanged. Five feature commits, four fix commits from the audit, docs and the version bump, all by nodemode-ai on main.

@@ -1,5 +1,5 @@
 # src-tauri HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.24.0) · 2026-10-10
+current: v1.13.9 (zip v1.24.1) · 2026-10-13
 
 ### src/main.rs window URL carries the launch key · and ../DAM_boot, ../DAM_boot.bat do the same for the browser build
 - refers-to: main.rs navigate to http://127.0.0.1:{port}/#dam-key={shell_key}; DAM_boot DAM_SHELL_KEY from /dev/urandom, UI_OPEN; DAM_boot.bat key from the venv's python secrets, UI_OPEN

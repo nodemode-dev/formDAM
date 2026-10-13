@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · DAM
-current: v1.13.9 (zip v1.24.0) · 2026-10-10
+current: v1.13.9 (zip v1.24.1) · 2026-10-13
 ### audit fixes after round 72 · window session, package hardening, family replay, Clean Up input
 - refers-to: security LAUNCH_KEY, LAUNCH_GENERATED, WINDOW_SESSION, SESSION_COOKIE, shell_allowed, window_allowed, automation_allowed, OPEN_PATHS; automation router GET/POST /session, _from_window, token-before-state; main lifespan launch address; packagesvc MIN_PASSWORD 16, MAX_MARKER, MAX_MANIFEST, MAX_MEMBER, _read_capped, _copy_capped, _check_space, _clean_file, _entry edit and live, _number, _apply_meta, _open_entry, open_package, _album_for, _merge_notes, check_password; editsvc _unit, _point, clean_spots, sanitize_state, _retouch; gpsscrub XMP_LOC, IIM_PLACE, _iim, _png_crcs; geosvc set_location_hidden pair; gallerysvc stamp and video metadata; familynet bound, _confirm, _tried, _accept_beacon, add_manual, fetch dev check; familyserver _sealed(request); edit router SegmentIn box range, _analysis_lock, cache key with sha256; setup/fetch_model.py
 - kind: rationale + replaced code
