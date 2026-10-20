@@ -626,3 +626,7 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 
 - [x] 1. Run the Linux build here & test it · `./build_app` built `formDAM_1.27.0_amd64.deb` after fixing the missing icon files it needed; installed, launched under Xvfb, engine attached, passkey saved to & read back from the Secret Service, polkit unlock issued a vault token (as root). 278dc8f.
 - [x] 2. The version is no longer pinned & follows the build · `frontend/package.json` drives Tauri, the engine & the installers; the old 1.13.9 rule is retired. 278dc8f and the v1.27.0 bump.
+
+## Round 77 · after zip v1.27.0 (zip formDAM_v1.27.1; the app reports v1.27.1)
+
+- [x] 1. Update the app icon · the play-plate M on the family tile w/ the family colours, crisp edges, enlarged to about 84 percent of the tile; icns, icon.png & the web icon replaced, `assets/icon_src/` added. 17c7e7a. Not run: an app build to see it in the Dock.

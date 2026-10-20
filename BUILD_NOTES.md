@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.1 (2026-10-20) · the app icon on the family tile
+
+The app icon moves to the Form family look (17c7e7a): the play-plate M mark keeps its shapes and sits on the dark squircle tile w/ the pink-to-violet bloom, rim and drop shadow, filling about 84 percent of it; the M and dot carry the blue, violet, pink, amber paint; the blurred halo around the M is gone so its outline stays crisp. `src-tauri/icons/source/icon.icns` (824 px tile, 100 px margin), `src-tauri/icons/icon.png` and `frontend/public/formDAM-icon.png/.svg` (full bleed) are replaced; `assets/icon_src/` regenerates them. The menu bar trayTemplate is unchanged. Landed by hand from the final state of the `feat/app-icon-redesign` bundle; the bundle was not applied. Verified: assets match the bundle tip byte for byte, icon.png inspected. Not run: any app build.
+
 ## v1.27.0 (2026-10-20) · the app and the zip carry the same version
 
 The owner lifted the old split (app at 1.13.9, zip moving on). `frontend/package.json` is the version of record: Tauri reads it through `tauri.conf.json`, the engine reads it from the repo or the frozen bundle, so the window, `/api/health`, the About panel and the installers all say 1.27.0 (278dc8f). A release bump is now `frontend/package.json`, the two version fields of `package-lock.json`, and `Cargo.toml` with its `Cargo.lock` entry.
