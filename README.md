@@ -1,17 +1,18 @@
-# DAM
+# formDAM
 
-Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between DAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
+Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between formDAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
 
 ## Quickstart
 
 ```
-./DAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
-setup/DAM_oc_install   # install only: backend venv + pip deps + face, CLIP, Clean Up & Look Up models (~650 MB on disk, ~1.2 GB downloaded once, sha256-pinned) + frontend npm install
-setup/DAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); DAM_OPEN=0 skips the browser
-setup/DAM_banner       # the DAM icon as an ASCII banner (NO_COLOR, DAM_BANNER=0 & DAM_BANNER_COLOR honored)
+./formDAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
+./formDAM desktop build    # the desktop app: setup/build_macos_app on macOS, setup/build_linux_app (a .deb) elsewhere
+setup/formDAM_oc_install   # install only: backend venv + pip deps + face, CLIP, Clean Up & Look Up models (~650 MB on disk, ~1.2 GB downloaded once, sha256-pinned) + frontend npm install
+setup/formDAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); FORMDAM_OPEN=0 skips the browser
+setup/formDAM_banner       # the formDAM icon as an ASCII banner (NO_COLOR, FORMDAM_BANNER=0 & FORMDAM_BANNER_COLOR honored)
 ```
 
-`./DAM` opens the interface at http://127.0.0.1:5173 with a one-time launch key in the address, which connects that browser to the engine; to connect another browser, use the address the boot script prints. A window opened without it shows a "not connected" card, because the engine answers only windows its launcher opened. The DAM mark lives in `frontend/public/` (source art, composed diamond app icon w/ neon glow, 512 PNG) & doubles as favicon + sidebar brand. Windows: `DAM.bat` does the same, with its steps in `setup\`.
+`./formDAM` opens the interface at http://127.0.0.1:5173 with a one-time launch key in the address, which connects that browser to the engine; to connect another browser, use the address the boot script prints. A window opened without it shows a "not connected" card, because the engine answers only windows its launcher opened. The formDAM mark lives in `frontend/public/` as `formDAM-icon.svg` & `formDAM-icon.png` (source art, composed diamond app icon w/ neon glow, 512 PNG) & doubles as favicon + sidebar brand. Windows: `formDAM.bat` does the same, with its steps in `setup\`.
 
 Prefer a single process? Build the UI once (`cd frontend && npm run build`) & the backend serves it at http://127.0.0.1:8000 directly.
 
@@ -28,8 +29,8 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 - **Places**: offline reverse geocoding, an offline map w/ clustered thumbnails, city & country collections, trips, location & date editing singly or in batches.
 - **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people, & Look Up in the info panel: about 384,000 species of animals, plants & fungi (BioCLIP, named to species, genus or family w/ the scientific name), dog & cat breeds, about 3,700 landmarks (any landmark in range of the photo's location competes, the best-known 1,500 otherwise), about 590 famous artworks w/ their artists, & about 1,200 foods & drinks. Media types include time-lapse, cinematic, spatial, animated & long exposure.
 - **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, Clean Up (brush, click Select Object or pick from suggested distractions to remove them w/ LaMa; brushing over a face pixelates it), markup, lens corrections, a Live Photo Long Exposure effect, copy & paste edits, revert, video trim; RAW files add a develop section (Kelvin white balance & tint, exposure, highlight recovery, demosaic, noise, fringe).
-- **Sharing**: Share as Encrypted Package turns photos or an album into a WinZip AES-256 zip w/ a generated password (or your own of at least 16 characters; zip encryption is guessed quickly offline, so short passwords are refused); file names, metadata & edits are inside the encryption & members carry random names. Location (GPS & place names in EXIF, XMP & IPTC, in edits & Live Photo videos too) is stripped losslessly unless you include it. Opening a package never changes photos you already have; it only adds new ones & links the rest. Send the zip by Mail, Messages, AirDrop or anything else & pass the password on separately; the recipient drops it onto DAM, enters the password & gets a new album or stack. Shared album packages carry notes both ways & merge back into the same album w/o duplicates. A static web gallery for any host is still available.
-- **Sync & Shared Library**: both off by default. Sync keeps this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS). The family Shared Library works only on the local network between DAM apps holding the same share key: peers find each other by an authenticated beacon & exchange signed, encrypted requests on their own port; an app w/ another key, or anything outside private network ranges, is refused. A Both / Personal / Shared switch sits in the filter menu.
+- **Sharing**: Share as Encrypted Package turns photos or an album into a WinZip AES-256 zip w/ a generated password (or your own of at least 16 characters; zip encryption is guessed quickly offline, so short passwords are refused); file names, metadata & edits are inside the encryption & members carry random names. Location (GPS & place names in EXIF, XMP & IPTC, in edits & Live Photo videos too) is stripped losslessly unless you include it. Opening a package never changes photos you already have; it only adds new ones & links the rest. Send the zip by Mail, Messages, AirDrop or anything else & pass the password on separately; the recipient drops it onto formDAM, enters the password & gets a new album or stack. Shared album packages carry notes both ways & merge back into the same album w/o duplicates. A static web gallery for any host is still available.
+- **Sync & Shared Library**: both off by default. Sync keeps this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS). The family Shared Library works only on the local network between formDAM apps holding the same share key: peers find each other by an authenticated beacon & exchange signed, encrypted requests on their own port; an app w/ another key, or anything outside private network ranges, is refused. A Both / Personal / Shared switch sits in the filter menu.
 - **Privacy**: automation access (scripts, agents, MCP tools) is off by default; Settings > Privacy turns it on & shows a token to give them. Only the app window & the desktop shell reach the engine otherwise: the launcher passes a per-launch key that the window trades for an HttpOnly session cookie, & the key is removed from the engine's environment so programs it starts never see it.
 - **Output**: XMP sidecars, File Info (IPTC) w/ templates, export to JPEG, HEIC, PNG, TIFF or WebP w/ sizing, naming, subfolders & metadata options, print & PDF contact sheets, saved workflows.
 - **Curation**: memories (generated or described) w/ generated music, slideshows, compare w/ linked zoom.
@@ -47,21 +48,21 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 setup/build_macos_app
 ```
 
-Run on a Mac from the repo root: it fetches the face models, builds the UI, freezes the engine into a single `dam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `DAM.app` + a `.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../DAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch). ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
+Run on a Mac from the repo root: it fetches the face models, builds the UI, freezes the engine into a single `formdam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `formDAM.app` + a `formDAM_v<version>.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../formDAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch); that data folder keeps its name so existing libraries open unchanged. Engine logs go to `~/Library/Logs/formDAM`. ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
 
 ## Configuration
 
 | Env var | Default | Meaning |
 | --- | --- | --- |
-| `DAM_LIBRARY` | `<repo>/library` | Library root (originals, cache, vault, `dam.db`) |
-| `DAM_MODELS` | `backend/models` | Model directory (face, CLIP, Clean Up, Look Up) |
-| `DAM_AUTOMATION` | unset | `1` lets any local caller use the API (the test suite & scripted runs need it); otherwise turn on Automation Access in Settings > Privacy |
-| `DAM_SHELL_KEY` | set by the launcher | Per-launch key the desktop shell or `setup/DAM_boot` passes to the engine; without it the engine makes one & prints the address that connects a window |
-| `DAM_CONFIG` | Application Support/DAM, %APPDATA%/DAM or ~/.config/dam | Where the list of known libraries is kept |
-| `DAM_FACE_THRESHOLD` | `0.55` | Cosine threshold for person clustering (also adjustable in People) |
-| `DAM_TRASH_DAYS` | `30` | Days before trash auto-purges |
+| `FORMDAM_LIBRARY` | `<repo>/library` | Library root (originals, cache, vault, `dam.db`) |
+| `FORMDAM_MODELS` | `backend/models` | Model directory (face, CLIP, Clean Up, Look Up) |
+| `FORMDAM_AUTOMATION` | unset | `1` lets any local caller use the API (the test suite & scripted runs need it); otherwise turn on Automation Access in Settings > Privacy |
+| `FORMDAM_SHELL_KEY` | set by the launcher | Per-launch key the desktop shell or `setup/formDAM_boot` passes to the engine; without it the engine makes one & prints the address that connects a window |
+| `FORMDAM_CONFIG` | Application Support/DAM, %APPDATA%/DAM or ~/.config/dam | Where the list of known libraries is kept |
+| `FORMDAM_FACE_THRESHOLD` | `0.55` | Cosine threshold for person clustering (also adjustable in People) |
+| `FORMDAM_TRASH_DAYS` | `30` | Days before trash auto-purges |
 
-The older `DAMP_*` spellings are still read when the `DAM_*` one is unset.
+The older `DAM_*` and `DAMP_*` spellings are still read, in that order, when the `FORMDAM_*` one is unset (not for `FORMDAM_AUTOMATION`, which only answers to its own name).
 
 ## Layout
 
@@ -104,4 +105,4 @@ Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natura
 
 Models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo: face (YuNet, SFace, under 40 MB), CLIP (146 MB), Clean Up (LaMa 89 MB, EfficientSAM 47 MB, YOLOX 35 MB) & Look Up (BioCLIP 84 MB plus species embeddings, downloaded once at 850 MB & stored as 192 MB int8). Look Up's landmark, art & food lists are rebuilt w/ `setup/gen_lookup_data.py`.
 
-DAM itself is MIT licensed (see LICENSE).
+formDAM itself is MIT licensed (see LICENSE).

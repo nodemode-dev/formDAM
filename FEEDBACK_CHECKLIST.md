@@ -1,4 +1,4 @@
-# DAMp feedback checklist
+# formDAM feedback checklist
 
 Every item from both feedback rounds, tracked to resolution. Legend: [x] done & verified here · [~] partial, w/ what remains · [>] roadmap, w/ the honest reason. Nothing is omitted.
 
@@ -606,3 +606,9 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 - [x] 6. Agentic, MCP & scripted use strictly enabled by the user, off by default · 4727fd9; the audit's forgeable-header finding fixed in b658629.
 - [x] 7. Sync across devices opt-in & off by default · unchanged design, off until turned on; confirmed by the audit.
 - [x] 8. Independent audit before publishing · 2 serious & 8 moderate findings, all fixed in b658629, 0646e1b, 6ad080f & 478a1df; the grades are the audit's.
+
+## Round 73 · after zip v1.24.1 (zip formDAM_v1.25.0; app reports v1.13.9)
+
+- [x] 1. Everything branded formDAM, not just DAM · every string a person reads in the interface, the engine, the desktop shell, the launchers and the docs; the app bundle, DMG, crate, engine binary and package names; FORMDAM_* settings w/ the DAM_ and DAMP_ spellings still read. 127f49e, 882218c, 8401ba3.
+- [x] 2. File names branded the same way · ./formDAM, formDAM.bat, setup/formDAM_banner, setup/formDAM_boot, setup/formDAM_oc_install (and their .bat twins), frontend/public/formDAM-icon.png & .svg, the repo folder and both zips. 127f49e.
+- [~] 3. Stored formats left as they are, on purpose · dam.db, the DAM data folders, the DAM Sync mirror folder, the vault magic & key labels, cookie & header names, the bundle identifier & the Keychain service keep their names so existing libraries, vaults and peers keep working. Renaming them needs a migration step; say the word if you want it.

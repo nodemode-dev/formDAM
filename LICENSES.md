@@ -1,6 +1,6 @@
-# DAM license ledger
+# formDAM license ledger
 
-DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree is classified here before use, per dev-rules licensing policy. Runtime web deps are also tabled in README.md.
+formDAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree is classified here before use, per dev-rules licensing policy. Runtime web deps are also tabled in README.md.
 
 ## Shipped inside the app bundle (desktop)
 
@@ -25,10 +25,10 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | exifread | BSD-3-Clause | EXIF, GPS & Apple maker-note read (metasvc) |
 | rawpy | MIT | RAW decode; the wheel bundles LibRaw (LGPL-2.1 OR CDDL-1.0) as a dynamic lib, same separability reasoning as libheif |
 | onnxruntime | MIT | runs the CLIP model for visual search, pets & content labels |
-| CLIP ViT-B/32 LAION-2B (onnx-community export of laion/CLIP-ViT-B-32-laion2B-s34B-b79K, int8, revision de693d0) + vocab.json + merges.txt | MIT | fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the face models. The BPE tokenizer in services/cliptok.py is written for DAM against the published vocab & merges |
+| CLIP ViT-B/32 LAION-2B (onnx-community export of laion/CLIP-ViT-B-32-laion2B-s34B-b79K, int8, revision de693d0) + vocab.json + merges.txt | MIT | fetched by the installers & build script, sha256-pinned, into backend/models; bundled via --add-data like the face models. The BPE tokenizer in services/cliptok.py is written for formDAM against the published vocab & merges |
 | GeoNames cities5000, admin1CodesASCII, countryInfo | CC BY 4.0 | backend/app/data/places.json.gz, reduced to name, coordinates, country, admin1 & population; offline reverse geocoding & place search. Attribution: "Place data from GeoNames (geonames.org), CC BY 4.0", shown under the Places page and in README |
 | Natural Earth admin-0 countries 1:50m | Public domain | backend/app/data/countries.json.gz, simplified outlines for the Places map & country fallback |
-| FormLit (nodemode-ai) | Apache-2.0 | adapted, with a header line naming the source file in each: the rename token engine (services/renamesvc.py, from formlit rename.py), EXIF reading (services/exifmeta.py read_image, from formlit metadata.py read_exif) and XMP build, parse & JPEG embedding (services/xmpsvc.py, from formlit metadata.py & xmpembed.py; changed to DAM's record shape, a dam: namespace for favorite & edits, GPS & people fields, and no Camera Raw develop mapping). NOTICE obligations satisfied by this row |
+| FormLit (nodemode-ai) | Apache-2.0 | adapted, with a header line naming the source file in each: the rename token engine (services/renamesvc.py, from formlit rename.py), EXIF reading (services/exifmeta.py read_image, from formlit metadata.py read_exif) and XMP build, parse & JPEG embedding (services/xmpsvc.py, from formlit metadata.py & xmpembed.py; changed to formDAM's record shape, a dam: namespace for favorite & edits, GPS & people fields, and no Camera Raw develop mapping). NOTICE obligations satisfied by this row |
 | pyobjc-core, pyobjc-framework-Cocoa, pyobjc-framework-ImageCaptureCore, pyobjc-framework-Quartz | MIT | Python bridge to Apple's ImageCaptureCore (the Photos.app device-import framework) for iPhone/iPad import + ImageIO thumbnail encode for the device browse grid; macOS only |
 | YuNet model | MIT | bundled via --add-data |
 | SFace model | Apache-2.0 | bundled via --add-data |
@@ -40,7 +40,7 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | BioCLIP species text embeddings (imageomics/bioclip-demo space revision eeb91af, txt_emb_species.npy and .json, 384,490 taxa) | MIT | sha256-pinned download, converted at install to int8 (bioclip_species_int8.npy, about 197 MB) by services/species.py prepare; the fp32 source is deleted |
 | Wikidata landmarks, artworks and dishes (backend/app/data/lookup_world.json.gz, built by setup/gen_lookup_data.py via the QLever Wikidata endpoint) | CC0-1.0 | Look Up names, coordinates and artist credits; no attribution required |
 | YOLOX-s (opencv/object_detection_yolox, object_detection_yolox_2022nov.onnx, revision 78c368f) | Apache-2.0 | Clean Up distraction suggestions (COCO classes) in services/cleanmodels.py; sha256-pinned like LaMa |
-| DAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
+| formDAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
 
 ## Build-time only (never distributed)
 
@@ -66,7 +66,7 @@ DAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree 
 | core:default | window + event baseline |
 | dialog:default | engine startup-failure dialog |
 
-The engine is spawned Rust-side from bundle resources (std Command), so no shell permission exists. The page receives ZERO Tauri APIs: remote-origin (loopback) content gets no IPC in Tauri by design, & this build does not grant any. Touch ID & Keychain run in the shell, triggered by DAM-CTRL lines the engine prints & answered over loopback HTTP w/ the local header; the passkey never enters the page.
+The engine is spawned Rust-side from bundle resources (std Command), so no shell permission exists. The page receives ZERO Tauri APIs: remote-origin (loopback) content gets no IPC in Tauri by design, & this build does not grant any. Touch ID & Keychain run in the shell, triggered by FORMDAM-CTRL lines the engine prints & answered over loopback HTTP w/ the local header; the passkey never enters the page.
 
 
 Private-API note: the Window blur control uses CGSSetWindowBackgroundBlurRadius (SkyLight), a private macOS symbol resolved at runtime & a decades-old community staple for adjustable window blur. It is a graceful no-op if the symbol vanishes, & the app must not ship to the Mac App Store w/ it.
