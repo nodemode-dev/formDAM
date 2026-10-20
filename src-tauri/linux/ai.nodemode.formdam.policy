@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>formDAM</vendor>
+  <vendor_url>https://nodemode.ai</vendor_url>
+  <action id="ai.nodemode.formdam.unlock">
+    <description>Unlock formDAM private items</description>
+    <message>formDAM needs to confirm it is you to unlock your private items</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_self</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

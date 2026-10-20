@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.25.1) · 2026-10-20
+### settings vault card, trash ensureVault modal, hidden and trash locked states · unlock names from /vault/device
+- refers-to: settings keychainWrap Promise.all status + labels; trash ensureVault device fetched before openModal, kcRow built only when available, append spread, toast; trash and hidden empty-sub lines
+- kind: rationale
+- logged: zip v1.26.0 · 2026-10-20
+
+The passkey modal now waits for the unlock status and names before it opens, so the save row is built once w/ the right words or not at all; before, it was appended and then removed or relabelled after a fetch, which shifted the modal. The locked-state lines are static and name no method, so they cannot change after paint.
 ### formDAM brand pass · formDAM-icon files, titles, sidebar mark, every user-facing string, package name
 - refers-to: public/formDAM-icon.png and .svg; index.html and splash.html title and icon; sidebar side-brand; session showLockout copy; people face banner; collections shared empty state; libmanage default library name and package toast; outputs default export folder; packages hints; privacy state lines and FORMDAM_AUTOMATION; search text engine hint; settings vault, menu bar hints; sharing family hint, peer fallback name, package toast and lede; package.json and package-lock.json formdam-frontend
 - kind: rationale

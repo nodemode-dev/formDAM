@@ -23,6 +23,14 @@ security-framework = "3"
 objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSResponder", "NSColor"] }
 libloading = "0.8"
 
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Foundation", "Security_Credentials_UI", "Win32_Foundation", "Win32_System_WinRT"] }
+windows-future = "0.2"
+keyring = { version = "3", features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["async-secret-service", "async-io", "crypto-rust"] }
+
 [profile.release]
 strip = true
 lto = true

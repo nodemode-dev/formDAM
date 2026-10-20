@@ -22,11 +22,24 @@
     ],
     "icon": [
       "icons/icon.icns",
+      "icons/icon.ico",
       "icons/icon.png"
     ],
     "macOS": {
       "minimumSystemVersion": "12.0",
       "entitlements": "Entitlements.plist"
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/polkit-1/actions/ai.nodemode.formdam.policy": "linux/ai.nodemode.formdam.policy"
+        }
+      }
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     },
     "resources": {
       "binaries/formdam-backend": "formdam-backend"

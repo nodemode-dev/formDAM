@@ -20,21 +20,24 @@ export async function vaultGate(): Promise<boolean> {
         return true;
       }
     } catch {
-      /* Touch ID unavailable, cancelled, or mismatched: fall through to the passkey modal */
+      /* device unlock unavailable, cancelled, or mismatched: fall through to the passkey modal */
     }
   }
+  const device = await Promise.all([
+    api<{ available: boolean; stored: boolean }>("/vault/keychain/status"),
+    api<{ method: string; store: string }>("/vault/device"),
+  ]).then(([kc, labels]) => ({ ...kc, ...labels })).catch(() => null);
   return new Promise((resolve) => {
     const modal = openModal(status.configured ? "Unlock Recently Deleted" : "Set a vault passkey");
     const hint = status.configured
       ? "Hidden, Recently Deleted & private albums w/o their own passkey are encrypted on disk w/ the vault passkey."
-      : "Pick a passkey. It encrypts Hidden, Recently Deleted & any private album that does not set its own. If you forget it, those items cannot be recovered, so save it to Keychain below when offered.";
+      : "Pick a passkey. It encrypts Hidden, Recently Deleted & any private album that does not set its own. If you forget it, those items cannot be recovered, so save it below when offered.";
     const { wrap, input } = textField("Passkey", "password", "At least 4 characters");
     const kcCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
-    const kcRow = h("label", { class: "field-check" }, kcCheck, "Save to Keychain so Touch ID can unlock this next time");
-    void api<{ available: boolean; stored: boolean }>("/vault/keychain/status").then((kc) => {
-      if (!kc.available) kcRow.remove();
-      if (kc.stored) kcCheck.checked = true;
-    }).catch(() => kcRow.remove());
+    kcCheck.checked = Boolean(device?.stored);
+    const kcRow = device?.available
+      ? h("label", { class: "field-check" }, kcCheck, `Save to ${device.store} so ${device.method} can unlock this next time`)
+      : null;
     const go = h("button", { class: "btn primary", type: "button" }, iconEl("lock"), status.configured ? "Unlock" : "Set & Unlock");
     let settled = false;
     const done = (ok: boolean) => {
@@ -48,10 +51,10 @@ export async function vaultGate(): Promise<boolean> {
         const path = status.configured ? "/vault/unlock" : "/vault/setup";
         const res = await api<{ token: string }>(path, { method: "POST", body: JSON.stringify({ passkey: input.value }) });
         setVaultToken(res.token);
-        if (kcCheck.checked) {
+        if (kcRow && kcCheck.checked) {
           try {
             await api("/vault/keychain/enable", { method: "POST", body: JSON.stringify({ passkey: input.value }) });
-            toast("Saved to Keychain; Touch ID will unlock next time");
+            toast(`Saved to ${device?.store}; ${device?.method} will unlock next time`);
           } catch (err) {
             toast(String((err as Error).message), "error");
           }
@@ -68,7 +71,7 @@ export async function vaultGate(): Promise<boolean> {
     modal.root.addEventListener("transitionend", () => {
       if (!document.body.contains(modal.root)) done(false);
     });
-    modal.body.append(h("p", { style: "margin:0;color:var(--text-muted);font-size:13px" }, hint), wrap, kcRow, h("div", { class: "modal-actions" }, go));
+    modal.body.append(h("p", { style: "margin:0;color:var(--text-muted);font-size:13px" }, hint), wrap, ...(kcRow ? [kcRow] : []), h("div", { class: "modal-actions" }, go));
     input.focus();
   });
 }
@@ -147,7 +150,7 @@ export function mountTrashPage(host: HTMLElement): () => void {
     h("div", { class: "empty-center" }, h("div", { class: "empty-card glass-panel" },
       iconEl("trash"),
       h("span", { class: "empty-title" }, "Locked"),
-      h("span", { class: "empty-sub" }, "Touch ID or your vault passkey is required to view Recently Deleted."),
+      h("span", { class: "empty-sub" }, "Your vault passkey, or device unlock where it is set up, is required to view Recently Deleted."),
     )),
   );
   let gone = false;

@@ -29,7 +29,7 @@ export function mountHiddenPage(host: HTMLElement): () => void {
       grid.replaceChildren(
         h("div", { class: "empty-center" }, h("div", { class: "empty-card glass-panel" },
           h("span", { class: "empty-title" }, "Locked"),
-          h("span", { class: "empty-sub" }, "Touch ID or your vault passkey is required to view Hidden."),
+          h("span", { class: "empty-sub" }, "Your vault passkey, or device unlock where it is set up, is required to view Hidden."),
         )),
       );
       return;

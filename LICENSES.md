@@ -11,6 +11,9 @@ formDAM itself is MIT (see LICENSE). Every dependency & binary that enters the t
 | regex (crate) | MIT OR Apache-2.0 | port handshake parsing |
 | objc2, objc2-foundation, objc2-local-authentication, block2 | MIT (Zlib OR Apache-2.0 OR MIT for the framework crate) | LAContext Touch ID prompt, shell-side (macOS only) |
 | security-framework | MIT OR Apache-2.0 | native Keychain read/write of the vault passkey, shell-side (macOS only) |
+| windows, windows-future | MIT OR Apache-2.0 | Windows Hello prompt (UserConsentVerifier and its Win32 interop), shell-side (Windows only); already in the tree through Tauri |
+| keyring | MIT OR Apache-2.0 | vault passkey in Windows Credential Manager (Windows) or the Secret Service (Linux), shell-side; its Linux backend pulls secret-service, zbus and the RustCrypto aes, cbc, hkdf, sha2 crates, all MIT, Apache-2.0 or BSD-2-Clause, audited 2026-10-20 |
+| polkit (pkcheck) | system binary, LGPL-2.0+ | called as a subprocess for the Linux unlock prompt, never linked or bundled; the .deb ships only formDAM's own action file |
 | objc2-app-kit | MIT (Zlib OR Apache-2.0 OR MIT) | NSWindow alpha & window number for the full-window controls (macOS only) |
 | libloading | ISC | runtime lookup of the compositor blur symbol (macOS only) |
 | ureq, serde_json | MIT OR Apache-2.0 | loopback control-channel client (shell -> engine) |

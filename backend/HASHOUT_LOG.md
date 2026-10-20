@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.25.1) · 2026-10-20
+### routers/trash.py device_labels, _method_cap, GET /vault/device · unlock names per OS
+- refers-to: trash device_labels, _method_cap, device_unlock_labels; _ctrl_roundtrip not-attached and timeout details; keychain_enable and bio_unlock details
+- kind: rationale
+- logged: zip v1.26.0 · 2026-10-20
+
+The engine runs on the same computer as the shell, so it names the unlock from sys.platform: Touch ID and the macOS Keychain, Windows Hello and Windows Credential Manager, system sign-in and the system keyring. The names come from their own endpoint because /vault/keychain/status keeps its exact two-key shape, which test_bio_channel pins.
 ### formDAM brand pass · config.env prefixes, FORMDAM_* reads, user-facing strings, the control-line tag
 - refers-to: config ENV_PREFIX, LEGACY_ENV_PREFIXES, env; main lifespan launch address, FastAPI title, _dist via env("DIST"); security _LEGACY_KEY, _ENV_KEY, AUTOMATION_OFF, automation_allowed FORMDAM_AUTOMATION, local_only_guard detail; automation router _from_window, _state forced, session and automation details; library router FORMDAM_LIBRARY, formDAM Library default name, details; importer and trash FORMDAM-CTRL prints; desktop_entry FORMDAM_DIST/MODELS/LIBRARY/PORT, Logs/formDAM, thread names; iccsvc FormDAMICCDelegate; native_picker prompts; packagesvc, syncapi, familynet messages; jobs, housekeeping, syncsvc, familyserver, extedit thread names; .env.example
 - kind: rationale

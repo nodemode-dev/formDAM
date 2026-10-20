@@ -149,7 +149,12 @@ fn kill_backend(handle: &tauri::AppHandle) {
 
 const KC_SERVICE: &str = "ai.nodemode.dam.vault";
 const KC_ACCOUNT: &str = "dam";
+#[cfg(target_os = "macos")]
 const KC_LEGACY: (&str, &str) = ("ai.nodemode.damp.vault", "damp");
+#[cfg(target_os = "linux")]
+const POLKIT_ACTION: &str = "ai.nodemode.formdam.unlock";
+#[cfg(target_os = "linux")]
+const POLKIT_POLICY: &str = "/usr/share/polkit-1/actions/ai.nodemode.formdam.policy";
 
 #[cfg(target_os = "macos")]
 fn bio_available() -> bool {
@@ -161,7 +166,28 @@ fn bio_available() -> bool {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+fn bio_available() -> bool {
+    use windows::Security::Credentials::UI::{UserConsentVerifier, UserConsentVerifierAvailability};
+    UserConsentVerifier::CheckAvailabilityAsync()
+        .and_then(|op| op.get())
+        .map(|state| state == UserConsentVerifierAvailability::Available)
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn bio_available() -> bool {
+    std::path::Path::new(POLKIT_POLICY).is_file()
+        && Command::new("pkcheck")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 fn bio_available() -> bool {
     false
 }
@@ -200,7 +226,65 @@ fn bio_evaluate(reason: &str) -> bool {
     outcome
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+fn bio_evaluate(reason: &str) -> bool {
+    use windows::core::{factory, HSTRING};
+    use windows::Security::Credentials::UI::{UserConsentVerificationResult, UserConsentVerifier};
+    use windows_future::IAsyncOperation;
+    use windows::Win32::System::WinRT::IUserConsentVerifierInterop;
+
+    if !bio_available() {
+        return false;
+    }
+    let Some(hwnd) = HANDLE
+        .get()
+        .and_then(|h| h.get_webview_window("main"))
+        .and_then(|w| w.hwnd().ok())
+    else {
+        return false;
+    };
+    let Ok(interop) = factory::<UserConsentVerifier, IUserConsentVerifierInterop>() else {
+        return false;
+    };
+    let op: windows::core::Result<IAsyncOperation<UserConsentVerificationResult>> =
+        unsafe { interop.RequestVerificationForWindowAsync(hwnd, &HSTRING::from(reason)) };
+    op.and_then(|op| op.get())
+        .map(|result| result == UserConsentVerificationResult::Verified)
+        .unwrap_or(false)
+}
+
+#[cfg(target_os = "linux")]
+fn bio_evaluate(_reason: &str) -> bool {
+    if !bio_available() {
+        return false;
+    }
+    let pid = std::process::id();
+    let start = std::fs::read_to_string("/proc/self/stat")
+        .ok()
+        .and_then(|stat| {
+            stat.rsplit_once(')')
+                .and_then(|(_, rest)| rest.split_whitespace().nth(19).map(str::to_string))
+        });
+    let uid = std::fs::read_to_string("/proc/self/status").ok().and_then(|status| {
+        status
+            .lines()
+            .find(|line| line.starts_with("Uid:"))
+            .and_then(|line| line.split_whitespace().nth(1).map(str::to_string))
+    });
+    let subject = match (start, uid) {
+        (Some(start), Some(uid)) => format!("{pid},{start},{uid}"),
+        _ => pid.to_string(),
+    };
+    Command::new("pkcheck")
+        .args(["--action-id", POLKIT_ACTION, "--process", &subject, "--allow-user-interaction"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 fn bio_evaluate(_reason: &str) -> bool {
     false
 }
@@ -221,7 +305,17 @@ fn kc_present() -> bool {
     })
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(windows, target_os = "linux"))]
+fn kc_entry() -> Option<keyring::Entry> {
+    keyring::Entry::new(KC_SERVICE, KC_ACCOUNT).ok()
+}
+
+#[cfg(any(windows, target_os = "linux"))]
+fn kc_present() -> bool {
+    kc_read().is_some()
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 fn kc_present() -> bool {
     false
 }
@@ -243,7 +337,12 @@ fn kc_read() -> Option<String> {
     Some(legacy)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(windows, target_os = "linux"))]
+fn kc_read() -> Option<String> {
+    kc_entry()?.get_password().ok()
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 fn kc_read() -> Option<String> {
     None
 }
@@ -254,7 +353,14 @@ fn kc_write(passkey: &str) -> bool {
         .is_ok()
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(any(windows, target_os = "linux"))]
+fn kc_write(passkey: &str) -> bool {
+    kc_entry()
+        .map(|entry| entry.set_password(passkey).is_ok())
+        .unwrap_or(false)
+}
+
+#[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
 fn kc_write(_passkey: &str) -> bool {
     false
 }
@@ -437,13 +543,19 @@ fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
         .resource_dir()
         .map_err(|e| format!("no resource dir: {e}"))?;
     let dir = resources.join("formdam-backend");
-    let bin = dir.join("formdam-backend");
+    let bin = dir.join(format!("formdam-backend{}", std::env::consts::EXE_SUFFIX));
     let mut cmd = Command::new(&bin);
     cmd.current_dir(&dir)
         .env("FORMDAM_PORT", "0")
         .env("FORMDAM_SHELL_KEY", shell_key())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
     Ok(cmd)
 }
 

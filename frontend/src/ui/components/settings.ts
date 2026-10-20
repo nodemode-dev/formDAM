@@ -322,26 +322,29 @@ export function openSettings(): void {
   });
 
   const keychainWrap = h("div", { class: "settings-keychain" });
-  void api<{ available: boolean; stored: boolean }>("/vault/keychain/status").then((status) => {
+  void Promise.all([
+    api<{ available: boolean; stored: boolean }>("/vault/keychain/status"),
+    api<{ method: string; store: string }>("/vault/device"),
+  ]).then(([kc, labels]) => ({ ...kc, ...labels })).then((status) => {
     if (!status.available) {
       keychainWrap.append(h("p", { class: "settings-hint" },
-        "macOS Keychain unlock is available in the desktop app on a Mac. Native Touch ID prompts land w/ the signed build."));
+        "Device unlock works in the formDAM desktop app: Touch ID on macOS, Windows Hello on Windows, and system sign-in on Linux (your fingerprint where one is enrolled, otherwise your account password, through polkit)."));
       return;
     }
     const state = h("p", { class: "settings-hint" },
       status.stored
-        ? "A formDAM vault passkey is stored in your Keychain. Unlock prompts can use it (Touch ID via Keychain access control)."
-        : "Store the vault passkey in your macOS Keychain to unlock w/o typing it.");
-    const enableBtn = h("button", { class: "btn", type: "button" }, iconEl("lock"), status.stored ? "Update Keychain entry" : "Enable Keychain unlock");
+        ? `A formDAM vault passkey is saved in ${status.store}. Unlock prompts use ${status.method}.`
+        : `Save the vault passkey in ${status.store} to unlock with ${status.method} instead of typing it.`);
+    const enableBtn = h("button", { class: "btn", type: "button" }, iconEl("lock"), status.stored ? "Update the saved passkey" : `Enable ${status.method} unlock`);
     enableBtn.addEventListener("click", () => {
-      const sub = openModal("Store passkey in Keychain");
+      const sub = openModal(`Save passkey in ${status.store}`);
       const { wrap, input } = textField("Vault passkey", "password", "Current vault passkey");
       const go = h("button", { class: "btn primary", type: "button" }, "Store");
       go.addEventListener("click", async () => {
         try {
           await api("/vault/keychain/enable", { method: "POST", body: JSON.stringify({ passkey: input.value }) });
           sub.close();
-          toast("Stored in the macOS Keychain");
+          toast(`Saved in ${status.store}`);
         } catch (err) {
           toast(String((err as Error).message), "error");
         }

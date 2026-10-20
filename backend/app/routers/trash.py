@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 from fastapi import APIRouter, HTTPException, Request
@@ -48,6 +49,19 @@ def vault_unlock(body: PasskeyIn):
 KEYCHAIN_SERVICE = "ai.nodemode.dam.vault"
 
 
+def device_labels() -> dict:
+    if sys.platform == "darwin":
+        return {"method": "Touch ID", "store": "the macOS Keychain"}
+    if os.name == "nt":
+        return {"method": "Windows Hello", "store": "Windows Credential Manager"}
+    return {"method": "system sign-in", "store": "the system keyring"}
+
+
+def _method_cap() -> str:
+    method = device_labels()["method"]
+    return method[:1].upper() + method[1:]
+
+
 SHELL = {"attached": False, "bio": False, "stored": False}
 PENDING: dict = {}
 
@@ -93,7 +107,7 @@ def bio_result(body: BioResult):
 
 def _ctrl_roundtrip(kind: str, passkey: str | None = None, timeout: float = 40.0) -> dict:
     if not SHELL["attached"]:
-        raise HTTPException(501, detail="The desktop shell is not attached; Touch ID needs the formDAM app.")
+        raise HTTPException(501, detail=f"The desktop shell is not attached; {device_labels()['method']} needs the formDAM desktop app.")
     nonce = os.urandom(12).hex()
     entry: dict = {"event": __import__("threading").Event(), "passkey": passkey}
     PENDING[nonce] = entry
@@ -101,13 +115,18 @@ def _ctrl_roundtrip(kind: str, passkey: str | None = None, timeout: float = 40.0
     finished = entry["event"].wait(timeout)
     PENDING.pop(nonce, None)
     if not finished:
-        raise HTTPException(504, detail="Touch ID timed out")
+        raise HTTPException(504, detail=f"{_method_cap()} timed out")
     return entry
 
 
 @router.get("/vault/keychain/status")
 def keychain_status():
     return {"available": SHELL["attached"] and SHELL["bio"], "stored": SHELL["stored"]}
+
+
+@router.get("/vault/device")
+def device_unlock_labels():
+    return device_labels()
 
 
 @router.post("/vault/keychain/enable")
@@ -117,7 +136,7 @@ def keychain_enable(body: PasskeyIn):
         raise HTTPException(401, detail="Wrong passkey")
     entry = _ctrl_roundtrip("KCSTORE", passkey=body.passkey)
     if not entry.get("ok"):
-        raise HTTPException(500, detail="The shell could not write the Keychain entry")
+        raise HTTPException(500, detail=f"The shell could not save the passkey to {device_labels()['store']}")
     return {"ok": True}
 
 
@@ -128,9 +147,9 @@ def bio_unlock():
         raise HTTPException(400, detail="No vault passkey is set yet")
     entry = _ctrl_roundtrip("BIOUNLOCK")
     if not entry.get("ok") or not entry.get("result_passkey"):
-        raise HTTPException(401, detail="Touch ID was cancelled or failed")
+        raise HTTPException(401, detail=f"{_method_cap()} was cancelled or failed")
     if not verify_passkey(entry["result_passkey"], stored_hash):
-        raise HTTPException(401, detail="The Keychain entry no longer matches the vault passkey")
+        raise HTTPException(401, detail=f"The passkey saved in {device_labels()['store']} no longer matches the vault passkey")
     from .. import vaultcrypt
     vaultcrypt.unlock_vault(entry["result_passkey"])
     return vaultcrypt.token_response(issue_token("vault"), vaultcrypt.VAULT_COOKIE)
