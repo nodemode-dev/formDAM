@@ -1,5 +1,11 @@
 # formDAM build notes
 
+## zip v1.25.1 (2026-10-20) · app reports v1.13.9
+
+A root `./build_app`, matching formlit's (3877ccb): it checks and, for Rust, installs the tools, runs `setup/build_macos_app` or `setup/build_linux_app`, copies `formDAM.app` to Applications on macOS (`--no-install` keeps it in place) or reports the `.deb` on Linux (`--install` installs it), and logs to `build_app.log`; `--open` and `--clean` as in formlit. `./formDAM desktop build` now runs it. No `build_app.bat`, since formDAM has no Windows desktop build.
+
+Verified here: `bash -n`; `--help` and an unknown flag; a run on a copy w/ the Linux build step stubbed passed the tool checks and wrote the log. Not run: the real macOS and Linux builds.
+
 ## zip v1.25.0 (2026-10-20) · app reports v1.13.9
 
 The product is formDAM throughout. The launchers, setup scripts and icon files are renamed (127f49e): `./formDAM`, `formDAM.bat`, `setup/formDAM_banner`, `setup/formDAM_boot`, `setup/formDAM_oc_install` and their `.bat` twins, `frontend/public/formDAM-icon.png` and `.svg`. The engine, the desktop shell and the build scripts follow (882218c): formDAM.app, `formDAM_v<version>.dmg`, the `formdam-desktop` crate, the `formdam-backend` engine binary, `FORMDAM_*` settings (the `DAM_` and `DAMP_` spellings still read), `FORMDAM-CTRL` control lines. The interface (8401ba3) and the docs (02f07f7) close it out. The repo folder and both zips are named formDAM.

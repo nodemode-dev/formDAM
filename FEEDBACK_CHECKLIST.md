@@ -612,3 +612,7 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 - [x] 1. Everything branded formDAM, not just DAM · every string a person reads in the interface, the engine, the desktop shell, the launchers and the docs; the app bundle, DMG, crate, engine binary and package names; FORMDAM_* settings w/ the DAM_ and DAMP_ spellings still read. 127f49e, 882218c, 8401ba3.
 - [x] 2. File names branded the same way · ./formDAM, formDAM.bat, setup/formDAM_banner, setup/formDAM_boot, setup/formDAM_oc_install (and their .bat twins), frontend/public/formDAM-icon.png & .svg, the repo folder and both zips. 127f49e.
 - [~] 3. Stored formats left as they are, on purpose · dam.db, the DAM data folders, the DAM Sync mirror folder, the vault magic & key labels, cookie & header names, the bundle identifier & the Keychain service keep their names so existing libraries, vaults and peers keep working. Renaming them needs a migration step; say the word if you want it.
+
+## Round 74 · after zip v1.25.0 (zip formDAM_v1.25.1; app reports v1.13.9)
+
+- [x] 1. The same build_app shebang in the root as the formlit example · `./build_app` w/ formlit's tool checks, rustup install, `--no-install`, `--install`, `--open`, `--clean` & `build_app.log`, over formDAM's own macOS & Linux build scripts; `./formDAM desktop build` runs it. 3877ccb. No `build_app.bat`: formDAM has no Windows desktop build yet.
