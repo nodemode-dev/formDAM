@@ -992,3 +992,10 @@ The user proved w/ screenshots that rounds 47-52's grid layers regressed the app
 - logged: v1.14.26 · 2026-07-27
 
 Vault pages must NEVER render cached items before this visit's gate resolves: the field bug was render()-then-fetch-then-prompt, showing the previous session's contents behind Touch ID. Invariants: cache discarded at mount, Locked card until vaultGate passes, token + cache cleared in teardown (every entry re-locks), & vaultGate's hasVaultToken fast path exists so in-visit actions do not double-prompt · do not remove it, & do not persist the vault token beyond a visit.
+
+### public/formDAM-icon.svg + src-tauri/icons · the mark in the family colours (v1.27.1)
+- refers-to: public/formDAM-icon.svg, public/formDAM-icon.png; src-tauri/icons/icon.png, src-tauri/icons/source/icon.icns; assets/icon_src/gen.py, parts.py, render.mjs
+- kind: rationale
+- logged: v1.27.1 · 2026-10-20
+
+The mark keeps the shapes of the user's refined icon (the rounded play plate, the M, the dot, the sheen, glint and dot light) and now sits on the family's square tile like the other Form icons, filling about 84 percent of it (86 percent at 64 px and below): the dark gradient squircle with its pink-to-violet bloom, rim and drop shadow, the play plate raised on it as a near-black triangle with its own shadow and a fine top-lit edge, and the M and dot in the family paint (blue, violet, pink, amber) along the original gradient axis. The blurred halo that outlined the M is gone, at the user's request, so its edges stay crisp. The macOS source/icon.icns uses the 824 px tile inside a 1024 canvas with a 100 px margin (the build restores that file over tauri's flattened one); icon.png and the web PNG are full bleed with transparent corners. assets/icon_src/ regenerates every file: `python3 gen.py <mac|full> <full|simple> out.svg`, then `node render.mjs out.svg out.png <size>` (Playwright). The menu bar trayTemplate files are unchanged.
