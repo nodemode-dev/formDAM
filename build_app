@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+ROOT="$(pwd)"
+
+usage() {
+  cat <<'EOF'
+./build_app            build formDAM's desktop app from this folder, start to finish
+  --no-install         macOS: leave the built app where it is instead of copying it to Applications
+  --install            Linux: install the built .deb with apt (asks for your password)
+  --open               open the app when the build is done
+  --clean              rebuild the Rust side and the frozen engine from nothing
+Every step's output goes to build_app.log beside this file.
+EOF
+}
+
+install_app=auto open_app=0 clean=0
+for arg in "$@"; do
+  case "$arg" in
+    --no-install) install_app=no ;;
+    --install) install_app=yes ;;
+    --open) open_app=1 ;;
+    --clean) clean=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
+
+log="$ROOT/build_app.log"
+: > "$log"
+exec > >(tee -a "$log") 2>&1
+trap 'status=$?; [ $status -eq 0 ] || printf "\n[formDAM] the build stopped (exit %s). The full log is %s\n" "$status" "$log"' EXIT
+
+say() { printf '[formDAM] %s\n' "$*"; }
+die() { printf '[formDAM] %s\n' "$*" >&2; exit 1; }
+step() { printf '\n[formDAM] == %s\n' "$*"; }
+rust_env() { [ -d "$HOME/.cargo/bin" ] && case ":$PATH:" in *":$HOME/.cargo/bin:"*) ;; *) PATH="$HOME/.cargo/bin:$PATH" ;; esac; return 0; }
+
+case "$(uname -s)" in
+  Darwin) os=macos ;;
+  Linux) os=linux ;;
+  *) os=other ;;
+esac
+
+step "checking the tools"
+[ "$os" != other ] || die "build_app runs on macOS and Linux; formDAM has no Windows desktop build yet (formDAM.bat runs the browser build)"
+if [ "$os" = macos ]; then
+  xcode-select -p >/dev/null 2>&1 || die "the Xcode command line tools are missing: run xcode-select --install, then ./build_app again"
+fi
+command -v python3 >/dev/null 2>&1 || die "Python 3.10 or newer is required (on macOS: brew install python; on Debian or Ubuntu: sudo apt install python3 python3-venv)"
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
+  || die "Python $(python3 -c 'import platform; print(platform.python_version())') is too old; formDAM's engine needs 3.10 or newer"
+command -v node >/dev/null 2>&1 || die "Node 20.19 or newer is required (on macOS: brew install node)"
+node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=12)||(a===20&&b>=19)?0:1)' \
+  || die "Node $(node -v) is too old; Vite needs 20.19 or 22.12 or newer"
+rust_env
+if ! command -v rustup >/dev/null 2>&1 && ! command -v cargo >/dev/null 2>&1; then
+  say "installing Rust with rustup (https://rustup.rs) into ~/.cargo; your shell profile is not changed"
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+  rust_env
+fi
+if command -v rustup >/dev/null 2>&1; then
+  rustup toolchain list | grep -q '^stable' || rustup toolchain install stable --profile minimal
+fi
+command -v cargo >/dev/null 2>&1 || die "cargo is still missing after the Rust install; open a new terminal and run ./build_app again"
+[ "$(dirname "$(command -v rustc)")" = "$(dirname "$(command -v cargo)")" ] \
+  || die "rustc ($(command -v rustc)) and cargo ($(command -v cargo)) come from different installs; remove one (brew uninstall rust) and run ./build_app again"
+command -v ffmpeg >/dev/null 2>&1 || say "ffmpeg is not on PATH; the app builds without it, but video thumbnails and video face scanning need it"
+say "python $(python3 -c 'import platform; print(platform.python_version())'), node $(node -v), $(rustc -V), $(cargo -V | awk '{print $1, $2}') from $(dirname "$(command -v rustc)")"
+
+if [ "$os" = macos ]; then
+  target_dir="$ROOT/src-tauri/target.nosync"
+else
+  target_dir="$ROOT/src-tauri/target"
+fi
+
+if [ "$clean" = 1 ]; then
+  step "cleaning earlier builds"
+  cargo clean --manifest-path src-tauri/Cargo.toml --target-dir "$target_dir"
+  rm -rf backend/build backend/dist backend/.venv-package src-tauri/binaries/formdam-backend
+fi
+
+chmod +x setup/build_macos_app setup/build_linux_app setup/package_dmg setup/apply_icon 2>/dev/null || true
+step "building the desktop app: models, window, frozen engine, bundle (the first build compiles several hundred Rust crates)"
+if [ "$os" = macos ]; then
+  setup/build_macos_app
+else
+  setup/build_linux_app
+fi
+
+bundle="$target_dir/release/bundle"
+version="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' src-tauri/tauri.conf.json)"
+
+if [ "$os" = macos ]; then
+  app="$bundle/macos/formDAM.app"
+  [ -d "$app" ] || die "the build finished but $app is missing"
+  dmg="$bundle/formDAM_v${version}.dmg"
+  say "app: $app"
+  [ -f "$dmg" ] && say "disk image: $dmg"
+  target_app=""
+  if [ "$install_app" != no ]; then
+    dest=/Applications
+    [ -w "$dest" ] || { dest="$HOME/Applications"; mkdir -p "$dest"; }
+    if pgrep -x formDAM >/dev/null 2>&1 || pgrep -x formdam-desktop >/dev/null 2>&1; then
+      osascript -e 'tell application "formDAM" to quit' >/dev/null 2>&1 || true
+      sleep 2
+    fi
+    rm -rf "$dest/formDAM.app"
+    ditto "$app" "$dest/formDAM.app"
+    xattr -dr com.apple.quarantine "$dest/formDAM.app" 2>/dev/null || true
+    target_app="$dest/formDAM.app"
+    say "installed: $target_app"
+  fi
+  if [ "$open_app" = 1 ]; then open "${target_app:-$app}"; fi
+else
+  deb="$(ls -t "$bundle"/deb/*.deb 2>/dev/null | head -1 || true)"
+  [ -n "$deb" ] && say "package: $deb"
+  ls "$bundle"/*/ 2>/dev/null | sed 's/^/  /' || true
+  if [ "$install_app" = yes ] && [ -n "$deb" ]; then
+    sudo apt install -y "$deb"
+  elif [ -n "$deb" ]; then
+    say "install it with: sudo apt install $deb   (or run ./build_app --install)"
+  fi
+  if [ "$open_app" = 1 ]; then
+    launched=0
+    for bin in /usr/bin/formDAM /usr/bin/formdam-desktop "$target_dir/release/formdam-desktop"; do
+      if [ -x "$bin" ]; then nohup "$bin" >/dev/null 2>&1 & launched=1; break; fi
+    done
+    [ "$launched" = 1 ] || say "no built formDAM binary to open"
+  fi
+fi
+say "done in ${SECONDS}s"

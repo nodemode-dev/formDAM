@@ -21,7 +21,7 @@ echo ">> Setting up the interface..."
 chmod +x frontend/oc_install frontend/boot_frontend 2>/dev/null || true
 (cd frontend && ./oc_install)
 
-chmod +x formDAM setup/formDAM_banner setup/formDAM_boot setup/formDAM_oc_install setup/build_macos_app setup/build_linux_app setup/package_dmg setup/apply_icon 2>/dev/null || true
+chmod +x formDAM build_app setup/formDAM_banner setup/formDAM_boot setup/formDAM_oc_install setup/build_macos_app setup/build_linux_app setup/package_dmg setup/apply_icon 2>/dev/null || true
 
 echo ""
 echo "==========================================="
@@ -33,6 +33,6 @@ echo "  1. Run: ./formDAM   (installs what is missing, boots both halves, opens 
 echo "  2. Optional settings: copy backend/.env.example to backend/.env"
 echo ""
 echo "Also:"
-echo "  - The desktop app builds on a Mac with setup/build_macos_app (setup/package_dmg and setup/apply_icon follow it)"
+echo "  - The desktop app builds with ./build_app on macOS or Linux (setup/build_macos_app or setup/build_linux_app underneath)"
 echo "  - ffmpeg stays on PATH, not in the repo: video thumbnails and video face scanning need it"
 echo ""

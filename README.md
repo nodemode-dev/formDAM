@@ -6,7 +6,7 @@ Open-source, local-first photo library and asset manager in the spirit of Photos
 
 ```
 ./formDAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
-./formDAM desktop build    # the desktop app: setup/build_macos_app on macOS, setup/build_linux_app (a .deb) elsewhere
+./build_app                # the desktop app, start to finish (./formDAM desktop build runs the same script)
 setup/formDAM_oc_install   # install only: backend venv + pip deps + face, CLIP, Clean Up & Look Up models (~650 MB on disk, ~1.2 GB downloaded once, sha256-pinned) + frontend npm install
 setup/formDAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); FORMDAM_OPEN=0 skips the browser
 setup/formDAM_banner       # the formDAM icon as an ASCII banner (NO_COLOR, FORMDAM_BANNER=0 & FORMDAM_BANNER_COLOR honored)
@@ -42,13 +42,19 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 - **Duplicates**: the bundled deduplakit engine (dual-gradient dHash + confidence-masked DCT pHash + color grid) finds exact & visually-identical sets across photos & videos; resolving keeps the best copy & trashes the rest.
 - **Utilities & Collections**: screenshots & screen recordings auto-detected, Recently Saved / Recently Viewed, counts everywhere, honest empty states for what is not built yet.
 
-## macOS desktop app
+## Desktop app
 
 ```
-setup/build_macos_app
+./build_app            # macOS or Linux, from a fresh clone
+  --no-install         # macOS: keep the app in place instead of copying it to Applications
+  --install            # Linux: install the built .deb with apt
+  --open               # open the app when the build is done
+  --clean              # rebuild the Rust side and the frozen engine from nothing
 ```
 
-Run on a Mac from the repo root: it fetches the face models, builds the UI, freezes the engine into a single `formdam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `formDAM.app` + a `formDAM_v<version>.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../formDAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch); that data folder keeps its name so existing libraries open unchanged. Engine logs go to `~/Library/Logs/formDAM`. ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
+`./build_app` checks the tools (Xcode command line tools on macOS, Python 3.10+, Node 20.19 or 22.12+, Rust, installed w/ rustup into `~/.cargo` when missing), runs `setup/build_macos_app` on macOS or `setup/build_linux_app` on Linux, then on macOS copies `formDAM.app` to `/Applications` (or `~/Applications` when that is not writable); on Linux it reports the `.deb`. Every step is logged to `build_app.log`. There is no Windows desktop build yet; `formDAM.bat` runs the browser build there.
+
+`setup/build_macos_app` on its own fetches the face models, builds the UI, freezes the engine into a single `formdam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `formDAM.app` + a `formDAM_v<version>.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../formDAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch); that data folder keeps its name so existing libraries open unchanged. Engine logs go to `~/Library/Logs/formDAM`. ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
 
 ## Configuration
 

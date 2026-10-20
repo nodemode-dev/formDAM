@@ -6,8 +6,8 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 if [ "${1:-}" = desktop ] && [ "${2:-}" = build ]; then
-  [ "$(uname -s)" = Darwin ] && exec setup/build_macos_app
-  exec setup/build_linux_app
+  shift 2
+  exec ./build_app "$@"
 fi
 
 chmod +x setup/formDAM_banner setup/formDAM_oc_install setup/formDAM_boot 2>/dev/null || true

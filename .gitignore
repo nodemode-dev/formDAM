@@ -26,3 +26,4 @@ backend/.venv-package/
 backend/dist/
 backend/build/
 backend/*.spec
+build_app.log
