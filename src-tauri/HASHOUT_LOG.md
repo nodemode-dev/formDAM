@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.26.0) · 2026-10-20
 
+### tauri.conf.json version from ../frontend/package.json · Cargo.toml and Cargo.lock 1.27.0
+- refers-to: tauri.conf.json version; Cargo.toml package version; Cargo.lock formdam-desktop version
+- kind: rationale + replaced code
+- logged: zip v1.27.0 · 2026-10-20
+
+Replaced: "version": "1.13.9" in tauri.conf.json. Tauri reads the version from the package.json path instead, so the bundle, the About panel, the .deb and the DMG name carry the build version w/o a second copy. Cargo cannot read another file, so the crate version is still a literal; it only names the crate, and a release bump sets it beside package.json.
+
 ### device unlock on Windows and Linux · bio_available, bio_evaluate, kc_entry/kc_present/kc_read/kc_write per OS, the engine as a .exe w/o a console, the polkit action
 - refers-to: Cargo.toml cfg(windows) windows 0.61 (Foundation, Security_Credentials_UI, Win32_Foundation, Win32_System_WinRT), windows-future 0.2, keyring windows-native; cfg(linux) keyring async-secret-service + async-io + crypto-rust; main.rs KC_LEGACY now macOS-only, POLKIT_ACTION, POLKIT_POLICY, Windows UserConsentVerifier CheckAvailabilityAsync and IUserConsentVerifierInterop RequestVerificationForWindowAsync on the main window's HWND, Linux pkcheck --process pid,start,uid --allow-user-interaction, backend_command EXE_SUFFIX and CREATE_NO_WINDOW; linux/ai.nodemode.formdam.policy; tauri.conf.json bundle.linux.deb.files, bundle.windows.webviewInstallMode, icons/icon.ico
 - kind: rationale

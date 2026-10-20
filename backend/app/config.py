@@ -1,8 +1,22 @@
+import json
 import os
-
-VERSION = "1.13.9"
+import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def _build_version() -> str:
+    for path in (os.path.join(getattr(sys, "_MEIPASS", ""), "package.json"),
+                 os.path.join(REPO_ROOT, "frontend", "package.json")):
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                return str(json.load(fh)["version"])
+        except (OSError, ValueError, KeyError):
+            continue
+    return "0.0.0"
+
+
+VERSION = _build_version()
 ENV_PREFIX = "FORMDAM_"
 LEGACY_ENV_PREFIXES = ("DAM_", "DAMP_")
 

@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.26.0) · 2026-10-20
+### config.py _build_version · the engine reports the build's own version
+- refers-to: config _build_version, VERSION; build_macos_app, build_linux_app, build_windows_app.bat --add-data ../frontend/package.json:.
+- kind: rationale + replaced code
+- logged: zip v1.27.0 · 2026-10-20
+
+Replaced: VERSION = "1.13.9", a literal held back by the owner's old rule that the app keep reporting 1.13.9 while the zip moved on (lifted 2026-10-20). frontend/package.json is now the one version of record; the engine reads it from the repo, or, frozen, from the copy PyInstaller places at the bundle root, and says 0.0.0 rather than a stale number if neither is there. /api/health, the FastAPI title and the sidebar foot all follow it.
 ### routers/trash.py device_labels, _method_cap, GET /vault/device · unlock names per OS
 - refers-to: trash device_labels, _method_cap, device_unlock_labels; _ctrl_roundtrip not-attached and timeout details; keychain_enable and bio_unlock details
 - kind: rationale

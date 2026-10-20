@@ -92,6 +92,7 @@ pyinstaller --clean --noconfirm --onedir --name formdam-backend \
   --add-data "../frontend/dist:frontend_dist" \
   --add-data "models:models" \
   --add-data "app/data:app/data" \
+  --add-data "../frontend/package.json:." \
   desktop_entry.py
 ./dist/formdam-backend/formdam-backend --selfcheck
 deactivate
@@ -102,6 +103,15 @@ rm -rf src-tauri/binaries/formdam-backend
 mkdir -p src-tauri/binaries
 cp -R backend/dist/formdam-backend src-tauri/binaries/formdam-backend
 echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
+
+say "Preparing the bundle icons (tauri.conf.json lists the icns and ico, so every bundler needs them present)"
+[ -f src-tauri/icons/icon.icns ] || cp src-tauri/icons/source/icon.icns src-tauri/icons/icon.icns
+if [ ! -f src-tauri/icons/icon.ico ]; then
+  icontmp="$(mktemp -d)"
+  npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png -o "$icontmp" >/dev/null
+  cp "$icontmp/icon.ico" src-tauri/icons/icon.ico
+  rm -rf "$icontmp"
+fi
 
 say "Building the app bundle (this compiles Rust; first run takes a while)"
 cd src-tauri

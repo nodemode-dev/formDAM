@@ -4,14 +4,14 @@
 # Self-contained: no figlet, no network, pure bash and printf (bash 3.2 safe).
 #
 #   setup/formDAM_banner               print the banner (./formDAM runs it first)
-#   FORMDAM_VERSION=v1.13.9 setup/formDAM_banner
+#   FORMDAM_VERSION=vX.Y.Z setup/formDAM_banner
 #
 # Environment:
 #   NO_COLOR=1                         force monochrome (no-color.org convention)
 #   FORMDAM_BANNER=0                   suppress the banner entirely
 #   FORMDAM_BANNER_COLOR=255;154;56    paint the mark in one RGB instead of the icon's red-to-yellow gradient
 #   FORMDAM_BANNER_CLEAR=1             clear the screen before painting
-#   FORMDAM_VERSION=v1.13.9            version string for the subtitle (default: frontend/package.json)
+#   FORMDAM_VERSION=vX.Y.Z             version string for the subtitle (default: frontend/package.json)
 
 [ "${FORMDAM_BANNER:-1}" = "0" ] && exit 0
 

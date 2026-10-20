@@ -89,6 +89,7 @@ pyinstaller --clean --noconfirm --onedir --name formdam-backend \
   --add-data "../frontend/dist:frontend_dist" \
   --add-data "models:models" \
   --add-data "app/data:app/data" \
+  --add-data "../frontend/package.json:." \
   desktop_entry.py
 ./dist/formdam-backend/formdam-backend --selfcheck
 deactivate

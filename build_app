@@ -89,7 +89,7 @@ else
 fi
 
 bundle="$target_dir/release/bundle"
-version="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' src-tauri/tauri.conf.json)"
+version="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["version"])' frontend/package.json)"
 
 if [ "$os" = macos ]; then
   app="$bundle/macos/formDAM.app"

@@ -63,6 +63,7 @@ pyinstaller --clean --noconfirm --onedir --name formdam-backend ^
   --add-data "../frontend/dist:frontend_dist" ^
   --add-data "models:models" ^
   --add-data "app/data:app/data" ^
+  --add-data "../frontend/package.json:." ^
   desktop_entry.py || exit /b 1
 dist\formdam-backend\formdam-backend.exe --selfcheck || exit /b 1
 call deactivate
@@ -74,6 +75,7 @@ if exist src-tauri\binaries\formdam-backend rmdir /s /q src-tauri\binaries\formd
 xcopy /e /i /q /y backend\dist\formdam-backend src-tauri\binaries\formdam-backend >nul || exit /b 1
 echo engine: src-tauri\binaries\formdam-backend\ (bundled via resources)
 
+if not exist src-tauri\icons\icon.icns copy /y src-tauri\icons\source\icon.icns src-tauri\icons\icon.icns >nul
 if exist src-tauri\icons\icon.ico goto :icon_done
 echo.
 echo == Generating the Windows icon from src-tauri\icons\icon.png ==

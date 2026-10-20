@@ -3,7 +3,7 @@ REM formDAM_banner.bat - boot banner for formDAM (Windows): the formDAM icon in 
 REM Self-contained: pure cmd. Mirrors setup/formDAM_banner at its 28-column size.
 REM   FORMDAM_BANNER=0            suppress the banner
 REM   NO_COLOR=1                  monochrome
-REM   FORMDAM_VERSION=v1.13.9     version shown under the icon (default: frontend\package.json)
+REM   FORMDAM_VERSION=vX.Y.Z      version shown under the icon (default: frontend\package.json)
 setlocal EnableDelayedExpansion
 if "%FORMDAM_BANNER%"=="0" exit /b 0
 
