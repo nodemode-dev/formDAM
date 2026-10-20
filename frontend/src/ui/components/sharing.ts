@@ -110,7 +110,7 @@ function familyCard(): { el: HTMLElement; paint: (f: FamilyState) => void } {
   for (const input of [paste, port, address]) input.addEventListener("keydown", (event) => event.stopPropagation());
   const el = h("div", { class: "share-settings glass-panel" },
     h("div", { class: "sync-head" }, h("b", {}, "Shared Library")),
-    h("p", { class: "field-hint" }, "A second library shared with family, only over your local network and only between DAM apps that hold the same share key. Nothing goes through a cloud or the internet: each app answers its family members directly, every request is signed with the key and every reply is encrypted with it. Off until you turn it on. Move photos in from the photo menu; everyone sees, edits & deletes them, and only the person who added a photo can move it back to Personal."),
+    h("p", { class: "field-hint" }, "A second library shared with family, only over your local network and only between formDAM apps that hold the same share key. Nothing goes through a cloud or the internet: each app answers its family members directly, every request is signed with the key and every reply is encrypted with it. Off until you turn it on. Move photos in from the photo menu; everyone sees, edits & deletes them, and only the person who added a photo can move it back to Personal."),
     h("label", { class: "field-check" }, enabled, "On (this computer takes part)"), fid, keyBox,
     h("div", { class: "row-gap" }, showKey, newKey),
     h("div", { class: "row-gap pkg-pw-row" }, paste, usePaste),
@@ -156,7 +156,7 @@ function familyCard(): { el: HTMLElement; paint: (f: FamilyState) => void } {
     setText(fid, f.has_key ? `Family ID ${f.family_id}: every member sees the same ID when they hold the same key. Share the key in person or by a channel you trust.` : "No share key yet: create one here, or paste the key another family member shows you.");
     for (const b of [newKey, usePaste]) b.toggleAttribute("disabled", f.enabled);
     paste.toggleAttribute("disabled", f.enabled);
-    patchList(peers, f.peers, (p) => p.dev, (p) => h("div", { class: "share-act" }, h("b", {}, p.name || "DAM"), ` · ${p.ip}:${p.port}`, h("span", { class: "list-sub" }, "")),
+    patchList(peers, f.peers, (p) => p.dev, (p) => h("div", { class: "share-act" }, h("b", {}, p.name || "formDAM"), ` · ${p.ip}:${p.port}`, h("span", { class: "list-sub" }, "")),
       (node, p) => setText(node.lastElementChild as HTMLElement, ` · ${p.synced ? `synced ${fullStamp(p.synced)}` : `seen ${fullStamp(p.seen)}`}`));
     const s = f.status;
     let line = f.enabled ? (f.peers.length ? "Waiting for the first pass" : "Looking for family members on this network") : "Off";
@@ -175,7 +175,7 @@ export function mountSharedPage(host: HTMLElement): () => void {
   openInput.addEventListener("change", () => {
     const file = openInput.files?.[0];
     openInput.value = "";
-    if (file) void openPackageFlow(file).then((ok) => { if (!ok) toast("That file is not a DAM share package", "error"); });
+    if (file) void openPackageFlow(file).then((ok) => { if (!ok) toast("That file is not a formDAM share package", "error"); });
   });
   const deviceName = h("input", { class: "field-input compact", type: "text", maxlength: "60" }) as HTMLInputElement;
   let paintSync: (s: SyncState) => void = () => undefined;
@@ -185,7 +185,7 @@ export function mountSharedPage(host: HTMLElement): () => void {
   deviceName.addEventListener("change", () => void api<SyncState>("/sync/device", { method: "PUT", body: JSON.stringify({ name: deviceName.value || "This computer" }) }).then(paintSync));
   const pad = h("div", { class: "view-pad" },
     h("div", { class: "section-head" }, h("h2", {}, "Encrypted Packages"), h("span", { class: "head-spacer" }), openBtn, openInput),
-    h("p", { class: "field-hint pkg-lede" }, "Sharing in DAM never opens a server. A package is an AES-256 encrypted zip with scrambled file names: send it any way you like, give the password separately, and the other person drops it into DAM. Album packages keep a shared album in step in both directions, with notes."),
+    h("p", { class: "field-hint pkg-lede" }, "Sharing in formDAM never opens a server. A package is an AES-256 encrypted zip with scrambled file names: send it any way you like, give the password separately, and the other person drops it into formDAM. Album packages keep a shared album in step in both directions, with notes."),
     packagesBox,
     h("div", { class: "section-head" }, h("h2", {}, "Sync & Shared Library")),
     h("label", { class: "field sync-device" }, h("span", { class: "field-label" }, "This computer is called"), deviceName),

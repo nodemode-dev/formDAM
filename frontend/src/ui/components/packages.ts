@@ -96,8 +96,8 @@ export async function packageFlow(ids: number[], album?: { id: number; name: str
   const create = h("button", { class: "btn primary", type: "button" }, "Create Package");
   const form = h("div", { class: "share-form" },
     h("p", { class: "field-hint" }, album
-      ? "Everything in the album, its notes and its share id go into one AES-256 encrypted zip. When the other person opens it in DAM, it becomes the same shared album; packages either of you send later add to it."
-      : "The originals, their edits and metadata go into one AES-256 encrypted zip with scrambled file names. The other person drops it into DAM and enters the password. Zip encryption guesses passwords quickly offline, so keep the generated one unless yours is long and random, and send it by a different route than the zip."),
+      ? "Everything in the album, its notes and its share id go into one AES-256 encrypted zip. When the other person opens it in formDAM, it becomes the same shared album; packages either of you send later add to it."
+      : "The originals, their edits and metadata go into one AES-256 encrypted zip with scrambled file names. The other person drops it into formDAM and enters the password. Zip encryption guesses passwords quickly offline, so keep the generated one unless yours is long and random, and send it by a different route than the zip."),
     title.wrap,
     album ? h("span", { class: "hidden" }) : h("label", { class: "field" }, h("span", { class: "field-label" }, "Arrives as"), addAs.el),
     h("div", { class: "row-gap pkg-pw-row" }, password.wrap, regen),
@@ -183,7 +183,7 @@ export async function openPackageFlow(file: File): Promise<boolean> {
   open.addEventListener("click", () => void go());
   password.input.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Enter") void go(); });
   modal.body.append(h("div", { class: "share-form" },
-    h("p", { class: "field-hint" }, `${file.name} is an encrypted DAM package with ${countFmt(info.files ?? 0)} file${info.files === 1 ? "" : "s"}. Its names and contents stay scrambled until the password opens it.`),
+    h("p", { class: "field-hint" }, `${file.name} is an encrypted formDAM package with ${countFmt(info.files ?? 0)} file${info.files === 1 ? "" : "s"}. Its names and contents stay scrambled until the password opens it.`),
     password.wrap, h("label", { class: "field" }, h("span", { class: "field-label" }, "Add as (shared albums always join their album)"), addAs.el),
     error, h("div", { class: "row-gap" }, open, cancel)));
   password.input.focus();

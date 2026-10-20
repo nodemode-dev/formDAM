@@ -53,7 +53,7 @@ export async function pickFolder(title: string): Promise<string> {
   try {
     return (await api<{ path: string | null }>("/fs/pick", { method: "POST" })).path ?? "";
   } catch {
-    return (await promptText(title, "~/Pictures/DAM Export", "Full path of a folder on this computer")) ?? "";
+    return (await promptText(title, "~/Pictures/formDAM Export", "Full path of a folder on this computer")) ?? "";
   }
 }
 
@@ -279,7 +279,7 @@ async function newWorkflowFlow(ids: number[]): Promise<void> {
       body = input;
       read = () => ({ template: input.value });
     } else if (kind === "export") {
-      const dest = stop(h("input", { class: "field-input", value: "~/Pictures/DAM Export" }) as HTMLInputElement);
+      const dest = stop(h("input", { class: "field-input", value: "~/Pictures/formDAM Export" }) as HTMLInputElement);
       const size = select([["full", "Full size"], ["long", "Long edge 2048"], ["long1080", "Long edge 1080"]], "long");
       body = h("div", { class: "row-gap" }, dest, size);
       read = () => ({ dest: dest.value, options: size.value === "full" ? {} : { size: "long", px: size.value === "long1080" ? 1080 : 2048 } });

@@ -126,7 +126,7 @@ export function mountLibraryPage(host: HTMLElement): () => void {
     if (path) void switchTo(path);
   });
   create.addEventListener("click", async () => {
-    const name = await promptText("New Library", "DAM Library", "Name of the new library", "Choose Location...");
+    const name = await promptText("New Library", "formDAM Library", "Name of the new library", "Choose Location...");
     if (!name) return;
     const path = await pickFolder("Where to create the library");
     if (path) void switchTo(path, true, name);
@@ -364,7 +364,7 @@ export function registerLibraryDrops(): void {
     const dropped = [...event.dataTransfer.files];
     const zips = dropped.filter((f) => f.name.toLowerCase().endsWith(".zip"));
     for (const zip of zips) {
-      void openPackageFlow(zip).then((ok) => { if (!ok) toast(`${zip.name} is not a DAM share package`, "error"); });
+      void openPackageFlow(zip).then((ok) => { if (!ok) toast(`${zip.name} is not a formDAM share package`, "error"); });
     }
     if (zips.length && zips.length === dropped.length) return;
     void collectEntries(event.dataTransfer.items).then((files) => uploadAll(files, albumId));

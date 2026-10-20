@@ -112,7 +112,7 @@ export function mountCollections(host: HTMLElement): () => void {
       extras: [h("button", { class: "btn", type: "button", onclick: () => navigate("#/trips") }, "See All")],
       body: tripsBody,
     },
-    { key: "shared", title: "Shared Albums", extras: [], body: h("div", { class: "empty-center" }, emptyState("people", "Sharing Not Built Yet", "DAM is local-first today; shared albums arrive w/ sync support.")) },
+    { key: "shared", title: "Shared Albums", extras: [], body: h("div", { class: "empty-center" }, emptyState("people", "Sharing Not Built Yet", "formDAM is local-first today; shared albums arrive w/ sync support.")) },
   ];
 
   let layout: { order: string[]; hidden: string[]; collapsed: string[] } = { order: SECTIONS.map((sec) => sec.key), hidden: [], collapsed: [] };

@@ -1,5 +1,11 @@
-# frontend HASHOUT_LOG · DAM
+# frontend HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.24.1) · 2026-10-13
+### formDAM brand pass · formDAM-icon files, titles, sidebar mark, every user-facing string, package name
+- refers-to: public/formDAM-icon.png and .svg; index.html and splash.html title and icon; sidebar side-brand; session showLockout copy; people face banner; collections shared empty state; libmanage default library name and package toast; outputs default export folder; packages hints; privacy state lines and FORMDAM_AUTOMATION; search text engine hint; settings vault, menu bar hints; sharing family hint, peer fallback name, package toast and lede; package.json and package-lock.json formdam-frontend
+- kind: rationale
+- logged: zip v1.25.0 · 2026-10-20
+
+Text only, no DOM structure or timing changed. Internal identifiers that never reach a reader stay as they were: the x-dam-* request headers (the engine's contract), the dam-key fragment, the dam-* CSS ids, keyframes, custom events and drag types, and the dam-amber theme name.
 ### engine/session.ts + main.ts gate + .lockout-card · the window connects with the launcher's key
 - refers-to: session KEY_RE, openSession, showLockout hashchange; main.ts top-level gate before initPrefs; parity.css .lockout-card; packages.ts MIN_PASSWORD 16 and hint
 - kind: rationale

@@ -23,9 +23,9 @@ export function privacyPane(): HTMLElement {
     copy.classList.toggle("hidden", !shown || !a.enabled);
     rotate.classList.toggle("hidden", !a.enabled);
     let line = a.enabled
-      ? `On${a.created_ts ? ` since ${fullStamp(a.created_ts)}` : ""}. Tools that send the token in an x-dam-automation header can use every part of DAM's local API.${shown ? " The token is shown once; copy it now." : ""}`
-      : "Off. Only this window and the DAM app itself can use the library.";
-    if (a.forced) line += " This engine was started with DAM_AUTOMATION=1, which lets any local program in until it is restarted without it.";
+      ? `On${a.created_ts ? ` since ${fullStamp(a.created_ts)}` : ""}. Tools that send the token in an x-dam-automation header can use every part of formDAM's local API.${shown ? " The token is shown once; copy it now." : ""}`
+      : "Off. Only this window and the formDAM app itself can use the library.";
+    if (a.forced) line += " This engine was started with FORMDAM_AUTOMATION=1, which lets any local program in until it is restarted without it.";
     setText(status, line);
   };
   check.addEventListener("change", async () => {
@@ -42,7 +42,7 @@ export function privacyPane(): HTMLElement {
   void api<Automation>("/system/automation").then(paint).catch(() => undefined);
   return h("div", {},
     h("label", { class: "field-check" }, check, "Automation Access (scripts, AI agents & MCP tools)"),
-    h("p", { class: "settings-hint" }, "Off by default. While it is off, DAM's engine answers only this window and the DAM app; any other program on this computer that tries to read or change your library, including AI agents and MCP servers, is refused. Turning it on issues a token you give to the tool you trust; turning it off revokes it. This guards the doorway that tools are meant to use. A program that already runs as you can still read files on your disk, which is why hidden, deleted & private items are also encrypted in the vault."),
+    h("p", { class: "settings-hint" }, "Off by default. While it is off, formDAM's engine answers only this window and the formDAM app; any other program on this computer that tries to read or change your library, including AI agents and MCP servers, is refused. Turning it on issues a token you give to the tool you trust; turning it off revokes it. This guards the doorway that tools are meant to use. A program that already runs as you can still read files on your disk, which is why hidden, deleted & private items are also encrypted in the vault."),
     status, tokenBox, h("div", { class: "row-gap" }, copy, rotate),
     h("p", { class: "settings-hint" }, "Other things that reach beyond this computer are also off until you turn them on: Sync This Library and the Shared Library, both on the Sharing page. Encrypted share packages are files you create and send yourself."));
 }

@@ -93,7 +93,7 @@ export function mountSearchPage(host: HTMLElement, query: string): () => void {
     const status = await api<{ engine: string | null; pending: number; job: { id: string } | null }>("/ocr/status");
     if (!status.engine) {
       ocrCard.replaceChildren(iconEl("type"),
-        h("span", { class: "settings-hint" }, "No text engine is available: the bundled model failed to load & tesseract is not installed. Rebuild the app, or brew install tesseract as a fallback, then reopen DAM."));
+        h("span", { class: "settings-hint" }, "No text engine is available: the bundled model failed to load & tesseract is not installed. Rebuild the app, or brew install tesseract as a fallback, then reopen formDAM."));
       return;
     }
     const engineLabel = status.engine === "rapidocr" ? "RapidOCR (bundled, offline)" : "tesseract (fallback)";

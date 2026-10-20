@@ -330,7 +330,7 @@ export function openSettings(): void {
     }
     const state = h("p", { class: "settings-hint" },
       status.stored
-        ? "A DAM vault passkey is stored in your Keychain. Unlock prompts can use it (Touch ID via Keychain access control)."
+        ? "A formDAM vault passkey is stored in your Keychain. Unlock prompts can use it (Touch ID via Keychain access control)."
         : "Store the vault passkey in your macOS Keychain to unlock w/o typing it.");
     const enableBtn = h("button", { class: "btn", type: "button" }, iconEl("lock"), status.stored ? "Update Keychain entry" : "Enable Keychain unlock");
     enableBtn.addEventListener("click", () => {
@@ -366,7 +366,7 @@ export function openSettings(): void {
     try {
       await api("/system/menubar", { method: "POST", body: JSON.stringify({ enabled: menubarCheck.checked }) });
       toast(menubarCheck.checked
-        ? "Menu bar icon enabled; closing the window keeps DAM running for quick imports"
+        ? "Menu bar icon enabled; closing the window keeps formDAM running for quick imports"
         : "Menu bar icon disabled");
     } catch (err) {
       toast(String((err as Error).message), "error");
@@ -412,7 +412,7 @@ export function openSettings(): void {
     ] },
     { key: "app", label: "App", icon: "gear", nodes: [
       h("label", { class: "field-check" }, menubarCheck, "Show the menu bar icon (import photos, videos & folders even while the window is closed)"),
-      h("p", { class: "settings-hint" }, "The menu bar icon offers Import Photos & Videos..., Import Folder... & Open DAM. While it is enabled, closing the window hides DAM instead of quitting; quit from the menu bar."),
+      h("p", { class: "settings-hint" }, "The menu bar icon offers Import Photos & Videos..., Import Folder... & Open formDAM. While it is enabled, closing the window hides formDAM instead of quitting; quit from the menu bar."),
       h("label", { class: "field-check" }, hudCheck, "Show preload diagnostics (small live readout, bottom-right: pending tiles, queue, requests in flight, loaded runway ahead & behind in px, average load time)"),
       h("p", { class: "settings-hint" }, "If scrolling ever shows tiles loading in, screenshot that readout mid-scroll: it names the failing stage exactly. ahead & behind sitting at the full 13-row figure means the runway is genuinely loaded."),
     ] },
