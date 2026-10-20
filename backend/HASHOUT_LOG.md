@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.26.0) · 2026-10-20
+current: v1.27.0 · 2026-10-20
 ### config.py _build_version · the engine reports the build's own version
 - refers-to: config _build_version, VERSION; build_macos_app, build_linux_app, build_windows_app.bat --add-data ../frontend/package.json:.
 - kind: rationale + replaced code

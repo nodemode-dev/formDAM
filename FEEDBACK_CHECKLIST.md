@@ -621,3 +621,8 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 
 - [x] 1. The desktop build runs on Windows too, not only macOS & Linux · `build_app.bat` & `setup\build_windows_app.bat` produce NSIS & MSI installers; `formDAM.bat desktop build` runs them. de7d995. Not run on a Windows machine yet.
 - [x] 2. Touch ID w/ the proper equivalent on Windows & Linux · Windows Hello & Credential Manager; on Linux polkit sign-in (fingerprint where enrolled, otherwise password) & the Secret Service. f73d84c. Type-checked for both; the prompts themselves have not been seen on a real desktop.
+
+## Round 76 · after zip v1.26.0 (zip formDAM_v1.27.0; the app now reports v1.27.0 too)
+
+- [x] 1. Run the Linux build here & test it · `./build_app` built `formDAM_1.27.0_amd64.deb` after fixing the missing icon files it needed; installed, launched under Xvfb, engine attached, passkey saved to & read back from the Secret Service, polkit unlock issued a vault token (as root). 278dc8f.
+- [x] 2. The version is no longer pinned & follows the build · `frontend/package.json` drives Tauri, the engine & the installers; the old 1.13.9 rule is retired. 278dc8f and the v1.27.0 bump.

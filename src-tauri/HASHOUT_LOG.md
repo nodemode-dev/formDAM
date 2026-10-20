@@ -1,5 +1,5 @@
 # src-tauri HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.26.0) · 2026-10-20
+current: v1.27.0 · 2026-10-20
 
 ### tauri.conf.json version from ../frontend/package.json · Cargo.toml and Cargo.lock 1.27.0
 - refers-to: tauri.conf.json version; Cargo.toml package version; Cargo.lock formdam-desktop version

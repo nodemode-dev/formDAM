@@ -1,5 +1,13 @@
 # formDAM build notes
 
+## v1.27.0 (2026-10-20) · the app and the zip carry the same version
+
+The owner lifted the old split (app at 1.13.9, zip moving on). `frontend/package.json` is the version of record: Tauri reads it through `tauri.conf.json`, the engine reads it from the repo or the frozen bundle, so the window, `/api/health`, the About panel and the installers all say 1.27.0 (278dc8f). A release bump is now `frontend/package.json`, the two version fields of `package-lock.json`, and `Cargo.toml` with its `Cargo.lock` entry.
+
+The Linux build was run here for the first time, start to finish: `./build_app` produced `formDAM_1.27.0_amd64.deb` after one fix (the deb bundler needs `icon.icns` and `icon.ico`, which only the macOS build used to make). The installed app opened under Xvfb, reported v1.27.0, saved the vault passkey to the Secret Service through the shell and read it back, and unlocked through polkit (as root); a normal user w/o a polkit agent is refused, which falls back to the passkey modal.
+
+Not seen: a polkit agent prompt on a real desktop, the Windows build, macOS. Open item: the stored-format names kept in v1.25.0.
+
 ## zip v1.26.0 (2026-10-20) · app reports v1.13.9
 
 Device unlock on all three systems (f73d84c). The vault's save-and-unlock was Touch ID plus the Keychain on macOS and absent elsewhere; the shell now answers the same control lines w/ Windows Hello and Windows Credential Manager on Windows, and w/ polkit sign-in (fingerprint through PAM where fprintd has a finger enrolled, otherwise the account password) and the Secret Service on Linux. The .deb installs the `ai.nodemode.formdam.unlock` polkit action. The engine names the method on `GET /vault/device`; the interface wording follows. macOS is unchanged.

@@ -1,5 +1,5 @@
 # frontend HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.26.0) · 2026-10-20
+current: v1.27.0 · 2026-10-20
 ### settings vault card, trash ensureVault modal, hidden and trash locked states · unlock names from /vault/device
 - refers-to: settings keychainWrap Promise.all status + labels; trash ensureVault device fetched before openModal, kcRow built only when available, append spread, toast; trash and hidden empty-sub lines
 - kind: rationale
