@@ -1,5 +1,13 @@
 # formDAM build notes
 
+## zip v1.25.0 (2026-10-20) · app reports v1.13.9
+
+The product is formDAM throughout. The launchers, setup scripts and icon files are renamed (127f49e): `./formDAM`, `formDAM.bat`, `setup/formDAM_banner`, `setup/formDAM_boot`, `setup/formDAM_oc_install` and their `.bat` twins, `frontend/public/formDAM-icon.png` and `.svg`. The engine, the desktop shell and the build scripts follow (882218c): formDAM.app, `formDAM_v<version>.dmg`, the `formdam-desktop` crate, the `formdam-backend` engine binary, `FORMDAM_*` settings (the `DAM_` and `DAMP_` spellings still read), `FORMDAM-CTRL` control lines. The interface (8401ba3) and the docs (02f07f7) close it out. The repo folder and both zips are named formDAM.
+
+Kept on purpose: `dam.db`, the `Application Support/DAM`, `%APPDATA%/DAM` and `~/.config/dam` data folders, the `DAM Sync` mirror folder, the vault magic and key labels, the `x-dam-*` headers and `dam_*` cookies, the `dam:` XMP prefix, the bundle identifier `ai.nodemode.dam` and the Keychain service. They are stored or exchanged formats; renaming them needs a migration, offered as the next step.
+
+Verified here: ruff clean; pytest 37 passed, 1 skipped, 1 failing as before (test_trash) with `FORMDAM_AUTOMATION=1`; frontend tsc clean, 10 vitest passing, vite build clean; `cargo check --locked` passes on Linux (3 warnings for the macOS-only Keychain constants); `bash -n` and `sh -n` on the setup scripts; `setup/formDAM_banner` prints. Not run: the macOS and Linux app builds, the Windows `.bat` files, the app itself.
+
 ## zip v1.24.1 (2026-10-13) · app reports v1.13.9
 
 One root command for the desktop build. `./DAM desktop build` runs `setup/build_macos_app` on macOS and the new `setup/build_linux_app` elsewhere (2353c7b). The Linux script follows the macOS one step for step without the macOS-only parts (device import, signing, icns, DMG) and ends in a `.deb`.

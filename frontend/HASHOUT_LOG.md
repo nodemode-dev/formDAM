@@ -1,5 +1,5 @@
 # frontend HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.24.1) · 2026-10-13
+current: v1.13.9 (zip v1.25.0) · 2026-10-20
 ### formDAM brand pass · formDAM-icon files, titles, sidebar mark, every user-facing string, package name
 - refers-to: public/formDAM-icon.png and .svg; index.html and splash.html title and icon; sidebar side-brand; session showLockout copy; people face banner; collections shared empty state; libmanage default library name and package toast; outputs default export folder; packages hints; privacy state lines and FORMDAM_AUTOMATION; search text engine hint; settings vault, menu bar hints; sharing family hint, peer fallback name, package toast and lede; package.json and package-lock.json formdam-frontend
 - kind: rationale

@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.24.1) · 2026-10-13
+current: v1.13.9 (zip v1.25.0) · 2026-10-20
 ### formDAM brand pass · config.env prefixes, FORMDAM_* reads, user-facing strings, the control-line tag
 - refers-to: config ENV_PREFIX, LEGACY_ENV_PREFIXES, env; main lifespan launch address, FastAPI title, _dist via env("DIST"); security _LEGACY_KEY, _ENV_KEY, AUTOMATION_OFF, automation_allowed FORMDAM_AUTOMATION, local_only_guard detail; automation router _from_window, _state forced, session and automation details; library router FORMDAM_LIBRARY, formDAM Library default name, details; importer and trash FORMDAM-CTRL prints; desktop_entry FORMDAM_DIST/MODELS/LIBRARY/PORT, Logs/formDAM, thread names; iccsvc FormDAMICCDelegate; native_picker prompts; packagesvc, syncapi, familynet messages; jobs, housekeeping, syncsvc, familyserver, extedit thread names; .env.example
 - kind: rationale
