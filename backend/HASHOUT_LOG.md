@@ -1,5 +1,5 @@
 # backend HASHOUT_LOG · formDAM
-current: v1.13.9 (zip v1.25.1) · 2026-10-20
+current: v1.13.9 (zip v1.26.0) · 2026-10-20
 ### routers/trash.py device_labels, _method_cap, GET /vault/device · unlock names per OS
 - refers-to: trash device_labels, _method_cap, device_unlock_labels; _ctrl_roundtrip not-attached and timeout details; keychain_enable and bio_unlock details
 - kind: rationale

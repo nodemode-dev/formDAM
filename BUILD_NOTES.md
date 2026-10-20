@@ -1,5 +1,13 @@
 # formDAM build notes
 
+## zip v1.26.0 (2026-10-20) · app reports v1.13.9
+
+Device unlock on all three systems (f73d84c). The vault's save-and-unlock was Touch ID plus the Keychain on macOS and absent elsewhere; the shell now answers the same control lines w/ Windows Hello and Windows Credential Manager on Windows, and w/ polkit sign-in (fingerprint through PAM where fprintd has a finger enrolled, otherwise the account password) and the Secret Service on Linux. The .deb installs the `ai.nodemode.formdam.unlock` polkit action. The engine names the method on `GET /vault/device`; the interface wording follows. macOS is unchanged.
+
+A Windows desktop build (de7d995): `build_app.bat` and `setup\build_windows_app.bat`, mirroring the Linux script, end in NSIS and MSI installers; the shell runs `formdam-backend.exe` w/o a console window. `formDAM.bat desktop build` runs it.
+
+Verified here: `cargo check --locked` on Linux and `cargo check --target x86_64-pc-windows-gnu`, both w/o warnings; ruff clean; pytest 37 passed, 1 skipped, 1 failing as before (test_trash); tsc clean, 10 vitest passing. Not run: the Windows batch files, a Windows Hello, polkit or Secret Service prompt on a real desktop, any app build. Open item: the stored-format names kept in v1.25.0.
+
 ## zip v1.25.1 (2026-10-20) · app reports v1.13.9
 
 A root `./build_app`, matching formlit's (3877ccb): it checks and, for Rust, installs the tools, runs `setup/build_macos_app` or `setup/build_linux_app`, copies `formDAM.app` to Applications on macOS (`--no-install` keeps it in place) or reports the `.deb` on Linux (`--install` installs it), and logs to `build_app.log`; `--open` and `--clean` as in formlit. `./formDAM desktop build` now runs it. No `build_app.bat`, since formDAM has no Windows desktop build.

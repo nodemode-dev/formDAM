@@ -615,4 +615,9 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 
 ## Round 74 · after zip v1.25.0 (zip formDAM_v1.25.1; app reports v1.13.9)
 
-- [x] 1. The same build_app shebang in the root as the formlit example · `./build_app` w/ formlit's tool checks, rustup install, `--no-install`, `--install`, `--open`, `--clean` & `build_app.log`, over formDAM's own macOS & Linux build scripts; `./formDAM desktop build` runs it. 3877ccb. No `build_app.bat`: formDAM has no Windows desktop build yet.
+- [x] 1. The same build_app shebang in the root as the formlit example · `./build_app` w/ formlit's tool checks, rustup install, `--no-install`, `--install`, `--open`, `--clean` & `build_app.log`, over formDAM's own macOS & Linux build scripts; `./formDAM desktop build` runs it. 3877ccb. No `build_app.bat`: formDAM has no Windows desktop build yet (closed in round 75).
+
+## Round 75 · after zip v1.25.1 (zip formDAM_v1.26.0; app reports v1.13.9)
+
+- [x] 1. The desktop build runs on Windows too, not only macOS & Linux · `build_app.bat` & `setup\build_windows_app.bat` produce NSIS & MSI installers; `formDAM.bat desktop build` runs them. de7d995. Not run on a Windows machine yet.
+- [x] 2. Touch ID w/ the proper equivalent on Windows & Linux · Windows Hello & Credential Manager; on Linux polkit sign-in (fingerprint where enrolled, otherwise password) & the Secret Service. f73d84c. Type-checked for both; the prompts themselves have not been seen on a real desktop.
