@@ -210,7 +210,7 @@ def add_manual(address: str) -> Dict[str, Any]:
     from .syncsvc import device_id
 
     if not SAFE_DEV.match(str(info.get("dev") or "")) or info["dev"] == device_id():
-        raise ValueError("That device did not answer as a DAM family member")
+        raise ValueError("That device did not answer as a formDAM family member")
     with _lock:
         _peers[info["dev"]] = {"dev": info["dev"], "ip": ip, "port": int(port), "seen": time.time(), "name": str(info.get("name") or "")[:60], "manual": True}
     return _peers[info["dev"]]
@@ -289,7 +289,7 @@ def start_discovery() -> None:
     for name, target in (("beacon", _beacon_loop), ("listen", _listen_loop)):
         thread = _threads.get(name)
         if thread is None or not thread.is_alive():
-            _threads[name] = threading.Thread(target=target, name=f"DAM-family-{name}", daemon=True)
+            _threads[name] = threading.Thread(target=target, name=f"formDAM-family-{name}", daemon=True)
             _threads[name].start()
 
 

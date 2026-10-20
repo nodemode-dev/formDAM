@@ -23,7 +23,7 @@ _ENV_KEY = os.environ.pop("FORMDAM_SHELL_KEY", "") or _LEGACY_KEY
 LAUNCH_KEY = _ENV_KEY or secrets.token_hex(32)
 LAUNCH_GENERATED = not _ENV_KEY
 WINDOW_SESSION = hmac.new(LAUNCH_KEY.encode(), b"dam-window-session", hashlib.sha256).hexdigest()
-AUTOMATION_OFF = ("Automation access is off. Scripts, agents and MCP tools can use DAM only after you turn on "
+AUTOMATION_OFF = ("Automation access is off. Scripts, agents and MCP tools can use formDAM only after you turn on "
                   "Automation Access in Settings > Privacy and give them the token it shows.")
 _cache: dict = {"ts": 0.0, "enabled": False, "hash": ""}
 
@@ -53,7 +53,7 @@ def window_allowed(request: Request) -> bool:
 
 
 def automation_allowed(request: Request) -> bool:
-    if os.environ.get("DAM_AUTOMATION") == "1":
+    if os.environ.get("FORMDAM_AUTOMATION") == "1":
         return True
     if shell_allowed(request) or window_allowed(request):
         return True
@@ -76,7 +76,7 @@ def host_allowed(host_header: str) -> bool:
 async def local_only_guard(request: Request, call_next):
     client = request.client
     if client is not None and not is_loopback_ip(client.host):
-        return JSONResponse(status_code=403, content={"detail": "DAM only accepts local loopback connections"})
+        return JSONResponse(status_code=403, content={"detail": "formDAM only accepts local loopback connections"})
     if not host_allowed(request.headers.get("host", "")):
         return JSONResponse(status_code=403, content={"detail": "Rejected non-local Host header"})
     if request.method in MUTATING and request.url.path.startswith("/api") and request.headers.get(LOCAL_HEADER) != "1":

@@ -105,7 +105,7 @@ def set_family_key(body: FamilyKeyIn):
     if body.key:
         key = familynet.normalize_key(body.key)
         if key is None:
-            raise HTTPException(400, detail="That is not a DAM share key (32 letters and digits, dashes optional)")
+            raise HTTPException(400, detail="That is not a formDAM share key (32 letters and digits, dashes optional)")
     else:
         key = familynet.new_key()
     setting_set("family_key", key)

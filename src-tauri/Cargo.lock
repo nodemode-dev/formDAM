@@ -467,25 +467,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
-name = "dam-desktop"
-version = "1.13.9"
-dependencies = [
- "block2",
- "libloading 0.8.9",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "objc2-local-authentication",
- "regex",
- "security-framework",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "ureq",
-]
-
-[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -829,6 +810,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "formdam-desktop"
+version = "1.13.9"
+dependencies = [
+ "block2",
+ "libloading 0.8.9",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-local-authentication",
+ "regex",
+ "security-framework",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "ureq",
 ]
 
 [[package]]

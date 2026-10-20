@@ -1,18 +1,18 @@
 #!/bin/bash
-# DAM release packager: turn a built DAM.app into a distributable DMG,
+# formDAM release packager: turn a built formDAM.app into a distributable DMG,
 # w/ the provided transparent icon.icns enforced byte-for-byte, the volume
 # icon set, & the Finder window blessed to auto-open on mount.
-# Run this AFTER setup/build_macos_app (or against any DAM.app you point it at).
+# Run this AFTER setup/build_macos_app (or against any formDAM.app you point it at).
 #
-#   setup/package_dmg                                    # uses the default build output
-#   setup/package_dmg /path/to/DAM.app                   # package a specific app
-#   setup/package_dmg /path/to/DAM.app /path/to/outdir   # choose where the DMG lands
+#   setup/package_dmg                                        # uses the default build output
+#   setup/package_dmg /path/to/formDAM.app                   # package a specific app
+#   setup/package_dmg /path/to/formDAM.app /path/to/outdir   # choose where the DMG lands
 set -e
 
 say() { echo "== $1 =="; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${1:-$ROOT/src-tauri/target.nosync/release/bundle/macos/DAM.app}"
+APP="${1:-$ROOT/src-tauri/target.nosync/release/bundle/macos/formDAM.app}"
 OUTDIR="${2:-$ROOT/src-tauri/target.nosync/release/bundle}"
 ICNS="$ROOT/src-tauri/icons/source/icon.icns"
 
@@ -54,24 +54,24 @@ fi
 
 say "Staging the DMG contents"
 STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/DAM.app"
+cp -R "$APP" "$STAGE/formDAM.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$ICNS" "$STAGE/.VolumeIcon.icns"
 touch "$STAGE/.metadata_never_index"
 
-if [ -d "/Volumes/DAM" ]; then
-  say "Detaching a stale DAM volume"
-  hdiutil detach "/Volumes/DAM" >/dev/null 2>&1 || hdiutil detach -force "/Volumes/DAM" >/dev/null 2>&1 || true
+if [ -d "/Volumes/formDAM" ]; then
+  say "Detaching a stale formDAM volume"
+  hdiutil detach "/Volumes/formDAM" >/dev/null 2>&1 || hdiutil detach -force "/Volumes/formDAM" >/dev/null 2>&1 || true
   sleep 1
 fi
 
-DMG="$OUTDIR/DAM_v${VERSION}.dmg"
+DMG="$OUTDIR/formDAM_v${VERSION}.dmg"
 mkdir -p "$OUTDIR"
 rm -f "$DMG"
 
 fancy_dmg() {
   RW=$(mktemp -u).dmg
-  hdiutil create -volname "DAM" -srcfolder "$STAGE" -ov -format UDRW "$RW" >/dev/null || return 1
+  hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDRW "$RW" >/dev/null || return 1
   ATTACH=$(hdiutil attach "$RW" -nobrowse -noverify -noautoopen) || { rm -f "$RW"; return 1; }
   DEV=$(echo "$ATTACH" | awk '/^\/dev\// {print $1; exit}')
   MOUNT=$(echo "$ATTACH" | awk '/\/Volumes\// {for (i=3; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : ""); exit}')
@@ -94,7 +94,7 @@ tell application "Finder"
     set arrangement of icon view options of container window to not arranged
     set icon size of icon view options of container window to 104
     try
-      set position of item "DAM.app" of container window to {150, 190}
+      set position of item "formDAM.app" of container window to {150, 190}
       set position of item "Applications" of container window to {430, 190}
     end try
     update without registering applications
@@ -127,16 +127,16 @@ if fancy_dmg; then
 else
   say "Fancy pass hit a busy disk; building the DMG directly (identical contents, plainer mount window)"
   rm -f "$DMG"
-  hdiutil create -volname "DAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+  hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
 fi
 rm -rf "$STAGE"
 
 say "Done"
 echo "DMG: $DMG"
 echo
-echo "Icon: pixel-verified transparent & shipped byte-exact (DAM.icon in src-tauri/icons/ upgrades to the modern format when you add it)."
+echo "Icon: pixel-verified transparent & shipped byte-exact (formDAM.icon in src-tauri/icons/ upgrades to the modern format when you add it)."
 echo
 echo "For a PUBLIC release later, replace the ad-hoc signature w/ a real one:"
-echo "  codesign --force --deep --options runtime -s 'Developer ID Application: YOU' DAM.app"
-echo "  xcrun notarytool submit DAM_v${VERSION}.dmg --keychain-profile dam --wait"
-echo "  xcrun stapler staple DAM_v${VERSION}.dmg"
+echo "  codesign --force --deep --options runtime -s 'Developer ID Application: YOU' formDAM.app"
+echo "  xcrun notarytool submit formDAM_v${VERSION}.dmg --keychain-profile formdam --wait"
+echo "  xcrun stapler staple formDAM_v${VERSION}.dmg"

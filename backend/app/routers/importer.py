@@ -134,13 +134,13 @@ def set_window(body: WindowIn):
     out = {}
     if body.blur is not None:
         blur = max(0, min(64, int(body.blur)))
-        print(f"DAM-CTRL WINBLUR {blur}", flush=True)
+        print(f"FORMDAM-CTRL WINBLUR {blur}", flush=True)
         out["blur"] = blur
     if body.clear:
-        print("DAM-CTRL WINCLEAR 1", flush=True)
+        print("FORMDAM-CTRL WINCLEAR 1", flush=True)
         out["clear"] = True
     if body.ready:
-        print("DAM-CTRL WINSHOW 1", flush=True)
+        print("FORMDAM-CTRL WINSHOW 1", flush=True)
         out["ready"] = True
     return out or {"ok": True}
 
@@ -152,7 +152,7 @@ class MenubarIn(BaseModel):
 @router.post("/system/menubar")
 def set_menubar(body: MenubarIn):
     setting_set("menubar_enabled", "1" if body.enabled else "0")
-    print(f"DAM-CTRL TRAYSET {1 if body.enabled else 0}", flush=True)
+    print(f"FORMDAM-CTRL TRAYSET {1 if body.enabled else 0}", flush=True)
     return {"enabled": body.enabled}
 
 
@@ -186,7 +186,7 @@ class IDeviceImportIn(BaseModel):
 @router.post("/idevice/import")
 def idevice_import(body: IDeviceImportIn):
     if not idevicesvc.supported():
-        raise HTTPException(501, detail="iPhone import needs the DAM macOS desktop app")
+        raise HTTPException(501, detail="iPhone import needs the formDAM macOS desktop app")
 
     def run(state: Dict[str, Any]) -> None:
         libraryfs.begin_batch("iphone", body.serial)

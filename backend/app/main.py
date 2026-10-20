@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .config import VERSION, cache_dir, originals_dir
+from .config import VERSION, cache_dir, env, originals_dir
 from . import mediacodecs, upgrade_thumbs, wiring
 from .db import init_db, q, ex, setting_get, setting_set
 from .services import classify
@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
     init_db()
     from . import security
     if security.LAUNCH_GENERATED:
-        print("DAM: no launcher key was given; open the interface with this address (it connects the window):\n"
-              f"DAM:   http://127.0.0.1:8000/#dam-key={security.LAUNCH_KEY}  (use the port the engine or the dev server runs on)",
+        print("formDAM: no launcher key was given; open the interface with this address (it connects the window):\n"
+              f"formDAM:   http://127.0.0.1:8000/#dam-key={security.LAUNCH_KEY}  (use the port the engine or the dev server runs on)",
               file=sys.stderr, flush=True)
     os.makedirs(originals_dir(), exist_ok=True)
     os.makedirs(cache_dir(), exist_ok=True)
@@ -69,15 +69,12 @@ def _reclassify_screenshots() -> None:
 
 mediacodecs.register()
 wiring.connect()
-app = FastAPI(title="DAM", version=VERSION, lifespan=lifespan)
+app = FastAPI(title="formDAM", version=VERSION, lifespan=lifespan)
 app.middleware("http")(local_only_guard)
 
 for module in (automation, system, importer, browse, render, edit, organize, files, geo, discover, output, curate, library, packages, syncapi, mediaapi, albums, people, trash, dedup):
     app.include_router(module.router, prefix="/api")
 
-_dist = os.environ.get(
-    "DAM_DIST",
-    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist"),
-)
+_dist = env("DIST", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist"))
 if os.path.isdir(_dist):
     app.mount("/", StaticFiles(directory=_dist, html=True), name="ui")

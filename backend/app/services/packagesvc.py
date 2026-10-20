@@ -286,7 +286,7 @@ def _read_manifest(zf) -> Dict[str, Any]:
             raise PackageError("That password does not open this package") from exc
         raise PackageError("This package is damaged") from exc
     if data.get("format") != FORMAT or not isinstance(data.get("items"), list):
-        raise PackageError("This is not a DAM share package")
+        raise PackageError("This is not a formDAM share package")
     return data
 
 

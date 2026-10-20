@@ -1,5 +1,12 @@
-# src-tauri HASHOUT_LOG · DAM
+# src-tauri HASHOUT_LOG · formDAM
 current: v1.13.9 (zip v1.24.1) · 2026-10-13
+
+### formDAM brand pass · productName, crate, engine binary, menus, control-line tag · and ../build_macos_app, ../build_linux_app, ../package_dmg, ../apply_icon
+- refers-to: tauri.conf.json productName formDAM, resources binaries/formdam-backend; Cargo.toml and Cargo.lock formdam-desktop (lock entry moved to its sorted place after form_urlencoded so --locked accepts it); capabilities description; main.rs tray-open and tray-quit labels, BIOUNLOCK reason, backend_command formdam-backend and FORMDAM_PORT/FORMDAM_SHELL_KEY, about name, app submenu, window title, spawn and start errors, FORMDAM-CTRL prefix; build scripts pyinstaller --name formdam-backend and the engine tree paths, formDAM.app, the optional formDAM.icon and CFBundleIconName; package_dmg formDAM.app, /Volumes/formDAM, formDAM_v<version>.dmg
+- kind: rationale
+- logged: zip v1.25.0 · 2026-10-20
+
+The bundle is formDAM.app, its menus, About panel, tray and dialogs say formDAM, and the DMG is formDAM_v<version>.dmg. The engine binary and the crate move to formdam-backend and formdam-desktop so build output names match. The bundle identifier ai.nodemode.dam and the Keychain service ai.nodemode.dam.vault stay: changing either would hide the existing WebKit storage and the stored vault passkey from the new build.
 
 ### src/main.rs window URL carries the launch key · and ../DAM_boot, ../DAM_boot.bat do the same for the browser build
 - refers-to: main.rs navigate to http://127.0.0.1:{port}/#dam-key={shell_key}; DAM_boot DAM_SHELL_KEY from /dev/urandom, UI_OPEN; DAM_boot.bat key from the venv's python secrets, UI_OPEN

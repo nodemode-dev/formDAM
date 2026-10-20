@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "DAM desktop shell: window + dialog baseline. The page receives ZERO Tauri APIs (remote-origin loopback content gets no IPC by design); Touch ID & Keychain run shell-side over the engine control channel.",
+  "description": "formDAM desktop shell: window + dialog baseline. The page receives ZERO Tauri APIs (remote-origin loopback content gets no IPC by design); Touch ID & Keychain run shell-side over the engine control channel.",
   "windows": [
     "main"
   ],

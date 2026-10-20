@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "DAM",
+  "productName": "formDAM",
   "version": "1.13.9",
   "identifier": "ai.nodemode.dam",
   "build": {
@@ -29,7 +29,7 @@
       "entitlements": "Entitlements.plist"
     },
     "resources": {
-      "binaries/dam-backend": "dam-backend"
+      "binaries/formdam-backend": "formdam-backend"
     }
   }
 }

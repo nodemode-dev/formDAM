@@ -26,7 +26,7 @@ def start(kind: str, target: Callable[[Dict[str, Any]], None]) -> str:
         finally:
             reset_thread_conn()
 
-    thread = threading.Thread(target=run, name=f"DAM-{kind}", daemon=True)
+    thread = threading.Thread(target=run, name=f"formDAM-{kind}", daemon=True)
     thread.start()
     return job_id
 

@@ -552,7 +552,7 @@ def _loop() -> None:
 def start() -> None:
     global _thread
     if _thread is None or not _thread.is_alive():
-        _thread = threading.Thread(target=_loop, name="DAM-sync", daemon=True)
+        _thread = threading.Thread(target=_loop, name="formDAM-sync", daemon=True)
         _thread.start()
 
 

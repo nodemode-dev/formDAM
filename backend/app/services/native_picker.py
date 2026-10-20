@@ -21,7 +21,7 @@ def _run(cmd: List[str]) -> subprocess.CompletedProcess:
 
 
 def _mac(initial: Optional[str]) -> Optional[str]:
-    prompt = "Choose a folder to import into DAM"
+    prompt = "Choose a folder to import into formDAM"
     script = f'POSIX path of (choose folder with prompt "{prompt}" with showing package contents)'
     if initial and os.path.isdir(initial) and '"' not in initial:
         script = (
@@ -43,7 +43,7 @@ def _windows(initial: Optional[str]) -> Optional[str]:
     script = (
         "Add-Type -AssemblyName System.Windows.Forms;"
         "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;"
-        "$dialog.Description = 'Choose a folder to import into DAM';"
+        "$dialog.Description = 'Choose a folder to import into formDAM';"
         "$dialog.ShowNewFolderButton = $false;"
         + seed
         + "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK)"
@@ -60,7 +60,7 @@ def _linux(initial: Optional[str]) -> Optional[str]:
         raise PickerUnavailable("No graphical session detected; use the in-app browser below")
     seed = initial if initial and os.path.isdir(initial) else os.path.expanduser("~")
     if shutil.which("zenity"):
-        cmd = ["zenity", "--file-selection", "--directory", "--title=Choose a folder to import into DAM"]
+        cmd = ["zenity", "--file-selection", "--directory", "--title=Choose a folder to import into formDAM"]
         cmd.append(f"--filename={seed.rstrip(os.sep)}{os.sep}")
         proc = _run(cmd)
         if proc.returncode not in (0, 1):
@@ -69,7 +69,7 @@ def _linux(initial: Optional[str]) -> Optional[str]:
             return None
         return proc.stdout.strip() or None
     if shutil.which("kdialog"):
-        proc = _run(["kdialog", "--getexistingdirectory", seed, "--title", "Choose a folder to import into DAM"])
+        proc = _run(["kdialog", "--getexistingdirectory", seed, "--title", "Choose a folder to import into formDAM"])
         if proc.returncode not in (0, 1):
             raise PickerUnavailable(f"kdialog could not open: {proc.stderr.strip() or 'unknown error'}")
         if proc.returncode == 1:

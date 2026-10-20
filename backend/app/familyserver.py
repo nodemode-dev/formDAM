@@ -93,7 +93,7 @@ def start() -> bool:
         config = uvicorn.Config(app, host="0.0.0.0", port=familynet.settings()["port"], log_level="warning", access_log=False)
         _server = uvicorn.Server(config)
         _server.install_signal_handlers = lambda: None  # type: ignore[method-assign]
-        _thread = threading.Thread(target=_server.run, name="DAM-family", daemon=True)
+        _thread = threading.Thread(target=_server.run, name="formDAM-family", daemon=True)
         _thread.start()
     for _ in range(60):
         if _server.started:

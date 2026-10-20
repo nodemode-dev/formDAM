@@ -73,11 +73,11 @@ def switch_library(body: SwitchIn):
     path = os.path.abspath(os.path.expanduser(body.path))
     exists = os.path.isfile(os.path.join(path, "dam.db")) or os.path.isfile(os.path.join(path, "damp.db"))
     if not exists and not body.create:
-        raise HTTPException(404, detail="No DAM library at that path; choose New Library to create one there")
+        raise HTTPException(404, detail="No formDAM library at that path; choose New Library to create one there")
     if not exists and os.path.isdir(path) and any(not n.startswith(".") for n in os.listdir(path)):
-        path = os.path.join(path, (body.name or "DAM Library").strip() or "DAM Library")
+        path = os.path.join(path, (body.name or "formDAM Library").strip() or "formDAM Library")
     os.makedirs(path, exist_ok=True)
-    os.environ["DAM_LIBRARY"] = path
+    os.environ["FORMDAM_LIBRARY"] = path
     init_db()
     os.makedirs(originals_dir(), exist_ok=True)
     os.makedirs(cache_dir(), exist_ok=True)
@@ -232,7 +232,7 @@ def browse_disk(path: str = Query("", max_length=4000)):
     try:
         entries = sorted(os.scandir(target), key=lambda e: e.name.lower())
     except PermissionError:
-        raise HTTPException(403, detail="DAM cannot read that folder") from None
+        raise HTTPException(403, detail="formDAM cannot read that folder") from None
     for entry in entries:
         if entry.name.startswith("."):
             continue

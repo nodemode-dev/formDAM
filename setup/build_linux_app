@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the DAM Linux desktop app: the Tauri shell over the engine frozen with PyInstaller (onedir, bundled as a
+# Builds the formDAM Linux desktop app: the Tauri shell over the engine frozen with PyInstaller (onedir, bundled as a
 # resource), packaged as a .deb. Run it on Linux (Debian or Ubuntu) from anywhere: setup/build_linux_app
 # It mirrors build_macos_app step for step, without the macOS-only parts (device import, signing, icns, DMG).
 set -e
@@ -82,7 +82,7 @@ if [ ! -f models/bioclip_species_int8.npy ]; then
   python -m app.services.species prepare models/txt_emb_species.npy models/txt_emb_species.json models
   rm -f models/txt_emb_species.npy models/txt_emb_species.json
 fi
-pyinstaller --clean --noconfirm --onedir --name dam-backend \
+pyinstaller --clean --noconfirm --onedir --name formdam-backend \
   --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread \
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
@@ -93,15 +93,15 @@ pyinstaller --clean --noconfirm --onedir --name dam-backend \
   --add-data "models:models" \
   --add-data "app/data:app/data" \
   desktop_entry.py
-./dist/dam-backend/dam-backend --selfcheck
+./dist/formdam-backend/formdam-backend --selfcheck
 deactivate
 cd ..
 
 say "Placing the engine tree (onedir: no per-launch extraction, fast cold start)"
-rm -rf src-tauri/binaries/dam-backend
+rm -rf src-tauri/binaries/formdam-backend
 mkdir -p src-tauri/binaries
-cp -R backend/dist/dam-backend src-tauri/binaries/dam-backend
-echo "engine: src-tauri/binaries/dam-backend/ (bundled via resources)"
+cp -R backend/dist/formdam-backend src-tauri/binaries/formdam-backend
+echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
 
 say "Building the app bundle (this compiles Rust; first run takes a while)"
 cd src-tauri

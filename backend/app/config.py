@@ -3,11 +3,16 @@ import os
 VERSION = "1.13.9"
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LEGACY_ENV_PREFIX = "DAMP_"
+ENV_PREFIX = "FORMDAM_"
+LEGACY_ENV_PREFIXES = ("DAM_", "DAMP_")
 
 
 def env(name: str, default: str) -> str:
-    return os.environ.get(f"DAM_{name}", os.environ.get(f"{LEGACY_ENV_PREFIX}{name}", default))
+    for prefix in (ENV_PREFIX, *LEGACY_ENV_PREFIXES):
+        value = os.environ.get(f"{prefix}{name}")
+        if value is not None:
+            return value
+    return default
 
 
 def library_root() -> str:

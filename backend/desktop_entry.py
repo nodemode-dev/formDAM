@@ -74,7 +74,7 @@ def _open_log():
     if not getattr(sys, "frozen", False):
         return None
     home = os.path.expanduser("~")
-    folder = os.path.join(home, "Library", "Logs", "DAM") if sys.platform == "darwin" else os.path.dirname(default_library())
+    folder = os.path.join(home, "Library", "Logs", "formDAM") if sys.platform == "darwin" else os.path.dirname(default_library())
     try:
         os.makedirs(folder, exist_ok=True)
         log = open(os.path.join(folder, "engine.log"), "a", encoding="utf-8", buffering=1)
@@ -83,7 +83,7 @@ def _open_log():
     import faulthandler
     import time
 
-    log.write(f"\n=== DAM engine start {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+    log.write(f"\n=== formDAM engine start {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
     faulthandler.enable(file=log)
     sys.stdout, sys.stderr = _Tee(sys.stdout, log), _Tee(sys.stderr, log)
     return log
@@ -97,26 +97,26 @@ def main() -> int:
 
         return macshare.run(sys.argv[2:])
     _open_log()
-    os.environ.setdefault("DAM_DIST", os.path.join(resource_dir(), "frontend_dist"))
-    os.environ.setdefault("DAM_MODELS", os.path.join(resource_dir(), "models"))
+    os.environ.setdefault("FORMDAM_DIST", os.path.join(resource_dir(), "frontend_dist"))
+    os.environ.setdefault("FORMDAM_MODELS", os.path.join(resource_dir(), "models"))
     from app import libraries
 
-    os.environ.setdefault("DAM_LIBRARY", libraries.current() or default_library())
-    port = int(os.environ.get("DAM_PORT", "0") or 0)
+    os.environ.setdefault("FORMDAM_LIBRARY", libraries.current() or default_library())
+    port = int(os.environ.get("FORMDAM_PORT", "0") or 0)
     if sys.platform == "darwin":
         from app.services import iccsvc
 
         if iccsvc.available():
             import threading
 
-            server = threading.Thread(target=_serve, args=(port,), name="DAM-engine", daemon=True)
+            server = threading.Thread(target=_serve, args=(port,), name="formDAM-engine", daemon=True)
             server.start()
 
             def _exit_with_server() -> None:
                 server.join()
                 os._exit(0)
 
-            threading.Thread(target=_exit_with_server, name="DAM-exit", daemon=True).start()
+            threading.Thread(target=_exit_with_server, name="formDAM-exit", daemon=True).start()
             iccsvc.start_native()
             from PyObjCTools import AppHelper
 

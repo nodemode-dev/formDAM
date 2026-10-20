@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds the DAM macOS desktop app (Tauri shell + PyInstaller engine).
+# Builds the formDAM macOS desktop app (Tauri shell + PyInstaller engine).
 # Run this ON macOS: setup/build_macos_app (it resolves the repo root itself)
 set -e
 cd "$(dirname "$0")/.."
@@ -77,7 +77,7 @@ if [ ! -f models/bioclip_species_int8.npy ]; then
   python -m app.services.species prepare models/txt_emb_species.npy models/txt_emb_species.json models
   rm -f models/txt_emb_species.npy models/txt_emb_species.json
 fi
-pyinstaller --clean --noconfirm --onedir --name dam-backend \
+pyinstaller --clean --noconfirm --onedir --name formdam-backend \
   --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread \
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
@@ -90,16 +90,16 @@ pyinstaller --clean --noconfirm --onedir --name dam-backend \
   --add-data "models:models" \
   --add-data "app/data:app/data" \
   desktop_entry.py
-./dist/dam-backend/dam-backend --selfcheck
+./dist/formdam-backend/formdam-backend --selfcheck
 deactivate
 cd ..
 
 say "Placing the engine tree (onedir: no per-launch extraction, fast cold start)"
-rm -rf src-tauri/binaries/dam-backend
+rm -rf src-tauri/binaries/formdam-backend
 mkdir -p src-tauri/binaries
-cp -R backend/dist/dam-backend src-tauri/binaries/dam-backend
-codesign --force --deep -s - src-tauri/binaries/dam-backend/dam-backend 2>/dev/null || true
-echo "engine: src-tauri/binaries/dam-backend/ (bundled via resources)"
+cp -R backend/dist/formdam-backend src-tauri/binaries/formdam-backend
+codesign --force --deep -s - src-tauri/binaries/formdam-backend/formdam-backend 2>/dev/null || true
+echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
 
 say "Generating app icons from src-tauri/icons/icon.png"
 cargo tauri icon src-tauri/icons/icon.png
@@ -111,7 +111,7 @@ python3 - << 'PYPLIST'
 import pathlib, plistlib
 path = pathlib.Path("src-tauri/Info.plist")
 data = plistlib.loads(path.read_bytes()) if path.exists() else {}
-want = "DAM reads photos & videos from a connected iPhone, iPad or camera to import them into your library."
+want = "formDAM reads photos & videos from a connected iPhone, iPad or camera to import them into your library."
 if data.get("NSRemovableVolumesUsageDescription") != want:
     data["NSRemovableVolumesUsageDescription"] = want
     path.write_bytes(plistlib.dumps(data))
@@ -126,12 +126,12 @@ else
   say "No Developer ID certificate in the keychain; tauri will ad-hoc sign (fine for local use)"
 fi
 
-if [ -d "src-tauri/icons/DAM.icon" ] && xcrun --find actool >/dev/null 2>&1; then
+if [ -d "src-tauri/icons/formDAM.icon" ] && xcrun --find actool >/dev/null 2>&1; then
   say "Icon Composer document found; compiling the modern .icon (this is what removes the macOS 26 Dock backing)"
   rm -rf src-tauri/icons/iconassets
   mkdir -p src-tauri/icons/iconassets
-  if xcrun actool src-tauri/icons/DAM.icon --compile src-tauri/icons/iconassets \
-       --app-icon DAM --output-partial-info-plist src-tauri/icons/iconassets/partial.plist \
+  if xcrun actool src-tauri/icons/formDAM.icon --compile src-tauri/icons/iconassets \
+       --app-icon formDAM --output-partial-info-plist src-tauri/icons/iconassets/partial.plist \
        --platform macosx --minimum-deployment-target 26.0 >/dev/null 2>&1 \
      && [ -f "src-tauri/icons/iconassets/Assets.car" ]; then
     python3 - << 'PYWIRE'
@@ -145,13 +145,13 @@ if "icons/iconassets/Assets.car" not in res:
 import plistlib
 plist = pathlib.Path("src-tauri/Info.plist")
 data = plistlib.loads(plist.read_bytes()) if plist.exists() else {}
-if data.get("CFBundleIconName") != "DAM":
-    data["CFBundleIconName"] = "DAM"
+if data.get("CFBundleIconName") != "formDAM":
+    data["CFBundleIconName"] = "formDAM"
     plist.write_bytes(plistlib.dumps(data))
-print("   Assets.car wired into the bundle + CFBundleIconName=DAM")
+print("   Assets.car wired into the bundle + CFBundleIconName=formDAM")
 PYWIRE
   else
-    say "actool could not compile DAM.icon; continuing w/ the legacy icns"
+    say "actool could not compile formDAM.icon; continuing w/ the legacy icns"
   fi
 fi
 
@@ -173,7 +173,7 @@ if ! cargo tauri build --bundles app -- --locked; then
   fi
 fi
 
-APP="$CARGO_TARGET_DIR/release/bundle/macos/DAM.app"
+APP="$CARGO_TARGET_DIR/release/bundle/macos/formDAM.app"
 say "Verifying the bundled icns (placed BEFORE the build now, so tauri's signature stays untouched)"
 if diff -q src-tauri/icons/source/icon.icns "$APP/Contents/Resources/icon.icns" >/dev/null 2>&1; then
   echo "   icon.icns is byte-identical to your provided file & the signature is tauri's own"
@@ -191,7 +191,7 @@ echo
 echo "Already installed a copy in /Applications? Stamp its icon in place any time:"
 echo "  setup/apply_icon"
 echo
-echo "Icon: your transparent icns ships byte-exact. (Optional: an Icon Composer DAM.icon in src-tauri/icons/ upgrades to the modern format on the next build.)"
+echo "Icon: your transparent icns ships byte-exact. (Optional: an Icon Composer formDAM.icon in src-tauri/icons/ upgrades to the modern format on the next build.)"
 echo
 if [ -n "$IDENTITY" ]; then
   echo "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)"

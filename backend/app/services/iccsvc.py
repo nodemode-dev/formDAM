@@ -55,7 +55,7 @@ def detail() -> Dict[str, Any]:
     if not available():
         reason = "ImageCaptureCore not present (pyobjc-framework-ImageCaptureCore is bundled by build_macos_app)" if sys.platform == "darwin" else "macOS only"
     elif not active():
-        reason = _start_error or "engine not started in desktop mode (run the DAM app, or python3 desktop_entry.py)"
+        reason = _start_error or "engine not started in desktop mode (run the formDAM app, or python3 desktop_entry.py)"
     return {"available": available(), "active": active(), "loop": "main" if _loop_owner else "none", "reason": reason}
 
 
@@ -118,7 +118,7 @@ def contents(serial: str) -> Dict[str, Any]:
     if _bridge_factory is not None:
         ensure_test_bridge()
     if _bridge is None:
-        raise RuntimeError("iPhone engine is not running; open the DAM desktop app")
+        raise RuntimeError("iPhone engine is not running; open the formDAM desktop app")
     _bridge.open_session(serial, SESSION_TIMEOUT)
     _bridge.wait_ready(serial, CATALOG_TIMEOUT)
     return _bridge.media_files(serial)
@@ -150,7 +150,7 @@ def run_import(
     link_pair: Optional[Callable[[int, int], bool]] = None,
 ) -> None:
     if _bridge is None:
-        raise RuntimeError("iPhone engine is not running; open the DAM desktop app")
+        raise RuntimeError("iPhone engine is not running; open the formDAM desktop app")
     counts = state["counts"]
     state["stage"] = "connecting"
     _bridge.open_session(serial, SESSION_TIMEOUT)
@@ -596,7 +596,7 @@ def _delegate_class(foundation: Any) -> Any:
     if _DelegateClass is not None:
         return _DelegateClass
 
-    class DAMICCDelegate(foundation.NSObject):
+    class FormDAMICCDelegate(foundation.NSObject):
         bridge = None
 
         def deviceBrowser_didAddDevice_moreComing_(self, browser, device, more):
@@ -679,5 +679,5 @@ def _delegate_class(foundation: Any) -> Any:
         def didReceiveDownloadProgressForFile_downloadedBytes_maxBytes_(self, file, downloaded, total):
             pass
 
-    _DelegateClass = DAMICCDelegate
+    _DelegateClass = FormDAMICCDelegate
     return _DelegateClass

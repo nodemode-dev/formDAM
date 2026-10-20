@@ -82,12 +82,12 @@ fn set_tray(handle: &tauri::AppHandle, enabled: bool) {
     let build = || -> tauri::Result<TrayIcon> {
         let icon = Image::from_bytes(include_bytes!("../icons/menubar/trayTemplate@2x.png"))?;
         let menu = MenuBuilder::new(handle)
-            .text("tray-open", "Open DAM")
+            .text("tray-open", "Open formDAM")
             .separator()
             .text("tray-import-files", "Import Photos & Videos...")
             .text("tray-import-folder", "Import Folder...")
             .separator()
-            .text("tray-quit", "Quit DAM")
+            .text("tray-quit", "Quit formDAM")
             .build()?;
         TrayIconBuilder::with_id("dam-tray")
             .icon(icon)
@@ -370,7 +370,7 @@ fn handle_ctrl_line(port: u16, line: &str) {
     }
     match kind {
         "BIOUNLOCK" => {
-            let ok = bio_evaluate("unlock DAM private items");
+            let ok = bio_evaluate("unlock formDAM private items");
             let passkey = if ok { kc_read() } else { None };
             engine_post(
                 port,
@@ -436,12 +436,12 @@ fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
         .path()
         .resource_dir()
         .map_err(|e| format!("no resource dir: {e}"))?;
-    let dir = resources.join("dam-backend");
-    let bin = dir.join("dam-backend");
+    let dir = resources.join("formdam-backend");
+    let bin = dir.join("formdam-backend");
     let mut cmd = Command::new(&bin);
     cmd.current_dir(&dir)
-        .env("DAM_PORT", "0")
-        .env("DAM_SHELL_KEY", shell_key())
+        .env("FORMDAM_PORT", "0")
+        .env("FORMDAM_SHELL_KEY", shell_key())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     Ok(cmd)
@@ -459,10 +459,10 @@ fn main() {
             let _ = HANDLE.set(handle.clone());
 
             let about = AboutMetadataBuilder::new()
-                .name(Some("DAM"))
+                .name(Some("formDAM"))
                 .comments(Some("Local-first digital asset manager for photos & video"))
                 .build();
-            let app_menu = SubmenuBuilder::new(app, "DAM")
+            let app_menu = SubmenuBuilder::new(app, "formDAM")
                 .about(Some(about))
                 .separator()
                 .text("open-settings", "Settings...")
@@ -524,7 +524,7 @@ fn main() {
                 "main",
                 WebviewUrl::App("splash.html".into()),
             )
-            .title("DAM")
+            .title("formDAM")
             .disable_drag_drop_handler()
             .transparent(true)
             .visible(false)
@@ -549,7 +549,7 @@ fn main() {
 
             let mut child = backend_command(&handle)?
                 .spawn()
-                .map_err(|e| format!("the DAM engine failed to spawn: {e}"))?;
+                .map_err(|e| format!("the formDAM engine failed to spawn: {e}"))?;
             let stdout = child.stdout.take();
             let stderr = child.stderr.take();
             handle.state::<Backend>().0.lock().unwrap().replace(child);
@@ -625,7 +625,7 @@ fn main() {
                             }
                         }
                         for line in rx.iter() {
-                            if line.starts_with("DAM-CTRL ") {
+                            if line.starts_with("FORMDAM-CTRL ") {
                                 handle_ctrl_line(found, &line);
                             }
                         }
@@ -633,7 +633,7 @@ fn main() {
                     None => {
                         handle2
                             .dialog()
-                            .message("The DAM engine failed to start. Please relaunch the app.")
+                            .message("The formDAM engine failed to start. Please relaunch the app.")
                             .blocking_show();
                         kill_backend(&handle2);
                         std::process::exit(1);

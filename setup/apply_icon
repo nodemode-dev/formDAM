@@ -1,13 +1,13 @@
 #!/bin/bash
-# Stamp the provided transparent icon.icns onto an INSTALLED DAM.app
-# (default /Applications/DAM.app), re-sign, & nudge Finder/Dock to refresh.
+# Stamp the provided transparent icon.icns onto an INSTALLED formDAM.app
+# (default /Applications/formDAM.app), re-sign, & nudge Finder/Dock to refresh.
 #   setup/apply_icon
-#   setup/apply_icon "/Applications/DAM.app"
+#   setup/apply_icon "/Applications/formDAM.app"
 set -e
 
 say() { echo "== $1 =="; }
 
-APP="${1:-/Applications/DAM.app}"
+APP="${1:-/Applications/formDAM.app}"
 ICNS="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/icons/source/icon.icns"
 
 [ -d "$APP" ] || { echo "ERROR: app not found at $APP"; exit 1; }
@@ -41,4 +41,4 @@ echo "  sudo rm -rf /Library/Caches/com.apple.iconservices.store && killall Dock
 echo
 echo "macOS 26 reminder: the SYSTEM squircle appears in Dock, Finder & Get Info for"
 echo "legacy icns; the file itself is pixel-verified transparent. Save an Icon Composer"
-echo "DAM.icon into src-tauri/icons/ & rebuild to ship the modern format."
+echo "formDAM.icon into src-tauri/icons/ & rebuild to ship the modern format."

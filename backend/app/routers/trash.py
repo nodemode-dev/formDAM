@@ -93,11 +93,11 @@ def bio_result(body: BioResult):
 
 def _ctrl_roundtrip(kind: str, passkey: str | None = None, timeout: float = 40.0) -> dict:
     if not SHELL["attached"]:
-        raise HTTPException(501, detail="The desktop shell is not attached; Touch ID needs the DAM app.")
+        raise HTTPException(501, detail="The desktop shell is not attached; Touch ID needs the formDAM app.")
     nonce = os.urandom(12).hex()
     entry: dict = {"event": __import__("threading").Event(), "passkey": passkey}
     PENDING[nonce] = entry
-    print(f"DAM-CTRL {kind} {nonce}", flush=True)
+    print(f"FORMDAM-CTRL {kind} {nonce}", flush=True)
     finished = entry["event"].wait(timeout)
     PENDING.pop(nonce, None)
     if not finished:

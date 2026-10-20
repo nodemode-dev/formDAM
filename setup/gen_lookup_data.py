@@ -31,7 +31,7 @@ MIN_LINKS = {"landmark": 25, "art": 18, "food": 15}
 
 def run(query: str) -> list:
     url = ENDPOINT + "?" + urllib.parse.urlencode({"query": PREFIX + query})
-    req = urllib.request.Request(url, headers={"Accept": "application/sparql-results+json", "User-Agent": "DAM-build-data/1.0"})
+    req = urllib.request.Request(url, headers={"Accept": "application/sparql-results+json", "User-Agent": "formDAM-build-data/1.0"})
     for attempt in range(4):
         try:
             data = json.load(urllib.request.urlopen(req, timeout=300))

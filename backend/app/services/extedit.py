@@ -147,5 +147,5 @@ def _ensure_thread() -> None:
     global _thread
     with _lock:
         if _thread is None:
-            _thread = threading.Thread(target=_loop, name="DAM-edit-with", daemon=True)
+            _thread = threading.Thread(target=_loop, name="formDAM-edit-with", daemon=True)
             _thread.start()
