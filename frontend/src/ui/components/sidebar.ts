@@ -107,7 +107,7 @@ export function mountSidebar(host: HTMLElement): void {
   const root = h(
     "nav",
     { class: "sidebar" },
-    h("div", { class: "side-brand" }, h("img", { class: "brand-mark", src: "/DAM-icon.png", alt: "DAM" }), h("span", {}, "DAM")),
+    h("div", { class: "side-brand" }, h("img", { class: "brand-mark", src: "/formDAM-icon.png", alt: "formDAM" }), h("span", {}, "formDAM")),
     row({ label: "Library", icon: "grid", hash: "#/library" }),
     row({ label: "Collections", icon: "shapes", hash: "#/collections" }),
     h("div", { class: "side-section" }, h("p", { class: "side-title" }, "Pinned"), ...PINNED.map(row), pinsWrap),

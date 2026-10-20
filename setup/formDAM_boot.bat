@@ -1,5 +1,5 @@
 @echo off
-REM DAM boot (Windows): the engine and the interface, each in its own window, then the browser.
+REM formDAM boot (Windows): the engine and the interface, each in its own window, then the browser.
 REM Lives in setup\; resolves the repo root itself.
 setlocal EnableDelayedExpansion
 set "ROOT=%~dp0.."
@@ -13,17 +13,17 @@ set "VER=%VER: =%"
 set "UI=http://127.0.0.1:5173"
 
 echo ===========================================
-echo DAM v%VER% - Boot
+echo formDAM v%VER% - Boot
 echo ===========================================
 echo.
 
 if not exist "%ROOT%\backend\venv" (
-    echo ERROR: the engine is not installed. Run setup\DAM_oc_install.bat
+    echo ERROR: the engine is not installed. Run setup\formDAM_oc_install.bat
     pause
     exit /b 1
 )
 if not exist "%ROOT%\frontend\node_modules" (
-    echo ERROR: the interface is not installed. Run setup\DAM_oc_install.bat
+    echo ERROR: the interface is not installed. Run setup\formDAM_oc_install.bat
     pause
     exit /b 1
 )
@@ -35,16 +35,16 @@ if exist "%ROOT%\backend\.env" (
     )
 )
 
-for /f "usebackq delims=" %%k in (`""%ROOT%\backend\venv\Scripts\python.exe" -c "import secrets; print(secrets.token_hex(32))""`) do set "DAM_SHELL_KEY=%%k"
-set "UI_OPEN=%UI%/#dam-key=%DAM_SHELL_KEY%"
+for /f "usebackq delims=" %%k in (`""%ROOT%\backend\venv\Scripts\python.exe" -c "import secrets; print(secrets.token_hex(32))""`) do set "FORMDAM_SHELL_KEY=%%k"
+set "UI_OPEN=%UI%/#dam-key=%FORMDAM_SHELL_KEY%"
 
 echo Booting the engine...
-start "DAM engine" cmd /k "cd /d "%ROOT%\backend" && venv\Scripts\activate && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+start "formDAM engine" cmd /k "cd /d "%ROOT%\backend" && venv\Scripts\activate && uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 
 timeout /t 2 /nobreak >nul
 
 echo Booting the interface...
-start "DAM interface" cmd /k "cd /d "%ROOT%\frontend" && npm run dev"
+start "formDAM interface" cmd /k "cd /d "%ROOT%\frontend" && npm run dev"
 
 echo.
 echo ===========================================
@@ -54,10 +54,10 @@ echo     - Interface: %UI%
 echo ===========================================
 echo.
 echo Close either window to stop that half.
-echo A browser window opened here is connected to DAM. To connect another one, open:
+echo A browser window opened here is connected to formDAM. To connect another one, open:
 echo   %UI_OPEN%
 
-if "%DAM_OPEN%"=="0" goto done
+if "%FORMDAM_OPEN%"=="0" goto done
 set /a tries=0
 :wait_ui
 curl -s -o nul "%UI%" >nul 2>&1 && goto open_ui

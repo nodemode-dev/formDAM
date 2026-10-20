@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DAM macOS/Linux installation. Idempotent: safe to run on every boot.
+# formDAM macOS/Linux installation. Idempotent: safe to run on every boot.
 # Lives in setup/; resolves the repo root itself, so it works from anywhere.
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,7 +8,7 @@ cd "$ROOT"
 VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' frontend/package.json | head -1)"
 
 echo "==========================================="
-echo "DAM v${VERSION} - Installation"
+echo "formDAM v${VERSION} - Installation"
 echo "==========================================="
 echo ""
 
@@ -21,7 +21,7 @@ echo ">> Setting up the interface..."
 chmod +x frontend/oc_install frontend/boot_frontend 2>/dev/null || true
 (cd frontend && ./oc_install)
 
-chmod +x DAM setup/DAM_banner setup/DAM_boot setup/DAM_oc_install setup/build_macos_app setup/package_dmg setup/apply_icon 2>/dev/null || true
+chmod +x formDAM setup/formDAM_banner setup/formDAM_boot setup/formDAM_oc_install setup/build_macos_app setup/build_linux_app setup/package_dmg setup/apply_icon 2>/dev/null || true
 
 echo ""
 echo "==========================================="
@@ -29,7 +29,7 @@ echo "Installation complete"
 echo "==========================================="
 echo ""
 echo "Next steps:"
-echo "  1. Run: ./DAM   (installs what is missing, boots both halves, opens http://127.0.0.1:5173)"
+echo "  1. Run: ./formDAM   (installs what is missing, boots both halves, opens http://127.0.0.1:5173)"
 echo "  2. Optional settings: copy backend/.env.example to backend/.env"
 echo ""
 echo "Also:"

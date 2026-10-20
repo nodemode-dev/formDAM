@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DAM - macOS/Linux launcher for the local browser build. Banner, install (idempotent), boot.
+# formDAM - macOS/Linux launcher for the local browser build. Banner, install (idempotent), boot.
 # Every step lives in setup/; this file only sequences them.
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -10,10 +10,10 @@ if [ "${1:-}" = desktop ] && [ "${2:-}" = build ]; then
   exec setup/build_linux_app
 fi
 
-chmod +x setup/DAM_banner setup/DAM_oc_install setup/DAM_boot 2>/dev/null || true
+chmod +x setup/formDAM_banner setup/formDAM_oc_install setup/formDAM_boot 2>/dev/null || true
 
 # Boot banner. Never allowed to fail the launch: cosmetics do not gate startup.
-bash setup/DAM_banner || true
+bash setup/formDAM_banner || true
 
-setup/DAM_oc_install
-exec setup/DAM_boot
+setup/formDAM_oc_install
+exec setup/formDAM_boot

@@ -30,7 +30,7 @@ fetch_model() {
     return
   fi
   echo "downloading $name"
-  curl -fSL --retry 4 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o "$target" "$url" || { rm -f "$target"; echo "could not download $name (network or DNS); rerun ./DAM when the connection is back"; exit 1; }
+  curl -fSL --retry 4 --retry-delay 3 --retry-all-errors --connect-timeout 20 -o "$target" "$url" || { rm -f "$target"; echo "could not download $name (network or DNS); rerun ./formDAM when the connection is back"; exit 1; }
   [ "$(sha256_of "$target")" = "$sha" ] || { echo "checksum mismatch for $name"; exit 1; }
 }
 fetch_model face_detection_yunet_2023mar.onnx \

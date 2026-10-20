@@ -1,11 +1,11 @@
 @echo off
-REM DAM_banner.bat - boot banner for DAM (Windows): the DAM icon in ASCII, not the word.
-REM Self-contained: pure cmd. Mirrors setup/DAM_banner at its 28-column size.
-REM   DAM_BANNER=0                suppress the banner
+REM formDAM_banner.bat - boot banner for formDAM (Windows): the formDAM icon in ASCII, not the word.
+REM Self-contained: pure cmd. Mirrors setup/formDAM_banner at its 28-column size.
+REM   FORMDAM_BANNER=0            suppress the banner
 REM   NO_COLOR=1                  monochrome
-REM   DAM_VERSION=v1.13.9         version shown under the icon (default: frontend\package.json)
+REM   FORMDAM_VERSION=v1.13.9     version shown under the icon (default: frontend\package.json)
 setlocal EnableDelayedExpansion
-if "%DAM_BANNER%"=="0" exit /b 0
+if "%FORMDAM_BANNER%"=="0" exit /b 0
 
 set "ROOT=%~dp0.."
 set "D=" & set "R=" & set "C0=" & set "C1=" & set "C2=" & set "C3=" & set "C4=" & set "C5=" & set "C6=" & set "C7="
@@ -23,7 +23,7 @@ if not defined NO_COLOR (
     set "C7=!ESC![38;2;255;41;44m"
 )
 
-set "VER=%DAM_VERSION%"
+set "VER=%FORMDAM_VERSION%"
 if not defined VER if exist "%ROOT%\frontend\package.json" (
     for /F "tokens=2 delims=:" %%v in ('findstr /C:"\"version\"" "%ROOT%\frontend\package.json"') do (
         if not defined VER set "VER=%%v"

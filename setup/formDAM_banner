@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# DAM_banner - boot banner for DAM: the DAM icon itself (the play-triangle
+# formDAM_banner - boot banner for formDAM: the formDAM icon itself (the play-triangle
 # plate, the m mark and its ball) drawn in ASCII, not the word.
 # Self-contained: no figlet, no network, pure bash and printf (bash 3.2 safe).
 #
-#   setup/DAM_banner               print the banner (./DAM runs it first)
-#   DAM_VERSION=v1.13.9 setup/DAM_banner
+#   setup/formDAM_banner               print the banner (./formDAM runs it first)
+#   FORMDAM_VERSION=v1.13.9 setup/formDAM_banner
 #
 # Environment:
-#   NO_COLOR=1                     force monochrome (no-color.org convention)
-#   DAM_BANNER=0                   suppress the banner entirely
-#   DAM_BANNER_COLOR=255;154;56    paint the mark in one RGB instead of the icon's red-to-yellow gradient
-#   DAM_BANNER_CLEAR=1             clear the screen before painting
-#   DAM_VERSION=v1.13.9            version string for the subtitle (default: frontend/package.json)
+#   NO_COLOR=1                         force monochrome (no-color.org convention)
+#   FORMDAM_BANNER=0                   suppress the banner entirely
+#   FORMDAM_BANNER_COLOR=255;154;56    paint the mark in one RGB instead of the icon's red-to-yellow gradient
+#   FORMDAM_BANNER_CLEAR=1             clear the screen before painting
+#   FORMDAM_VERSION=v1.13.9            version string for the subtitle (default: frontend/package.json)
 
-[ "${DAM_BANNER:-1}" = "0" ] && exit 0
+[ "${FORMDAM_BANNER:-1}" = "0" ] && exit 0
 
 # --- terminal size ------------------------------------------------------------
 cols="${COLUMNS:-0}"
@@ -36,8 +36,8 @@ if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != "dumb" ]; then
     truecolor|24bit)
       DIM=$'\033[38;2;115;115;115m'
       for k in 0 1 2 3 4 5 6 7; do
-        if [ -n "${DAM_BANNER_COLOR:-}" ]; then
-          MARK[k]=$'\033[38;2;'"$DAM_BANNER_COLOR"'m'
+        if [ -n "${FORMDAM_BANNER_COLOR:-}" ]; then
+          MARK[k]=$'\033[38;2;'"$FORMDAM_BANNER_COLOR"'m'
         else
           MARK[k]=$'\033[38;2;255;'"$(( 231 - 190 * k / 7 ))"';'"$(( 88 - 44 * k / 7 ))"'m'
         fi
@@ -142,7 +142,7 @@ pad=$(( (cols - width) / 2 ))
 indent=""
 [ "$pad" -gt 0 ] && indent="$(printf '%*s' "$pad" '')"
 
-[ "${DAM_BANNER_CLEAR:-0}" = "1" ] && [ -t 1 ] && printf '\033[2J\033[H'
+[ "${FORMDAM_BANNER_CLEAR:-0}" = "1" ] && [ -t 1 ] && printf '\033[2J\033[H'
 
 printf '\n'
 
@@ -176,11 +176,11 @@ if [ -n "$art" ]; then
     r=$((r + 1))
   done
 else
-  printf '%s%s%s%s\n' "$indent" "${MARK[4]:-}" "DAM" "$RESET"
+  printf '%s%s%s%s\n' "$indent" "${MARK[4]:-}" "formDAM" "$RESET"
 fi
 
 # --- subtitle -----------------------------------------------------------------
-ver="${DAM_VERSION:-}"
+ver="${FORMDAM_VERSION:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -z "$ver" ] && [ -r "$ROOT/frontend/package.json" ]; then
   ver="v$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/frontend/package.json" | head -1)"

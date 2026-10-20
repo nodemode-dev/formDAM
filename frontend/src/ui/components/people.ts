@@ -245,7 +245,7 @@ export function mountPeoplePage(host: HTMLElement): () => void {
         : `Missing models: ${status.missing_models.join(", ")}.`;
       banner.replaceChildren(
         iconEl("warn"),
-        h("span", { class: "banner-text" }, `Face recognition is not ready. ${missing} Run ./DAM (or setup/DAM_oc_install) to set it up.`),
+        h("span", { class: "banner-text" }, `Face recognition is not ready. ${missing} Run ./formDAM (or setup/formDAM_oc_install) to set it up.`),
       );
       scanBtn.disabled = true;
       return;

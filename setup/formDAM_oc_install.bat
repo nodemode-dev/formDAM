@@ -1,5 +1,5 @@
 @echo off
-REM DAM Windows installation. Idempotent: safe to run on every boot.
+REM formDAM Windows installation. Idempotent: safe to run on every boot.
 REM Lives in setup\; resolves the repo root itself, so it works from anywhere.
 setlocal
 set "ROOT=%~dp0.."
@@ -12,7 +12,7 @@ set "VER=%VER:,=%"
 set "VER=%VER: =%"
 
 echo ===========================================
-echo DAM v%VER% - Windows Installation
+echo formDAM v%VER% - Windows Installation
 echo ===========================================
 echo.
 
@@ -65,7 +65,7 @@ echo Installation complete
 echo ===========================================
 echo.
 echo Next steps:
-echo   1. Run: DAM.bat   (installs what is missing, boots both halves, opens http://127.0.0.1:5173)
+echo   1. Run: formDAM.bat   (installs what is missing, boots both halves, opens http://127.0.0.1:5173)
 echo   2. Optional settings: copy backend\.env.example to backend\.env
 echo.
 endlocal

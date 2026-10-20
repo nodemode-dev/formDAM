@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DAM boot: the engine and the interface dev server, from the repo root, then the browser.
+# formDAM boot: the engine and the interface dev server, from the repo root, then the browser.
 # Lives in setup/; resolves the repo root itself.
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -8,7 +8,7 @@ VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' fron
 UI="http://127.0.0.1:5173"
 
 echo "==================================================="
-echo "  DAM v${VERSION} - Boot"
+echo "  formDAM v${VERSION} - Boot"
 echo "==================================================="
 
 if [ ! -f backend/app/main.py ]; then
@@ -16,11 +16,11 @@ if [ ! -f backend/app/main.py ]; then
   exit 1
 fi
 if [ ! -d backend/venv ]; then
-  echo "Error: the engine is not installed. Run setup/DAM_oc_install"
+  echo "Error: the engine is not installed. Run setup/formDAM_oc_install"
   exit 1
 fi
 if [ ! -d frontend/node_modules ]; then
-  echo "Error: the interface is not installed. Run setup/DAM_oc_install"
+  echo "Error: the interface is not installed. Run setup/formDAM_oc_install"
   exit 1
 fi
 
@@ -31,9 +31,9 @@ if [ -f backend/.env ]; then
   set +a
 fi
 
-DAM_SHELL_KEY="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
-export DAM_SHELL_KEY
-UI_OPEN="${UI}/#dam-key=${DAM_SHELL_KEY}"
+FORMDAM_SHELL_KEY="$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+export FORMDAM_SHELL_KEY
+UI_OPEN="${UI}/#dam-key=${FORMDAM_SHELL_KEY}"
 
 echo ""
 echo "Booting the engine..."
@@ -54,13 +54,13 @@ echo "    - Engine:    http://127.0.0.1:8000"
 echo "    - Interface: ${UI}"
 echo "==========================================="
 echo ""
-echo "A browser window opened here is connected to DAM. To connect another one, open:"
+echo "A browser window opened here is connected to formDAM. To connect another one, open:"
 echo "  ${UI_OPEN}"
 echo ""
 echo "Press Ctrl+C to stop both"
 
 OPENER_PID=""
-if [ "${DAM_OPEN:-1}" != "0" ]; then
+if [ "${FORMDAM_OPEN:-1}" != "0" ]; then
   (
     for _ in $(seq 1 90); do
       if curl -fsS -o /dev/null "$UI" 2>/dev/null; then

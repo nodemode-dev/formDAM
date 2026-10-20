@@ -23,10 +23,10 @@ export function showLockout(root: HTMLElement): void {
   const card = document.createElement("div");
   card.className = "lockout-card";
   const title = document.createElement("h1");
-  title.textContent = "This window is not connected to DAM";
+  title.textContent = "This window is not connected to formDAM";
   const body = document.createElement("p");
-  body.textContent = "DAM only answers windows it opened itself, so other programs on this computer cannot use your library. "
-    + "Open DAM from its app, or run ./DAM (DAM.bat on Windows) and use the window it opens or the address it prints.";
+  body.textContent = "formDAM only answers windows it opened itself, so other programs on this computer cannot use your library. "
+    + "Open formDAM from its app, or run ./formDAM (formDAM.bat on Windows) and use the window it opens or the address it prints.";
   card.append(title, body);
   root.replaceChildren(card);
   window.addEventListener("hashchange", () => {
