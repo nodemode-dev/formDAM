@@ -43,7 +43,7 @@ case "$(uname -s)" in
 esac
 
 step "checking the tools"
-[ "$os" != other ] || die "build_app runs on macOS and Linux; formDAM has no Windows desktop build yet (formDAM.bat runs the browser build)"
+[ "$os" != other ] || die "build_app runs on macOS and Linux; on Windows run build_app.bat"
 if [ "$os" = macos ]; then
   xcode-select -p >/dev/null 2>&1 || die "the Xcode command line tools are missing: run xcode-select --install, then ./build_app again"
 fi

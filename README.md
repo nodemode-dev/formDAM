@@ -36,7 +36,7 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
 - **Curation**: memories (generated or described) w/ generated music, slideshows, compare w/ linked zoom.
 - **Libraries**: several libraries, repair, consolidate referenced files.
 - **Albums**: create, rename, delete, add/remove via multi-select. Private albums require a passkey (scrypt-hashed) & their items disappear from every general view, incl. People & Duplicates.
-- **Vault**: one vault passkey guards Recently Deleted & doubles as the fallback key for private albums w/o their own. Unlocks issue short-lived HMAC tokens; nothing is stored in the browser.
+- **Vault**: one vault passkey guards Recently Deleted & doubles as the fallback key for private albums w/o their own. Unlocks issue short-lived HMAC tokens; nothing is stored in the browser. In the desktop app the passkey can be saved to the system's own store & unlocked w/ the system's own check: Touch ID & the Keychain on macOS, Windows Hello (face, fingerprint or PIN) & Credential Manager on Windows, polkit sign-in (the fingerprint reader where fprintd has a finger enrolled, otherwise the account password) & the Secret Service (GNOME Keyring, KWallet) on Linux.
 - **Recently Deleted**: trash is a database state, not a file move. Items auto-purge after 30 days (configurable), restore or delete forever any time. Duplicate resolutions land here too, so they are always reversible.
 - **People**: YuNet face detection + SFace 128-d embeddings, incremental clustering by cosine similarity. Videos are sampled at the same timestamps the dedup engine uses, so people are found in footage too. Rename clusters as you go.
 - **Duplicates**: the bundled deduplakit engine (dual-gradient dHash + confidence-masked DCT pHash + color grid) finds exact & visually-identical sets across photos & videos; resolving keeps the best copy & trashes the rest.
@@ -50,9 +50,13 @@ ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning
   --install            # Linux: install the built .deb with apt
   --open               # open the app when the build is done
   --clean              # rebuild the Rust side and the frozen engine from nothing
+
+build_app.bat          # Windows, from a fresh clone
+  --install            # run the NSIS installer when the build is done
+  --open               # open the folder with the installers
 ```
 
-`./build_app` checks the tools (Xcode command line tools on macOS, Python 3.10+, Node 20.19 or 22.12+, Rust, installed w/ rustup into `~/.cargo` when missing), runs `setup/build_macos_app` on macOS or `setup/build_linux_app` on Linux, then on macOS copies `formDAM.app` to `/Applications` (or `~/Applications` when that is not writable); on Linux it reports the `.deb`. Every step is logged to `build_app.log`. There is no Windows desktop build yet; `formDAM.bat` runs the browser build there.
+`./build_app` checks the tools (Xcode command line tools on macOS, Python 3.10+, Node 20.19 or 22.12+, Rust, installed w/ rustup into `~/.cargo` when missing), runs `setup/build_macos_app` on macOS or `setup/build_linux_app` on Linux, then on macOS copies `formDAM.app` to `/Applications` (or `~/Applications` when that is not writable); on Linux it reports the `.deb`, which also installs the polkit action that the unlock prompt uses (`pkcheck` comes w/ polkit; a keyring daemon such as GNOME Keyring or KWallet holds the saved passkey). Every step is logged to `build_app.log`. On Windows, `build_app.bat` (or `formDAM.bat desktop build`) checks Python, Node & Rust (the MSVC toolchain rustup offers) and runs `setup\build_windows_app.bat`, which fetches the models, builds the window, freezes `formdam-backend.exe`, generates `icon.ico` & produces NSIS & MSI installers in `src-tauri\target\release\bundle`; the installer fetches WebView2 if the machine lacks it.
 
 `setup/build_macos_app` on its own fetches the face models, builds the UI, freezes the engine into a single `formdam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `formDAM.app` + a `formDAM_v<version>.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../formDAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch); that data folder keeps its name so existing libraries open unchanged. Engine logs go to `~/Library/Logs/formDAM`. ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
 
