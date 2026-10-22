@@ -630,3 +630,7 @@ You said it & you proved it w/ two screenshots: v1.14.13 was the best-behaving b
 ## Round 77 · after zip v1.27.0 (zip formDAM_v1.27.1; the app reports v1.27.1)
 
 - [x] 1. Update the app icon · the play-plate M on the family tile w/ the family colours, crisp edges, enlarged to about 84 percent of the tile; icns, icon.png & the web icon replaced, `assets/icon_src/` added. 17c7e7a. Not run: an app build to see it in the Dock.
+
+## Round 78 · after zip v1.27.1 (zip formDAM_v1.27.2; the app reports v1.27.2)
+
+- [x] 1. Checks only, releases by formcompiler · `.github/workflows/ci.yml` runs the frontend (`npm test`, build), the backend (compile, pytest, boot and `/api/health`) and the scripts on main, pull requests and `compile_vX.Y.Z` branches; releases are built by formcompiler (`nodemode-ai/formcompiler`) as `formDAM-vX.Y.Z`. Not run: CI on GitHub.

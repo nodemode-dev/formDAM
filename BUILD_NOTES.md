@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.2 (2026-10-22) · checks only, releases by formcompiler
+
+formDAM's GitHub Actions now run checks only (new `.github/workflows/ci.yml`: frontend `npm ci`, `npm test`, `npm run build`; backend install, compile, `pytest -q tests`, boot on 8000 and `/api/health`; shell syntax and the markdown em dash and emoji scan) on main, pull requests and `compile_vX.Y.Z` branches. Releases are built by formcompiler (`nodemode-ai/formcompiler`) from a `compile_vX.Y.Z` branch and drafted as `formDAM-vX.Y.Z` on its release page. The history was re-identified before the first push: one author, nodemode-ai, and no co-author lines. No change to the app itself. Not run: CI on GitHub.
+
 ## v1.27.1 (2026-10-20) · the app icon on the family tile
 
 The app icon moves to the Form family look (17c7e7a): the play-plate M mark keeps its shapes and sits on the dark squircle tile w/ the pink-to-violet bloom, rim and drop shadow, filling about 84 percent of it; the M and dot carry the blue, violet, pink, amber paint; the blurred halo around the M is gone so its outline stays crisp. `src-tauri/icons/source/icon.icns` (824 px tile, 100 px margin), `src-tauri/icons/icon.png` and `frontend/public/formDAM-icon.png/.svg` (full bleed) are replaced; `assets/icon_src/` regenerates them. The menu bar trayTemplate is unchanged. Landed by hand from the final state of the `feat/app-icon-redesign` bundle; the bundle was not applied. Verified: assets match the bundle tip byte for byte, icon.png inspected. Not run: any app build.
