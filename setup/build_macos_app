@@ -91,6 +91,8 @@ pyinstaller --clean --noconfirm --onedir --name formdam-backend \
   --add-data "app/data:app/data" \
   --add-data "../frontend/package.json:." \
   desktop_entry.py
+gpl="$(find dist/formdam-backend \( -iname 'libx264*' -o -iname 'libx265*' -o -iname 'librubberband*' -o -iname 'libvidstab*' -o -iname 'libpostproc*' \) | head -1)"
+[ -z "$gpl" ] || { echo "GPL FFmpeg library in the engine: $gpl. Reinstall opencv from source without FFmpeg: PIP_NO_BINARY=opencv-python,opencv-python-headless CMAKE_ARGS=-DWITH_FFMPEG=OFF pip install --force-reinstall -r requirements_macos.txt"; exit 1; }
 ./dist/formdam-backend/formdam-backend --selfcheck
 deactivate
 cd ..
