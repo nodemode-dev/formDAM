@@ -6,10 +6,10 @@ def register() -> bool:
     if _registered:
         return True
     try:
-        import pillow_heif
+        import pi_heif
     except Exception:
         return False
-    pillow_heif.register_heif_opener()
+    pi_heif.register_heif_opener()
     _registered = True
     return True
 

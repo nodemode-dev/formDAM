@@ -91,7 +91,7 @@ library/    created on first run: originals/, cache/, vault/, dam.db
 | Pillow | MIT-CMU | backend |
 | numpy | BSD-3-Clause | backend |
 | opencv-python-headless | Apache-2.0 | backend |
-| pillow-heif | BSD-3-Clause (libheif LGPL, dynamic) | backend |
+| pi-heif | BSD-3-Clause (libheif and libde265 LGPL, dynamic; decode only) | backend |
 | exifread | BSD-3-Clause | backend |
 | rawpy | MIT (LibRaw LGPL-2.1 OR CDDL-1.0, dynamic) | backend |
 | onnxruntime | MIT | backend |

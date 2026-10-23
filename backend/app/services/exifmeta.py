@@ -202,9 +202,9 @@ def _image_kinds(path: str) -> Dict[str, Any]:
             pass
     if ext in ("heic", "heif"):
         try:
-            import pillow_heif
+            import pi_heif
 
-            heif = pillow_heif.open_heif(path, convert_hdr_to_8bit=True)
+            heif = pi_heif.open_heif(path, convert_hdr_to_8bit=True)
             sizes = {tuple(im.size) for im in heif}
             if len(heif) >= 2 and len(sizes) == 1:
                 found["spatial"] = True

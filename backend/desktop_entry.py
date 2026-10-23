@@ -26,7 +26,7 @@ def default_library() -> str:
 
 def selfcheck() -> int:
     info = {"python": sys.version.split()[0]}
-    for label, module in (("pillow", "PIL"), ("numpy", "numpy"), ("opencv", "cv2"), ("pillow_heif", "pillow_heif"), ("imagecapture", "ImageCaptureCore"), ("quartz", "Quartz"), ("cryptography", "cryptography")):
+    for label, module in (("pillow", "PIL"), ("numpy", "numpy"), ("opencv", "cv2"), ("pi_heif", "pi_heif"), ("imagecapture", "ImageCaptureCore"), ("quartz", "Quartz"), ("cryptography", "cryptography")):
         try:
             imported = __import__(module)
             info[label] = getattr(imported, "__version__", "ok")

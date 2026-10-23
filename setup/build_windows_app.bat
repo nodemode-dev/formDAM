@@ -48,13 +48,13 @@ if exist .venv-package rmdir /s /q .venv-package
 python -m venv .venv-package || exit /b 1
 call .venv-package\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
-pip install -r requirements.txt pillow-heif pyinstaller || exit /b 1
+pip install -r requirements.txt pyinstaller || exit /b 1
 if exist models\bioclip_species_int8.npy goto :species_done
 python -m app.services.species prepare models\txt_emb_species.npy models\txt_emb_species.json models || exit /b 1
 del /q models\txt_emb_species.npy models\txt_emb_species.json
 :species_done
 pyinstaller --clean --noconfirm --onedir --name formdam-backend ^
-  --collect-all uvicorn --collect-all PIL --collect-all pillow_heif ^
+  --collect-all uvicorn --collect-all PIL --collect-all pi_heif --exclude-module pillow_heif ^
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread ^
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography ^
   --hidden-import app.familyserver --collect-all pyzipper --collect-all Cryptodome ^

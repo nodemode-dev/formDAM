@@ -34,7 +34,7 @@ Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trade
 | numpy | BSD-3-Clause | embeddings math |
 | cryptography | Apache-2.0 OR BSD-3-Clause | vault encryption at rest (X25519, HKDF-SHA256, AES-256-GCM); the wheel bundles OpenSSL 3 (Apache-2.0). Dual license, both options permissive (same class as tauri's MIT OR Apache-2.0): flagged for owner review per policy |
 | opencv-python-headless | Apache-2.0 | YuNet/SFace inference |
-| pillow-heif | BSD-3-Clause (bindings) | bundles libheif (LGPL-3.0) & codecs as dynamic libs; acceptable under LGPL separability (dynamic link, replaceable); revisit before any store distribution |
+| pi-heif 1.4.0 | BSD-3-Clause (bindings) | HEIC and HEIF decode only. The wheel bundles libheif and libde265 (both LGPL-3.0) as separate shared libraries in a `--onedir` engine, so they stay dynamically linked and replaceable; source at github.com/strukturag/libheif and github.com/strukturag/libde265. Replaces pillow-heif, whose wheels also bundle the x265 encoder (GPL-2.0), excluded from the freeze with `--exclude-module pillow_heif`. Revisit before any store distribution |
 | exifread | BSD-3-Clause | EXIF, GPS & Apple maker-note read (metasvc) |
 | rawpy | MIT | RAW decode; the wheel bundles LibRaw (LGPL-2.1 OR CDDL-1.0) as a dynamic lib, same separability reasoning as libheif |
 | onnxruntime | MIT | runs the CLIP model for visual search, pets & content labels |

@@ -72,13 +72,13 @@ rm -rf .venv-package
 python3 -m venv .venv-package
 . .venv-package/bin/activate
 pip install --upgrade pip >/dev/null
-pip install -r requirements_macos.txt pillow-heif pyinstaller
+pip install -r requirements_macos.txt pyinstaller
 if [ ! -f models/bioclip_species_int8.npy ]; then
   python -m app.services.species prepare models/txt_emb_species.npy models/txt_emb_species.json models
   rm -f models/txt_emb_species.npy models/txt_emb_species.json
 fi
 pyinstaller --clean --noconfirm --onedir --name formdam-backend \
-  --collect-all uvicorn --collect-all PIL --collect-all pillow_heif \
+  --collect-all uvicorn --collect-all PIL --collect-all pi_heif --exclude-module pillow_heif \
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread \
   --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography \
   --collect-all ImageCaptureCore --collect-all Quartz \

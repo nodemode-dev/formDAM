@@ -966,3 +966,10 @@ WINALPHA removed w/ the whole-window fade (shell arm deleted); WINMAT was alread
 - logged: v1.14.13 · 2026-07-26
 
 Thumbs are WebP q80 method 4 at the same 192/384/768 buckets (payload diet, not a resolution change). Video posters go ffmpeg-frame-to-temp-jpg then Pillow-to-WebP so the bundled ffmpeg never needs a libwebp encoder · keep that two-step. ensure_thumb converts a legacy _v3.jpg in place when hit, so the system is correct even if the sweep never runs. upgrade_thumbs.py is deliberately a separate, standalone script (user requirement): importable (lifespan spawns run_async, a niced daemon thread after 3s · a subprocess would break under PyInstaller where sys.executable is the bundled binary) AND directly runnable. The .v4_done marker gates everything; delete it to force a re-sweep. THUMB_VER bumps must update both the script's suffix pair & the legacy path helper.
+
+### app/mediacodecs.py + app/services/exifmeta.py · pi-heif, not pillow-heif (v1.27.4)
+- refers-to: mediacodecs.py :: register; exifmeta.py :: spatial HEIC probe; desktop_entry.py :: selfcheck; setup/build_*_app freeze flags
+- kind: rationale
+- logged: v1.27.4 · 2026-10-23
+
+The family bundle audit found pillow-heif's wheels carry libx265, the HEVC encoder, under GPL-2.0, and the freeze collected it into the engine. formDAM only decodes HEIC and HEIF, so it now uses pi-heif, the decode-only build of the same bindings: libheif and libde265 (LGPL-3.0) as separate shared libraries, and the same `register_heif_opener` and `open_heif(path, convert_hdr_to_8bit=...)` calls. The build scripts install it through requirements and pass `--exclude-module pillow_heif`, so a stray pillow-heif in a build venv can never be frozen in; formvis and formlit already freeze this way. The self-check reports `pi_heif`.
