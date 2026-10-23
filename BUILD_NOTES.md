@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.3 (2026-10-23) · licensing and trademark fixes
+
+The owner's IP plans of 2026-10-23 (trademarks, copyright, licensing; the patent plan is handled separately). formDAM reads DNG, so Adobe's DNG notice is in Settings > App > About formDAM (a closed "Licences and notices" section), LICENSES.md and the README; a trademark notice (Adobe, Bridge, Lightroom, Photoshop; Apple, Photos) is in the README and LICENSES.md; the README no longer says "in the spirit of Photos.app and Adobe Bridge"; "Liquid glass" in Settings is "Glass"; CLAUDE.md carries the agent rules. Verified: tsc --noEmit passes; markdown has no emoji or U+2014. Not verified: the Settings pane in the window under throttling.
+
 ## v1.27.2 (2026-10-22) · checks only, releases by formcompiler
 
 formDAM's GitHub Actions now run checks only (new `.github/workflows/ci.yml`: frontend `npm ci`, `npm test`, `npm run build`; backend install, compile, `pytest -q tests`, boot on 8000 and `/api/health`; shell syntax and the markdown em dash and emoji scan) on main, pull requests and `compile_vX.Y.Z` branches. Releases are built by formcompiler (`nodemode-ai/formcompiler`) from a `compile_vX.Y.Z` branch and drafted as `formDAM-vX.Y.Z` on its release page. The history was re-identified before the first push: one author, nodemode-ai, and no co-author lines. No change to the app itself. Not run: CI on GitHub.
