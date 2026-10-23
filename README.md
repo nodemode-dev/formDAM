@@ -1,6 +1,6 @@
 # formDAM
 
-Open-source, local-first photo library and asset manager in the spirit of Photos.app and Adobe Bridge: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between formDAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
+Open-source, local-first photo library and asset manager: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between formDAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
 
 ## Quickstart
 
@@ -115,4 +115,10 @@ Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natura
 
 Models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo: face (YuNet, SFace, under 40 MB), CLIP (146 MB), Clean Up (LaMa 89 MB, EfficientSAM 47 MB, YOLOX 35 MB) & Look Up (BioCLIP 84 MB plus species embeddings, downloaded once at 850 MB & stored as 192 MB int8). Look Up's landmark, art & food lists are rebuilt w/ `setup/gen_lookup_data.py`.
 
-formDAM itself is MIT licensed (see LICENSE).
+formDAM itself is MIT licensed (see LICENSE); every component and its licence is in LICENSES.md.
+
+This product includes DNG technology under license by Adobe Systems Incorporated.
+
+## Trademarks
+
+Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Photos are trademarks of Apple Inc. formDAM is not affiliated with or endorsed by Adobe or Apple; the names describe file formats and compatibility only (XMP sidecars from Bridge or Lightroom, DNG files).

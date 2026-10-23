@@ -2,6 +2,16 @@
 
 formDAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree is classified here before use, per dev-rules licensing policy. Runtime web deps are also tabled in README.md.
 
+## Adobe DNG patent licence
+
+This product includes DNG technology under license by Adobe Systems Incorporated.
+
+formDAM reads DNG files (RAW decoding through rawpy and LibRaw). Adobe's DNG Specification patent licence is worldwide and royalty-free for reading and writing files that comply with the DNG Specification, on condition that distributed products display the notice above prominently; it is shown in Settings > App > About formDAM, under Licences and notices. Adobe may revoke the licence from anyone who, with their affiliates, brings a patent action against Adobe over reading or writing DNG files. Source: the licence text Adobe ships with the DNG SDK (`PATENTS`).
+
+## Trademarks
+
+Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Photos are trademarks of Apple Inc. formDAM is not affiliated with or endorsed by Adobe or Apple.
+
 ## Shipped inside the app bundle (desktop)
 
 | Component | License | Notes |
