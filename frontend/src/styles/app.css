@@ -641,6 +641,8 @@ html.vibrancy #app { background: var(--vib-body, rgba(10,6,3,0.46)); }
 .settings-pane .field-check { margin: 13px 0; gap: 10px; line-height: 1.45; max-width: 560px; align-items: flex-start; }
 .settings-pane .field-check input { margin-top: 2px; flex: none; }
 .settings-pane .settings-hint { max-width: 560px; line-height: 1.5; margin: 6px 0 2px; }
+.settings-notices { max-width: 560px; margin-top: 6px; }
+.settings-notices summary { cursor: pointer; font-size: 12.5px; color: var(--text); }
 .settings-pane .preset-row { display: flex; gap: 8px; margin: 4px 0 14px; }
 .settings-pane .swatch-row { display: flex; gap: 10px; margin: 6px 0 4px; }
 .settings-pane .modal-actions { margin-top: 20px; }

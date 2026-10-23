@@ -240,7 +240,7 @@ export function openSettings(): void {
   const topBlurRow = h("label", { class: "slider-row" }, h("span", { class: "slider-label" }, "Top bar blur"), topBlur, topBlurVal);
   const topNote = h("p", { class: "settings-hint" }, "The top bar is its own glass on every page: opacity sets its smoke, blur sets how strongly content scrolling beneath it defocuses. Defaults match the app glass exactly, so nothing changes until you move these.");
 
-  const sideNote = h("p", { class: "settings-hint" }, "These controls shape the side panel ON THE COLLECTIONS PAGE ONLY, where carousels slide beneath it: Panel opacity sets how solid its smoke is there (0% clear glass, 100% nearly solid) & Panel blur sets how strongly photos, videos & text passing under it defocus. Everywhere else the panel simply follows the Liquid glass sliders. Content is SUPPOSED to blur under this panel on Collections; the no-blur rule protects content from the window fade only.");
+  const sideNote = h("p", { class: "settings-hint" }, "These controls shape the side panel ON THE COLLECTIONS PAGE ONLY, where carousels slide beneath it: Panel opacity sets how solid its smoke is there (0% clear glass, 100% nearly solid) & Panel blur sets how strongly photos, videos & text passing under it defocus. Everywhere else the panel simply follows the Glass sliders. Content is SUPPOSED to blur under this panel on Collections; the no-blur rule protects content from the window fade only.");
 
   const bgCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
   bgCheck.checked = prefs.background;
@@ -380,7 +380,7 @@ export function openSettings(): void {
     { key: "appearance", label: "Appearance", icon: "glass", nodes: [
       h("p", { class: "settings-section" }, "Accent color"),
       swatchRow,
-      h("p", { class: "settings-section" }, "Liquid glass"),
+      h("p", { class: "settings-section" }, "Glass"),
       presetRow,
       ...sliderRows,
       radiusRow,
@@ -418,6 +418,11 @@ export function openSettings(): void {
       h("p", { class: "settings-hint" }, "The menu bar icon offers Import Photos & Videos..., Import Folder... & Open formDAM. While it is enabled, closing the window hides formDAM instead of quitting; quit from the menu bar."),
       h("label", { class: "field-check" }, hudCheck, "Show preload diagnostics (small live readout, bottom-right: pending tiles, queue, requests in flight, loaded runway ahead & behind in px, average load time)"),
       h("p", { class: "settings-hint" }, "If scrolling ever shows tiles loading in, screenshot that readout mid-scroll: it names the failing stage exactly. ahead & behind sitting at the full 13-row figure means the runway is genuinely loaded."),
+      h("p", { class: "settings-section" }, "About formDAM"),
+      h("p", { class: "settings-hint" }, "Open-source, local-first photo library and asset manager. MIT licence; every component and its licence is listed in LICENSES.md."),
+      h("details", { class: "settings-notices" },
+        h("summary", {}, "Licences and notices"),
+        h("p", { class: "settings-hint" }, "This product includes DNG technology under license by Adobe Systems Incorporated.")),
     ] },
     { key: "library", label: "Library", icon: "library", nodes: [libraryInfo] },
     { key: "vault", label: "Vault & Keychain", icon: "lock", nodes: [keychainWrap] },

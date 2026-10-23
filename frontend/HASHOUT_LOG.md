@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · formDAM
-current: v1.27.2 · 2026-10-22
+current: v1.27.3 · 2026-10-23
+### settings App pane · About formDAM with a closed Licences and notices section; "Glass" in place of "Liquid glass"
+- refers-to: ui/components/settings.ts :: PANES app (About formDAM heading, hint, details.settings-notices), PANES appearance heading, sideNote; styles/app.css :: .settings-notices
+- kind: rationale
+- logged: v1.27.3 · 2026-10-23
+
+The owner's licensing plan (L1, approved 2026-10-23): Adobe's DNG patent licence asks products that read DNG to show "This product includes DNG technology under license by Adobe Systems Incorporated." prominently, and the owner chose an About box with an accordion closed by default. formDAM has no About box, so Settings > App ends with an "About formDAM" heading, one line, and a native `<details>` "Licences and notices" holding the notice; it is built with the rest of the pane and opens in place. The owner's rename table also gives formDAM's translucent panels its own word: the Appearance heading and the side panel note say "Glass" where they said "Liquid glass" (Apple's name). Setting keys, CSS classes and `GlassPrefs` are unchanged.
 ### settings vault card, trash ensureVault modal, hidden and trash locked states · unlock names from /vault/device
 - refers-to: settings keychainWrap Promise.all status + labels; trash ensureVault device fetched before openModal, kcRow built only when available, append spread, toast; trash and hidden empty-sub lines
 - kind: rationale
