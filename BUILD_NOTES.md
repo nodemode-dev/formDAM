@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.5 (2026-10-23) · macOS OpenCV guard
+
+The macOS wheels of opencv-python-headless and opencv-python (rapidocr's) carry Homebrew's FFmpeg with libx264, libx265, rubberband, vidstab and postproc (GPL). formcompiler 0.3.1 builds OpenCV from source without FFmpeg on macOS for formDAM (`PIP_NO_BINARY`, `CMAKE_ARGS`), and `setup/build_macos_app` now stops if any of those libraries reach the engine, naming the source install. LICENSES.md's OpenCV row says which platform carries what. formDAM uses OpenCV for images only (no VideoCapture or VideoWriter). Not run here: a macOS build.
+
 ## v1.27.4 (2026-10-23) · bundle audit fixes
 
 The family bundle audit (formcompiler sidecar, BUNDLE_AUDIT.md) found GPL code in the engine: pillow-heif's wheels bundle the x265 encoder (GPL-2.0), and `--collect-all pillow_heif` froze it in.
