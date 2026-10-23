@@ -1,5 +1,19 @@
 # formDAM build notes
 
+## v1.27.4 (2026-10-23) · bundle audit fixes
+
+The family bundle audit (formcompiler sidecar, BUNDLE_AUDIT.md) found GPL code in the engine: pillow-heif's wheels bundle the x265 encoder (GPL-2.0), and `--collect-all pillow_heif` froze it in.
+
+- 4ca638d moves HEIC and HEIF decoding to pi-heif 1.4.0, which bundles only libheif and libde265 (LGPL-3.0, separate shared libraries, onedir engine). The API is the same. The three build scripts exclude pillow_heif.
+- 96c729f fills the ledger gaps:
+  - rapidocr and its models, which are Apache-2.0 and macOS only (now pinned 1.2.3);
+  - every frozen Python package;
+  - the LGPL FFmpeg and OpenSSL inside opencv;
+  - the Tauri crates under MPL-2.0 and other licences;
+  - the AppImage's GTK stack.
+- LICENSE and LICENSES.md now ship inside every installer. The Linux and Windows freezes no longer name a rapidocr package they never install.
+- Verified: the pi-heif wheel's bundled-licence list; py_compile; bash -n; tauri.conf.json parses. Not run: a build or a HEIC import.
+
 ## v1.27.3 (2026-10-23) · licensing and trademark fixes
 
 The owner's IP plans of 2026-10-23 (trademarks, copyright, licensing; the patent plan is handled separately). formDAM reads DNG, so Adobe's DNG notice is in Settings > App > About formDAM (a closed "Licences and notices" section), LICENSES.md and the README; a trademark notice (Adobe, Bridge, Lightroom, Photoshop; Apple, Photos) is in the README and LICENSES.md; the README no longer says "in the spirit of Photos.app and Adobe Bridge"; "Liquid glass" in Settings is "Glass"; CLAUDE.md carries the agent rules. Verified: tsc --noEmit passes; markdown has no emoji or U+2014. Not verified: the Settings pane in the window under throttling.
