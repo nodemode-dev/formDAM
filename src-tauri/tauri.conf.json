@@ -42,7 +42,9 @@
       }
     },
     "resources": {
-      "binaries/formdam-backend": "formdam-backend"
+      "binaries/formdam-backend": "formdam-backend",
+      "../LICENSE": "LICENSE",
+      "../LICENSES.md": "LICENSES.md"
     }
   }
 }

@@ -56,7 +56,7 @@ del /q models\txt_emb_species.npy models\txt_emb_species.json
 pyinstaller --clean --noconfirm --onedir --name formdam-backend ^
   --collect-all uvicorn --collect-all PIL --collect-all pi_heif --exclude-module pillow_heif ^
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread ^
-  --collect-all rapidocr_onnxruntime --collect-all onnxruntime --collect-all cryptography ^
+  --collect-all onnxruntime --collect-all cryptography ^
   --hidden-import app.familyserver --collect-all pyzipper --collect-all Cryptodome ^
   --exclude-module pymobiledevice3 ^
   --hidden-import app.main ^

@@ -27,14 +27,14 @@ Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trade
 | objc2-app-kit | MIT (Zlib OR Apache-2.0 OR MIT) | NSWindow alpha & window number for the full-window controls (macOS only) |
 | libloading | ISC | runtime lookup of the compositor blur symbol (macOS only) |
 | ureq, serde_json | MIT OR Apache-2.0 | loopback control-channel client (shell -> engine) |
-| Python runtime (frozen) | PSF-2.0 | inside PyInstaller onefile |
+| Python runtime (frozen) | PSF-2.0 | inside the PyInstaller engine, frozen `--onedir` (setup/build_*_app), so every shared library stays a separate, replaceable file |
 | fastapi | MIT | engine |
 | uvicorn | BSD-3-Clause | engine server |
 | Pillow | MIT-CMU | image decode/thumbs |
 | numpy | BSD-3-Clause | embeddings math |
 | cryptography | Apache-2.0 OR BSD-3-Clause | vault encryption at rest (X25519, HKDF-SHA256, AES-256-GCM); the wheel bundles OpenSSL 3 (Apache-2.0). Dual license, both options permissive (same class as tauri's MIT OR Apache-2.0): flagged for owner review per policy |
-| opencv-python-headless | Apache-2.0 | YuNet/SFace inference |
-| pi-heif 1.4.0 | BSD-3-Clause (bindings) | HEIC and HEIF decode only. The wheel bundles libheif and libde265 (both LGPL-3.0) as separate shared libraries in a `--onedir` engine, so they stay dynamically linked and replaceable; source at github.com/strukturag/libheif and github.com/strukturag/libde265. Replaces pillow-heif, whose wheels also bundle the x265 encoder (GPL-2.0), excluded from the freeze with `--exclude-module pillow_heif`. Revisit before any store distribution |
+| opencv-python-headless | Apache-2.0 | YuNet/SFace inference. The wheel also bundles FFmpeg's libraries (LGPL-2.1-or-later, separate shared libraries, source at ffmpeg.org) and OpenSSL (OpenSSL licence); see the wheel's LICENSE-3RD-PARTY.txt |
+| pi-heif 1.4.0 | BSD-3-Clause (bindings); the binary wheel as a whole is LGPL-3.0 because of its libraries | HEIC and HEIF decode only. The wheel bundles libheif and libde265 (both LGPL-3.0) as separate shared libraries in a `--onedir` engine, so they stay dynamically linked and replaceable; source at github.com/strukturag/libheif and github.com/strukturag/libde265. Replaces pillow-heif, whose wheels also bundle the x265 encoder (GPL-2.0), excluded from the freeze with `--exclude-module pillow_heif`. Revisit before any store distribution |
 | exifread | BSD-3-Clause | EXIF, GPS & Apple maker-note read (metasvc) |
 | rawpy | MIT | RAW decode; the wheel bundles LibRaw (LGPL-2.1 OR CDDL-1.0) as a dynamic lib, same separability reasoning as libheif |
 | onnxruntime | MIT | runs the CLIP model for visual search, pets & content labels |
@@ -54,6 +54,21 @@ Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trade
 | Wikidata landmarks, artworks and dishes (backend/app/data/lookup_world.json.gz, built by setup/gen_lookup_data.py via the QLever Wikidata endpoint) | CC0-1.0 | Look Up names, coordinates and artist credits; no attribution required |
 | YOLOX-s (opencv/object_detection_yolox, object_detection_yolox_2022nov.onnx, revision 78c368f) | Apache-2.0 | Clean Up distraction suggestions (COCO classes) in services/cleanmodels.py; sha256-pinned like LaMa |
 | formDAM icon artwork | user-provided | src-tauri/icons/icon.png, used verbatim |
+| rapidocr-onnxruntime 1.2.3 (macOS) | Apache-2.0 | text-in-image search (services/ocrsvc.py); the wheel carries its PP-OCR detection, classification and recognition ONNX models (PaddleOCR, Apache-2.0). Installed only by requirements_macos.txt, so the Linux and Windows engines search text with tesseract on PATH |
+| Other Python packages frozen into the engine | MIT: annotated-doc, annotated-types, anyio, fastapi, h11, pydantic, pydantic-core, typing-inspection; MIT-0: cffi; BSD-3-Clause: click, idna, pycparser, protobuf, starlette; BSD: uvicorn; Apache-2.0: flatbuffers; Apache-2.0 OR BSD-2-Clause: packaging; PSF-2.0: typing-extensions; exifread: its own permissive notice (Copyright 2002-2007 Gene Cash) | read from the installed metadata of backend/requirements.txt, 2026-10-23 |
+
+## Desktop shell: crates under other licences
+
+Tauri links these crates unedited (no `[patch]` and no vendored copy):
+
+| Crate | Licence | Why it is there |
+| --- | --- | --- |
+| cssparser, selectors, dtoa-short, option-ext | MPL-2.0 | Tauri's HTML handling (tauri-utils); used unmodified, source at crates.io |
+| ring | Apache-2.0 AND ISC | TLS (rustls) |
+| webpki-roots | CDLA-Permissive-2.0 | root certificates for TLS |
+| r-efi | MIT OR Apache-2.0 OR LGPL-2.1-or-later | used under MIT |
+
+The Linux bundles also carry the build machine's WebKitGTK, GTK and GLib (LGPL-2.1-or-later) as separate shared libraries. This ledger and LICENSE ship inside every installer (`bundle.resources`).
 
 ## Build-time only (never distributed)
 
