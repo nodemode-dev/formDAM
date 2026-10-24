@@ -44,6 +44,7 @@
     "resources": {
       "binaries/formdam-backend": "formdam-backend",
       "../LICENSE": "LICENSE",
+      "../NOTICE.md": "NOTICE.md",
       "../LICENSES.md": "LICENSES.md"
     }
   }

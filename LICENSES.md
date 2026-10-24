@@ -1,6 +1,6 @@
 # formDAM license ledger
 
-formDAM itself is MIT (see LICENSE). Every dependency & binary that enters the tree is classified here before use, per dev-rules licensing policy. Runtime web deps are also tabled in README.md.
+formDAM itself is Apache-2.0, copyright 2026 NodeAgentc, Inc. (see LICENSE and NOTICE.md; MIT until v1.27.5). Every dependency & binary that enters the tree is classified here before use, per dev-rules licensing policy. Runtime web deps are also tabled in README.md.
 
 ## Adobe DNG patent licence
 

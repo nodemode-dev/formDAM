@@ -115,10 +115,14 @@ Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natura
 
 Models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo: face (YuNet, SFace, under 40 MB), CLIP (146 MB), Clean Up (LaMa 89 MB, EfficientSAM 47 MB, YOLOX 35 MB) & Look Up (BioCLIP 84 MB plus species embeddings, downloaded once at 850 MB & stored as 192 MB int8). Look Up's landmark, art & food lists are rebuilt w/ `setup/gen_lookup_data.py`.
 
-formDAM itself is MIT licensed (see LICENSE); every component and its licence is in LICENSES.md.
+Every component and its licence is in LICENSES.md; formDAM's own licence is at the end of this file.
 
 This product includes DNG technology under license by Adobe Systems Incorporated.
 
 ## Trademarks
 
 Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Photos are trademarks of Apple Inc. formDAM is not affiliated with or endorsed by Adobe or Apple; the names describe file formats and compatibility only (XMP sidecars from Bridge or Lightroom, DNG files).
+
+## License
+
+Apache-2.0. Copyright 2026 NodeAgentc, Inc. See `LICENSE` and `NOTICE.md`. formDAM was MIT licensed up to v1.27.5.
