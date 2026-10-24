@@ -419,6 +419,7 @@ export function openSettings(): void {
       h("label", { class: "field-check" }, hudCheck, "Show preload diagnostics (small live readout, bottom-right: pending tiles, queue, requests in flight, loaded runway ahead & behind in px, average load time)"),
       h("p", { class: "settings-hint" }, "If scrolling ever shows tiles loading in, screenshot that readout mid-scroll: it names the failing stage exactly. ahead & behind sitting at the full 13-row figure means the runway is genuinely loaded."),
       h("p", { class: "settings-section" }, "About formDAM"),
+      h("p", { class: "settings-hint", translate: "no" }, "by nodemode.ai"),
       h("p", { class: "settings-hint" }, "Open-source, local-first photo library and asset manager. Apache-2.0 licence; every component and its licence is listed in LICENSES.md."),
       h("details", { class: "settings-notices" },
         h("summary", {}, "Licences and notices"),

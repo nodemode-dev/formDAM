@@ -1,5 +1,11 @@
 # frontend HASHOUT_LOG · formDAM
-current: v1.27.3 · 2026-10-23
+current: v1.27.6 · 2026-10-24
+### settings App pane · About formDAM credit and licence name
+- refers-to: ui/components/settings.ts :: PANES app (About formDAM heading, the new credit line, hint)
+- kind: rationale
+- logged: v1.27.6 · 2026-10-24
+
+The owner relicensed formDAM to Apache-2.0 (copyright NodeAgentc, Inc.), so the About hint says Apache-2.0 where it said MIT. formDAM's Home has no credit line, so by the owner's choice the credit "by nodemode.ai" sits in About, directly under the heading, as a `settings-hint` built with the rest of the pane (nothing appears later) and marked translate="no" through `h()`'s attribute path.
 ### settings App pane · About formDAM with a closed Licences and notices section; "Glass" in place of "Liquid glass"
 - refers-to: ui/components/settings.ts :: PANES app (About formDAM heading, hint, details.settings-notices), PANES appearance heading, sideNote; styles/app.css :: .settings-notices
 - kind: rationale
