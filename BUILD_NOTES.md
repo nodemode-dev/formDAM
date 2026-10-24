@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.6 (2026-10-24) · Apache-2.0, NodeAgentc, Inc., and the About credit
+
+Phase 1 of the family plan (`FAMILY_DEV_PLAN.md` in the planning sidecar). By the owner's instruction formDAM is relicensed from MIT to Apache-2.0 with NodeAgentc, Inc. as the holder: LICENSE is the family's Apache text, NOTICE.md is new and ships in the desktop bundle beside LICENSE and LICENSES.md, LICENSES.md and the README say Apache-2.0 and the README ends with a License section. Every earlier commit is the owner's (nodemode-ai), so no outside contributor's consent was needed. Preferences > App > About says Apache-2.0 and carries the credit "by nodemode.ai". Commits 895e0af (relicense), f44a6b4 (About), and the release commit. Verified: the frontend build; LICENSE byte-identical to the family's copy and its terms equal to apache.org's text. Not run: Preferences in a window, a desktop bundle.
+
 ## v1.27.5 (2026-10-23) · macOS OpenCV guard
 
 The macOS wheels of opencv-python-headless and opencv-python (rapidocr's) carry Homebrew's FFmpeg with libx264, libx265, rubberband, vidstab and postproc (GPL). formcompiler 0.3.1 builds OpenCV from source without FFmpeg on macOS for formDAM (`PIP_NO_BINARY`, `CMAKE_ARGS`), and `setup/build_macos_app` now stops if any of those libraries reach the engine, naming the source install. LICENSES.md's OpenCV row says which platform carries what. formDAM uses OpenCV for images only (no VideoCapture or VideoWriter). Not run here: a macOS build.
