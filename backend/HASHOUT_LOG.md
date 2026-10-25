@@ -1,5 +1,14 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### security.local_only_guard · an Origin must be this app's own window
+- refers-to: security WINDOW_ORIGINS, origin_key, window_origin and the check after the cross-site one in local_only_guard; MUTATING, OPEN_PATHS, the launch key and the automation gate unchanged
+- kind: rationale
+- logged: zip v1.27.9 · 2026-10-25
+
+The family agent-stack standard, rule G2 (AGENT_STACK_STANDARD.md v0.2.0, ledger FB-036, formai_dev sidecar). The guard never judged an HTTP request's Origin, so a page on any site could send a simple GET with its own Origin and, on the open paths (/api/health, /api/session), be answered outright. A present Origin must now be one of the window's origins: the engine's own (an http origin whose scheme, host and port equal the request's Host, which is how the desktop window and the served build load), the dev window on 5173 and the preview window on 4173 (localhost and 127.0.0.1 each), tauri://localhost or http://tauri.localhost. The comparison parses scheme, host and port (origin_key, modelled on formpdf's) and never compares a prefix, so http://localhost.evil.com, http://localhost:5173.evil.com and null fail with 403 "Rejected foreign Origin". A request with no Origin is decided as before (rule G4). The launch key, the window cookie and the automation gate still decide who may use the API; this check only refuses. The guard is an http middleware only (formDAM has no websockets).
+
+Checked on the running engine (port 9151, launch key set, the built window served through FORMDAM_DIST) with /api/health, /api/session and a missing route: Origin http://evil.example, http://localhost.evil.com, http://localhost:5173.evil.com and null 403; the engine's own origin (127.0.0.1 and localhost), http://localhost:5173, http://127.0.0.1:5173, http://localhost:4173, tauri://localhost, http://tauri.localhost and no Origin pass (200, 404 for the missing route); cross-site without an Origin and a foreign Host still 403; cross-site with the dev Origin 200. The built window opened with #dam-key= in Chromium at 4x CPU and slow network, two shift runs and one throttle run: layout shift 0, no errors, 0 refusals from the window (18 refusals in the log before and after, all from the probes above). formDAM has no MCP server in this tree.
+
 ### security.local_only_guard · a request with no Origin is refused when Sec-Fetch-Site says cross-site
 - refers-to: security local_only_guard (the check after host_allowed), MUTATING, OPEN_PATHS unchanged
 - kind: rationale

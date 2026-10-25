@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 import time
+from urllib.parse import urlsplit
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -12,6 +13,14 @@ LOCAL_HEADER = "x-dam-local"
 VAULT_HEADER = "x-dam-vault"
 HOST_RE = re.compile(r"^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[::1\])(:\d+)?$", re.IGNORECASE)
 MUTATING = {"POST", "PUT", "PATCH", "DELETE"}
+WINDOW_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "tauri://localhost",
+    "http://tauri.localhost",
+)
 
 
 SHELL_HEADER = "x-dam-shell"
@@ -73,6 +82,29 @@ def host_allowed(host_header: str) -> bool:
     return bool(HOST_RE.match(host_header.strip()))
 
 
+def origin_key(value: str):
+    try:
+        parts = urlsplit(value.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    if not parts.scheme or not parts.hostname:
+        return None
+    if port is None:
+        port = {"http": 80, "https": 443}.get(parts.scheme)
+    return parts.scheme.lower(), parts.hostname.lower(), port
+
+
+def window_origin(origin: str, host_header: str) -> bool:
+    key = origin_key(origin)
+    if key is None:
+        return False
+    if key in {k for k in (origin_key(o) for o in WINDOW_ORIGINS) if k is not None}:
+        return True
+    own = origin_key(f"{key[0]}://{host_header.strip()}")
+    return key[0] == "http" and own is not None and own == key
+
+
 async def local_only_guard(request: Request, call_next):
     client = request.client
     if client is not None and not is_loopback_ip(client.host):
@@ -81,6 +113,9 @@ async def local_only_guard(request: Request, call_next):
         return JSONResponse(status_code=403, content={"detail": "Rejected non-local Host header"})
     if request.headers.get("origin") is None and request.headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
         return JSONResponse(status_code=403, content={"detail": "Rejected cross-site request"})
+    origin = request.headers.get("origin")
+    if origin is not None and not window_origin(origin, request.headers.get("host", "")):
+        return JSONResponse(status_code=403, content={"detail": "Rejected foreign Origin"})
     if request.method in MUTATING and request.url.path.startswith("/api") and request.headers.get(LOCAL_HEADER) != "1":
         return JSONResponse(status_code=403, content={"detail": "Missing local client header"})
     if request.url.path.startswith("/api/") and request.url.path not in OPEN_PATHS and not automation_allowed(request):
