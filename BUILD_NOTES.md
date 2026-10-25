@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.27.7 (2026-10-25) · zero npm audit findings
+
+Phase 2b of the family stabilization plan (`FAMILY_DEV_PLAN.md` v0.4.x, plan of record in the formai_dev sidecar): every frontend installs with zero `npm audit` findings. The frontend lock moves to Vite 8.3.5, Vitest and @vitest/mocker 4.1.12, undici 7.30.1 and source-map-js 1.2.2 (five development-tool findings, ledger FB-004 and FB-005); `package.json`'s ranges already admitted them. npm 10.9.9 cannot re-resolve Vite or Vitest in this tree (arborist `edgesOut` error), so npm 11.21.1 wrote those entries and npm 10 installs from them (frontend/HASHOUT_LOG.md). Commits 31c9048 (the lock and the log) and the release commit. Verified: `npm audit` 0, `npm ci` with npm 10, `tsc --noEmit`, `vite build`, `vitest run` 10 of 10, the dev server on loopback; the engine installs and answers `/api/health` 200. Not run: a window under throttling (no shipped code changed), a desktop bundle.
+
 ## v1.27.6 (2026-10-24) · Apache-2.0, NodeAgentc, Inc., and the About credit
 
 Phase 1 of the family plan (`FAMILY_DEV_PLAN.md` in the planning sidecar). By the owner's instruction formDAM is relicensed from MIT to Apache-2.0 with NodeAgentc, Inc. as the holder: LICENSE is the family's Apache text, NOTICE.md is new and ships in the desktop bundle beside LICENSE and LICENSES.md, LICENSES.md and the README say Apache-2.0 and the README ends with a License section. Every earlier commit is the owner's (nodemode-ai), so no outside contributor's consent was needed. Preferences > App > About says Apache-2.0 and carries the credit "by nodemode.ai". Commits 895e0af (relicense), f44a6b4 (About), and the release commit. Verified: the frontend build; LICENSE byte-identical to the family's copy and its terms equal to apache.org's text. Not run: Preferences in a window, a desktop bundle.
