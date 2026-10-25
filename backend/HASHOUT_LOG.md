@@ -1,5 +1,13 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### security.local_only_guard · a request with no Origin is refused when Sec-Fetch-Site says cross-site
+- refers-to: security local_only_guard (the check after host_allowed), MUTATING, OPEN_PATHS unchanged
+- kind: rationale
+- logged: zip v1.27.8 · 2026-10-25
+
+The family agent-stack standard, rule G4 (AGENT_STACK_STANDARD.md v0.2.0, owner decision D4, ledger FB-035, formai_dev sidecar). The guard let a request with no Origin through once its Host was loopback, so a web page could make the engine answer a GET by pointing an img or a link at http://127.0.0.1:<port>/..., since browsers send no Origin on those; the open paths (/api/health, /api/session) answer such a request outright. Browsers label every request with Sec-Fetch-Site and only a page on another site gets cross-site, so the guard now answers 403 "Rejected cross-site request" to a request with no Origin whose Sec-Fetch-Site is cross-site (trimmed, case-insensitive). A request that carries an Origin is decided as before, and same-site stays allowed on purpose: a dev window on localhost:5173 loading straight from localhost:8000 is same-site, and no outside page can be same-site with localhost. The CLI, scripts and MCP tools send neither header and pass; the automation gate is untouched and still never trusts Sec-Fetch-Site to admit anyone (this check only refuses). The guard is an http middleware only; browsers always send an Origin on a websocket.
+
+Checked on the running engine (port 9122, launch key set) at /api/health: no Origin with cross-site and with "  Cross-Site " 403; same-site, same-origin, none, no header, and cross-site with the dev Origin http://localhost:5173 200; a foreign Host 403. An Origin of http://evil.example on a GET answers 200 as before: the guard has never judged an HTTP Origin (mutating calls need the x-dam-local header, other /api routes the window cookie or automation token). In Chromium, a page served from http://127.0.0.2:9903 with an img and a clicked link pointing at /api/health got 403 for both, shown in the engine log. The built window served by the engine (FORMDAM_DIST) opened with #dam-key= in Chromium at 4x CPU and slow network, two shift runs (one shift entry each, value 0) and one throttle run: layout shift 0, no errors, 0 refusals from the window (5 refusals in the log before and after, all from the probes above). formDAM has no MCP server of its own in this tree, so no MCP check was possible.
 ### config.py _build_version · the engine reports the build's own version
 - refers-to: config _build_version, VERSION; build_macos_app, build_linux_app, build_windows_app.bat --add-data ../frontend/package.json:.
 - kind: rationale + replaced code

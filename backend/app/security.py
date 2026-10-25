@@ -79,6 +79,8 @@ async def local_only_guard(request: Request, call_next):
         return JSONResponse(status_code=403, content={"detail": "formDAM only accepts local loopback connections"})
     if not host_allowed(request.headers.get("host", "")):
         return JSONResponse(status_code=403, content={"detail": "Rejected non-local Host header"})
+    if request.headers.get("origin") is None and request.headers.get("sec-fetch-site", "").strip().lower() == "cross-site":
+        return JSONResponse(status_code=403, content={"detail": "Rejected cross-site request"})
     if request.method in MUTATING and request.url.path.startswith("/api") and request.headers.get(LOCAL_HEADER) != "1":
         return JSONResponse(status_code=403, content={"detail": "Missing local client header"})
     if request.url.path.startswith("/api/") and request.url.path not in OPEN_PATHS and not automation_allowed(request):
