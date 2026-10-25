@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
-current: v1.27.6 · 2026-10-24
+current: v1.27.7 · 2026-10-25
+### package-lock.json · zero npm audit findings, written by npm 11
+- refers-to: package-lock.json (written by npm, not by hand); package.json :: devDependencies (unchanged: `^8.1.5`, `^4.1.11` already admit the fixed versions)
+- kind: rationale + gotcha
+- logged: v1.27.7 · 2026-10-25
+
+Family rule from `FAMILY_DEV_PLAN.md` v0.4.x Phase 2b (formai_dev sidecar): every frontend installs with zero `npm audit` findings. This tree had five, all in development tools: Vite 8.1.5 (launch-editor command injection in the dev server, ledger FB-004), Vitest and @vitest/mocker 4.1.11 (code injection through manual mock registration), undici 7.29.0 through jsdom and source-map-js 1.2.1 through Vite (both denial of service, FB-005). The ranges in `package.json` already admit the fixed versions, so only the lock moved: Vite 8.3.5, Vitest and @vitest/mocker 4.1.12, undici 7.30.1, source-map-js 1.2.2. Gotcha: npm 10.9.9 fails on this tree with `Cannot read properties of null (reading 'edgesOut')` in arborist's peer-set walk whenever Vite or Vitest is re-resolved, from `npm install` with raised floors and from `npm update` alike; undici and source-map-js update fine. npm 11.21.1 (`npx -y npm@11.21.1 update vite vitest`) wrote the lock, and npm 10 then installs from it with `npm ci`. Raising the floors in `package.json` is left for when npm 10 can resolve them. After: `npm audit` 0, `tsc --noEmit`, `vite build`, `vitest run` 3 files and 10 tests passing, the dev server on `127.0.0.1:5173` only.
+
 ### settings App pane · About formDAM credit and licence name
 - refers-to: ui/components/settings.ts :: PANES app (About formDAM heading, the new credit line, hint)
 - kind: rationale
