@@ -32,7 +32,7 @@ keyring = { version = "3", features = ["windows-native"] }
 keyring = { version = "3", features = ["async-secret-service", "async-io", "crypto-rust"] }
 
 [profile.release]
-strip = true
+strip = false
 lto = true
 
 [profile.release.build-override]
