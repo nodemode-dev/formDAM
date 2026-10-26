@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.28.1 (2026-10-26) · the family test suite
+
+FAMILY_TEST_PLAN v0.3.0 section 5 gap fill. `backend/tests/` gains 101 pytest tests beside the existing 38: F1 guard contract with the launch key and window session, F4 version sites, F5 boot, F9 release profiles, and the P1 gap fills (originals never modified by ingest, edit or delete-from-library; the same file twice deduplicated by hash; an XMP write then read keeps every field; a password package exports and imports and a wrong password is refused; the LAN server is off by default and refuses an unpaired device). The older tests now open a window session and run on temporary library and config folders. CI gains a gating `test` job and `npm audit --audit-level=low`. No app bug was found. Verified: 139 passed and 1 skipped three times; vitest 10 passed; nine deliberate breaks each caught.
+
 ## v1.28.0 (2026-10-26) · release profile unstripped for macOS
 
 Step 0 of `FAMILY_TEST_PLAN.md` v0.3.0 (section 9, formai_dev sidecar): macOS builds fail when the release profile strips the binary, so `src-tauri/Cargo.toml` `[profile.release]` now reads `strip = false`; `lto` and the already unstripped build-override profile are unchanged. A minor number because the owner's versioning rule never lets a patch number reach two digits (after 1.27.9 comes 1.28.0). Commits cbc4329 (the profile line) and the release commit. Verified: Cargo.toml parses with both profiles unstripped; `cargo metadata --locked` resolves the crate at 1.28.0 with the lock as committed; the JSON files parse. Not run: a desktop bundle; the macOS build on the owner's Mac confirms it.
