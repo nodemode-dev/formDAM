@@ -5,10 +5,10 @@
 <title>formDAM</title>
 <style>
   html, body { margin: 0; height: 100%; background: #0d0c0a; }
-  body { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px;
+  body { box-sizing: border-box; padding-top: calc(50vh - 121px); display: flex; align-items: center; justify-content: flex-start; flex-direction: column; gap: 18px;
          font-family: -apple-system, "SF Pro Text", "Segoe UI", sans-serif; color: #8f8676; user-select: none; }
   img { width: 96px; height: 96px; animation: pulse 1.6s ease-in-out infinite; }
-  p { margin: 0; font-size: 13px; letter-spacing: 0.02em; }
+  p { margin: 0; height: 16px; font-size: 13px; line-height: 16px; letter-spacing: 0.02em; }
   @keyframes pulse { 0%, 100% { opacity: 0.75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
 </style>
 </head>

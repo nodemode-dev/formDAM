@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### public/splash.html · the logo no longer moves while the page streams in
+- refers-to: public/splash.html :: body (padding-top, justify-content), p (height, line-height)
+- kind: rationale
+- logged: v1.28.2 · 2026-10-26 · Ledger FB-114
+
+The desktop shell shows splash.html while the engine starts. Its body centred the logo and the line under it as flex children, so when a paint came between the logo and the line the logo was centred alone and then moved up 57 px when the line arrived: layout shift 4.8e-4 (about one throttled load in ten in the window smoke F7, source an IMG with no class, which also made the 15-run stress fail). The body now starts at a fixed padding-top and the line has a fixed 16 px height, so the logo's position no longer depends on its later sibling; the padding (50vh - 121px) puts the logo where it was (y 365.8 in a 900 px viewport, the 36 px being what the head elements and body already contribute). Verified: a server that sends the page up to the line, pauses 1 s and sends the rest measured a shift of 4.8e-4 (IMG 421 to 364) before and 0 after, with and without the pause, logo y 365.8 before and after.
+
 ### tests/window · the window smoke (F7) in its own folder
 - refers-to: tests/window/test_window.py (pytest and Python Playwright, not vitest; vitest only includes tests/**/*.test.ts)
 - kind: rationale
