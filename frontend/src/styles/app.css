@@ -106,7 +106,7 @@ html.route-collections .sidebar {
 }
 .topbar-title { min-width: 0; }
 .topbar-title h1 { margin: 0; font-size: 15px; font-weight: 650; letter-spacing: var(--ls-title); white-space: nowrap; }
-.topbar-sub { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.topbar-sub { display: block; font-size: 12px; line-height: 16px; min-height: 16px; color: var(--text-muted); white-space: nowrap; }
 .topbar-spacer { flex: 1; }
 
 .seg {

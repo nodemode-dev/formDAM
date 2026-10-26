@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### styles/app.css .topbar-sub · the count under a topbar title no longer shifts the title
+- refers-to: styles/app.css :: .topbar-sub; the spans created in library.ts, search.ts, curate.ts, dedup.ts and libmanage.ts
+- kind: rationale
+- logged: v1.28.2 · 2026-10-26 · Ledger FB-113
+
+The topbar subtitle is an inline span that starts empty and is filled when the library summary arrives. An empty inline span makes no line box, so the title block was 19.75 px high and, centred in the 52 px bar, jumped up by 7.8 px when "N items" appeared (layout shift 7.5e-6 in the window smoke, F7, at 4x CPU and a slow network, the shift source being DIV.topbar-title). The span is now a block with a fixed 16 px line height and minimum height, so the line is reserved before the text arrives. Verified: the F7 window smoke failed before (shift 7.5e-06) and passes after (shift 0, two runs); no other shift entries.
+
 ### package-lock.json · zero npm audit findings, written by npm 11
 - refers-to: package-lock.json (written by npm, not by hand); package.json :: devDependencies (unchanged: `^8.1.5`, `^4.1.11` already admit the fixed versions)
 - kind: rationale + gotcha
