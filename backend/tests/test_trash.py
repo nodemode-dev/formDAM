@@ -28,7 +28,6 @@ def test_trash_lock_restore_and_delete(client, tmp_path):
     rel = client.get(f"/api/media/{b}", headers=auth).json()["rel_path"]
     from app.services.libraryfs import abs_path
     on_disk = abs_path(rel)
-    assert os.path.isfile(on_disk)
     assert client.delete(f"/api/trash/{b}", headers=auth).status_code == 200
     assert not os.path.exists(on_disk)
     assert client.get(f"/api/media/{b}", headers=auth).status_code == 404

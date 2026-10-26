@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### tests · family layers F1, F4, F5, F9 and the P1 gap fills for formDAM
+- refers-to: backend/tests (conftest, support, test_f1_guard, test_f4_versions, test_f5_boot, test_f9_release_profiles, test_p1_originals, test_p1_xmp, test_p1_package, test_p1_lan), backend/requirements-test.txt
+- kind: rationale
+- logged: v1.28.1 · 2026-10-26
+
+FAMILY_TEST_PLAN v0.3.0, section 5 gap fill. The older suite ran against a guard that had since gained the automation gate, so most of it answered 403; the client fixture now opens a window session with the launch key, as the window does, and the suite runs on a temporary library and config folder (a module-level default also keeps a background thread that outlives a test from writing to the repo's library folder). test_trash no longer expects a trashed original at its library path, because the vault seals it. Differences from the family template: no websocket (formDAM has none, so F1 checks the surface is absent), no engine.json and no /api/version (F5 reads /api/health and frontend/package.json), the version sites are the package.json and lock, Cargo.toml and Cargo.lock, and the guard has the launch key, window cookie and automation token layers that the F1 file checks as well. The LAN server (familyserver) is exercised through its own app with a private peer address and the family key signature; the real listener is only started to check it stops. Package tests switch to a second temporary library with FORMDAM_LIBRARY monkeypatched so the switch is undone. No bug was found, so no ledger number was used.
+
 ### security.local_only_guard · an Origin must be this app's own window
 - refers-to: security WINDOW_ORIGINS, origin_key, window_origin and the check after the cross-site one in local_only_guard; MUTATING, OPEN_PATHS, the launch key and the automation gate unchanged
 - kind: rationale

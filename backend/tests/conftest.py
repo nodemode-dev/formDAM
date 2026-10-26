@@ -1,5 +1,7 @@
 import os
+import shutil
 import sys
+import tempfile
 import time
 
 import pytest
@@ -8,16 +10,27 @@ from starlette.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+_SANDBOX = tempfile.mkdtemp(prefix="formdam-tests-")
+os.environ["DAM_LIBRARY"] = os.path.join(_SANDBOX, "library")
+os.environ["DAM_CONFIG"] = os.path.join(_SANDBOX, "config")
+
 HEADERS = {"x-dam-local": "1"}
+
+
+def pytest_sessionfinish(session, exitstatus):
+    shutil.rmtree(_SANDBOX, ignore_errors=True)
 
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DAM_LIBRARY", str(tmp_path / "library"))
+    monkeypatch.setenv("DAM_CONFIG", str(tmp_path / "config"))
     from app.db import reset_thread_conn
     reset_thread_conn()
     from app.main import app
+    from app.security import LAUNCH_KEY
     with TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 51234)) as tc:
+        assert tc.post("/api/session", headers={"x-dam-shell": LAUNCH_KEY, **HEADERS}).status_code == 200
         yield tc
     reset_thread_conn()
 
