@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### tests/window · the window smoke (F7) in its own folder
+- refers-to: tests/window/test_window.py (pytest and Python Playwright, not vitest; vitest only includes tests/**/*.test.ts)
+- kind: rationale
+- logged: v1.28.2 · 2026-10-26
+
+FAMILY_TEST_PLAN section 4, F7. The script starts the engine from backend/ on a free port with an empty library and config folder under a temporary home, FORMDAM_DIST pointing at the built frontend/dist and FORMDAM_SHELL_KEY set, then opens the window the way the desktop shell does (src-tauri main.rs navigates to http://127.0.0.1:PORT/#dam-key=KEY, and engine/session.ts trades the key for the window cookie). Without the key the window shows its lockout card and every /api call answers 403, so the test also asserts the lockout card is absent and #app mounted. Pages: the window entry with the key, and splash.html, the second HTML document the shell loads first. Chromium runs at 4x CPU slowdown and a 150 ms, 1.6 Mbps network; the test asserts a title, no 403, no failed or 4xx/5xx request, no console or page error and layout shift 0 after load, network idle and a 3 s settle. IGNORED_REQUESTS is empty. It needs `npm run build` first.
+
 ### styles/app.css .topbar-sub · the count under a topbar title no longer shifts the title
 - refers-to: styles/app.css :: .topbar-sub; the spans created in library.ts, search.ts, curate.ts, dedup.ts and libmanage.ts
 - kind: rationale
