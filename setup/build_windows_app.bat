@@ -80,7 +80,7 @@ if exist src-tauri\icons\icon.ico goto :icon_done
 echo.
 echo == Generating the Windows icon from src-tauri\icons\icon.png ==
 set "ICONTMP=%TEMP%\formdam-icons-%RANDOM%"
-call npx --yes @tauri-apps/cli@2 icon src-tauri\icons\icon.png -o "%ICONTMP%" || exit /b 1
+call npx --yes @tauri-apps/cli@2.12.3 icon src-tauri\icons\icon.png -o "%ICONTMP%" || exit /b 1
 copy /y "%ICONTMP%\icon.ico" src-tauri\icons\icon.ico >nul || exit /b 1
 rmdir /s /q "%ICONTMP%"
 :icon_done
@@ -88,7 +88,7 @@ rmdir /s /q "%ICONTMP%"
 echo.
 echo == Building the app bundle (this compiles Rust; first run takes a while) ==
 cd /d "%ROOT%\src-tauri"
-call npx --yes @tauri-apps/cli@2 build --bundles %BUNDLES% -- --locked || exit /b 1
+call npx --yes @tauri-apps/cli@2.12.3 build --bundles %BUNDLES% -- --locked || exit /b 1
 cd /d "%ROOT%"
 
 echo.

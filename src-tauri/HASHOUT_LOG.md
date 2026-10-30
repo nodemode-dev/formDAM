@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_linux_app + ../setup/build_windows_app.bat · @tauri-apps/cli pinned to 2.12.3
+- refers-to: build_linux_app and build_windows_app.bat, the npx icon and build lines
+- kind: rationale + replaced code
+- logged: v1.28.3 · 2026-10-30
+
+Replaced: npx --yes @tauri-apps/cli@2, which takes whatever 2.x npm has that day. frontend/package.json and its lock carry no @tauri-apps/cli, so both scripts pin 2.12.3, a CLI that bundles against the tauri 2.11 crates in Cargo.lock. The macOS script still installs tauri-cli ^2 through cargo when cargo-tauri is missing.
+
 ### ../setup/build_windows_app.bat · PyInstaller --add-data w/ the Windows separator, PyInstaller pinned
 - refers-to: build_windows_app.bat the four --add-data pairs, pip install pyinstaller==6.16.0
 - kind: rationale + replaced code
