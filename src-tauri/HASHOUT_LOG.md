@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_windows_app.bat · PyInstaller --add-data w/ the Windows separator, PyInstaller pinned
+- refers-to: build_windows_app.bat the four --add-data pairs, pip install pyinstaller==6.16.0
+- kind: rationale + replaced code
+- logged: v1.28.3 · 2026-10-30
+
+Replaced: --add-data "../frontend/dist:frontend_dist", "models:models", "app/data:app/data", "../frontend/package.json:." and an unpinned pyinstaller. ';' is the separator PyInstaller has always accepted on Windows (the colon form is only accepted from 6.x, and a drive-letter path makes it ambiguous), and the paths use backslashes like the rest of the script. Neither requirements file pins PyInstaller and the macOS and Linux scripts install it unpinned, so Windows takes a current 6.x, 6.16.0, and no longer moves to a new major by itself.
+
 ### macOS signing under formcompiler · Entitlements.plist, ../setup/build_macos_app engine signing, ../setup/package_dmg keeps tauri's signature
 - refers-to: Entitlements.plist com.apple.security.cs.disable-library-validation and com.apple.security.cs.allow-unsigned-executable-memory; build_macos_app ENGINE, ENTITLEMENTS, IDENTITY from APPLE_SIGNING_IDENTITY before the keychain lookup, the Mach-O signing loop over the engine tree; package_dmg ENTITLEMENTS, IDENTITY, SIGNED, REPAIRED and the three signing branches, the closing release hint
 - kind: rationale + replaced code

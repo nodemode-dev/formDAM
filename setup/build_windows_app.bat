@@ -48,7 +48,7 @@ if exist .venv-package rmdir /s /q .venv-package
 python -m venv .venv-package || exit /b 1
 call .venv-package\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
-pip install -r requirements.txt pyinstaller || exit /b 1
+pip install -r requirements.txt pyinstaller==6.16.0 || exit /b 1
 if exist models\bioclip_species_int8.npy goto :species_done
 python -m app.services.species prepare models\txt_emb_species.npy models\txt_emb_species.json models || exit /b 1
 del /q models\txt_emb_species.npy models\txt_emb_species.json
@@ -60,10 +60,10 @@ pyinstaller --clean --noconfirm --onedir --name formdam-backend ^
   --hidden-import app.familyserver --collect-all pyzipper --collect-all Cryptodome ^
   --exclude-module pymobiledevice3 ^
   --hidden-import app.main ^
-  --add-data "../frontend/dist:frontend_dist" ^
-  --add-data "models:models" ^
-  --add-data "app/data:app/data" ^
-  --add-data "../frontend/package.json:." ^
+  --add-data "..\frontend\dist;frontend_dist" ^
+  --add-data "models;models" ^
+  --add-data "app\data;app\data" ^
+  --add-data "..\frontend\package.json;." ^
   desktop_entry.py || exit /b 1
 dist\formdam-backend\formdam-backend.exe --selfcheck || exit /b 1
 call deactivate
