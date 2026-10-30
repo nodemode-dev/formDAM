@@ -23,26 +23,38 @@ ICON_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$APP/Contents/
 case "$ICON_NAME" in *.icns) : ;; *) ICON_NAME="$ICON_NAME.icns" ;; esac
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")
 
-IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
+ENTITLEMENTS="$ROOT/src-tauri/Entitlements.plist"
+IDENTITY="${APPLE_SIGNING_IDENTITY:-}"
+[ "$IDENTITY" != "-" ] || IDENTITY=""
+[ -n "$IDENTITY" ] || IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
 
+# Strip quarantine first; it is not part of the seal, so a signed app stays valid.
+xattr -cr "$APP" 2>/dev/null || true
+SIGNED=0
+if codesign --verify --deep --strict "$APP" >/dev/null 2>&1; then SIGNED=1; fi
+
+REPAIRED=0
 if ! diff -q "$ICNS" "$APP/Contents/Resources/$ICON_NAME" >/dev/null 2>&1; then
   say "Repairing Resources/$ICON_NAME w/ your provided file"
   cp "$ICNS" "$APP/Contents/Resources/$ICON_NAME"
+  REPAIRED=1
 fi
 
-# Strip quarantine FIRST, then sign, so the seal is coherent w/ the final bytes.
-xattr -cr "$APP" 2>/dev/null || true
-if [ -n "$IDENTITY" ]; then
+if [ "$SIGNED" = 1 ] && [ "$REPAIRED" = 0 ]; then
+  say "Keeping the app's own signature (signed at build time)"
+  codesign -dv "$APP" 2>&1 | grep -E '^(Authority|TeamIdentifier|Timestamp)=' | head -3 | sed 's/^/   /' || true
+elif [ -n "$IDENTITY" ]; then
   say "Signing w/ Developer ID: $IDENTITY"
-  codesign --force --deep --options runtime -s "$IDENTITY" "$APP" 2>/dev/null || true
+  codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" -s "$IDENTITY" "$APP"
   if codesign --verify --deep --strict "$APP" >/dev/null 2>&1; then
-    echo "   Developer ID signature verifies (notarize before public release)"
+    echo "   Developer ID signature verifies"
   else
-    echo "   WARNING: Developer ID signing failed; see: codesign --verify --deep --strict --verbose=2 \"$APP\""
+    echo "   ERROR: Developer ID signing failed; see: codesign --verify --deep --strict --verbose=2 \"$APP\""
+    exit 1
   fi
 else
   say "Ad-hoc signing (no Developer ID certificate found)"
-  codesign --force --deep -s - "$APP" 2>/dev/null || true
+  codesign --force --deep --entitlements "$ENTITLEMENTS" -s - "$APP" 2>/dev/null || true
   # Ad-hoc seals pass plain --verify but NOT --deep --strict (that path is for
   # authority chains), so check the honest thing: that a signature exists & is valid.
   if codesign --verify "$APP" >/dev/null 2>&1; then
@@ -136,7 +148,7 @@ echo "DMG: $DMG"
 echo
 echo "Icon: pixel-verified transparent & shipped byte-exact (formDAM.icon in src-tauri/icons/ upgrades to the modern format when you add it)."
 echo
-echo "For a PUBLIC release later, replace the ad-hoc signature w/ a real one:"
-echo "  codesign --force --deep --options runtime -s 'Developer ID Application: YOU' formDAM.app"
+echo "For a PUBLIC release, build w/ a Developer ID in the keychain (or APPLE_SIGNING_IDENTITY set) so tauri signs the app, then:"
+echo "  codesign --force --timestamp -s 'Developer ID Application: YOU' formDAM_v${VERSION}.dmg"
 echo "  xcrun notarytool submit formDAM_v${VERSION}.dmg --keychain-profile formdam --wait"
 echo "  xcrun stapler staple formDAM_v${VERSION}.dmg"

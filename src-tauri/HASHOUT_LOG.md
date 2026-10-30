@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### macOS signing under formcompiler · Entitlements.plist, ../setup/build_macos_app engine signing, ../setup/package_dmg keeps tauri's signature
+- refers-to: Entitlements.plist com.apple.security.cs.disable-library-validation and com.apple.security.cs.allow-unsigned-executable-memory; build_macos_app ENGINE, ENTITLEMENTS, IDENTITY from APPLE_SIGNING_IDENTITY before the keychain lookup, the Mach-O signing loop over the engine tree; package_dmg ENTITLEMENTS, IDENTITY, SIGNED, REPAIRED and the three signing branches, the closing release hint
+- kind: rationale + replaced code
+- logged: v1.28.3 · 2026-10-30
+
+Replaced: package_dmg ran codesign --force --deep --options runtime -s "$IDENTITY" over the whole app whenever a Developer ID was in the keychain, and codesign --force --deep -s - otherwise. formcompiler imports the Developer ID before the build and tauri signs the app w/ hardened runtime, Entitlements.plist and a timestamp, then notarizes it; the --deep re-sign dropped the entitlements and the timestamp, so the app lost the photos-library entitlement and failed notarization. package_dmg now keeps a signature that passes codesign --verify --deep --strict, re-signs only when the icon repair changed the bundle (Developer ID w/ --options runtime --timestamp --entitlements, no --deep: the engine lives in Resources, so it is sealed as a resource and keeps its own signature), and signs ad hoc only when the app is unsigned and no identity exists. The icon repair should stay a no-op: build_macos_app copies icons/source/icon.icns into icons/icon.icns before tauri builds. The engine was signed ad hoc once at its top binary; notarization inspects every Mach-O in the bundle, so w/ an identity each Mach-O file in the PyInstaller tree is signed w/ it, hardened runtime, a timestamp and Entitlements.plist, the top binary last. A frozen Python under the hardened runtime loads its own unsigned-by-Apple extension modules and ctypes code, hence the two cs entitlements. The identity comes from APPLE_SIGNING_IDENTITY first (formcompiler's Build env), then the keychain; "-" counts as none.
+
 ### tauri.conf.json version from ../frontend/package.json · Cargo.toml and Cargo.lock 1.27.0
 - refers-to: tauri.conf.json version; Cargo.toml package version; Cargo.lock formdam-desktop version
 - kind: rationale + replaced code
