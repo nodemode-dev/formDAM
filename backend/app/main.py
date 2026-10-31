@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -11,6 +12,10 @@ from .db import init_db, q, ex, setting_get, setting_set
 from .services import classify
 from .routers import albums, automation, browse, curate, dedup, discover, edit, files, geo, importer, library, mediaapi, organize, output, packages, people, render, syncapi, system, trash
 from .security import local_only_guard
+
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("text/css", ".css")
 
 
 @asynccontextmanager
