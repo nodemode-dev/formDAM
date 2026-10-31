@@ -16,7 +16,7 @@ setup/formDAM_banner       # the formDAM icon as an ASCII banner (NO_COLOR, FORM
 
 Prefer a single process? Build the UI once (`cd frontend && npm run build`) & the backend serves it at http://127.0.0.1:8000 directly.
 
-ffmpeg on PATH is needed for video thumbnails, video dedup & video face scanning; w/o it photos still work fully.
+Video thumbnails, video dedup & video face scanning use ffmpeg: the desktop app downloads its own LGPL build on first run when none is on PATH; w/o it photos still work fully.
 
 ## Features
 

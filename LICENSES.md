@@ -83,7 +83,7 @@ The Linux bundles also carry the build machine's WebKitGTK, GTK and GLib (LGPL-2
 
 | Component | License | Decision |
 | --- | --- | --- |
-| ffmpeg / ffprobe | LGPL/GPL (build-dependent) | called as subprocess on PATH; never copied into the bundle, keeping the .app proprietary-safe & the binary user-replaceable. brew install ffmpeg |
+| ffmpeg / ffprobe 7.1.5 | LGPL-2.1-or-later for the downloaded build; an installed one keeps its own licence | called as subprocess on PATH; never copied into the bundle, keeping the .app proprietary-safe & the binary user-replaceable. When none is installed, the engine downloads the LGPL build (`--disable-gpl --disable-nonfree`; libopus and libvpx BSD-3-Clause) from the nodemode-dev/formcut-binaries release on first run, checks every file's SHA-256 against `backend/app/ffmpeg_record.py`, and puts it first on PATH; its source is attached to that release |
 | tesseract | Apache-2.0 | OCR for text search; same tier & reasoning as ffmpeg. brew install tesseract |
 | pymobiledevice3 (<8) | GPL-3.0-or-later | REMOVED from the bundle at zip v1.15.0: it had been collected into the frozen engine since v0.11.0 w/o a ledger row, & GPL is banned in anything we distribute. The AFC code path remains as an optional dev fallback that only activates if the user pip-installs the package themselves (never bundled); the native ImageCaptureCore path replaces it |
 
