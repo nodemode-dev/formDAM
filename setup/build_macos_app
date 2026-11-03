@@ -193,7 +193,7 @@ if ! cargo tauri build --bundles app -- --locked; then
   fi
 fi
 
-APP="$CARGO_TARGET_DIR/release/bundle/macos/formDAM.app"
+APP="$CARGO_TARGET_DIR/release/bundle/macos/FormDAM.app"
 say "Verifying the bundled icns (placed BEFORE the build now, so tauri's signature stays untouched)"
 if diff -q src-tauri/icons/source/icon.icns "$APP/Contents/Resources/icon.icns" >/dev/null 2>&1; then
   echo "   icon.icns is byte-identical to your provided file & the signature is tauri's own"

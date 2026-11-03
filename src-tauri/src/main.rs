@@ -571,10 +571,10 @@ fn main() {
             let _ = HANDLE.set(handle.clone());
 
             let about = AboutMetadataBuilder::new()
-                .name(Some("formDAM"))
+                .name(Some("FormDAM"))
                 .comments(Some("Local-first digital asset manager for photos & video"))
                 .build();
-            let app_menu = SubmenuBuilder::new(app, "formDAM")
+            let app_menu = SubmenuBuilder::new(app, "FormDAM")
                 .about(Some(about))
                 .separator()
                 .text("open-settings", "Settings...")
@@ -636,7 +636,7 @@ fn main() {
                 "main",
                 WebviewUrl::App("splash.html".into()),
             )
-            .title("formDAM")
+            .title("FormDAM")
             .disable_drag_drop_handler()
             .transparent(true)
             .visible(false)
