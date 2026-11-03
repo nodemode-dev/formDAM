@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "formDAM",
+  "productName": "FormDAM",
   "version": "../frontend/package.json",
   "identifier": "ai.nodemode.dam",
   "build": {
