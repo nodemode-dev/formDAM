@@ -1,128 +1,172 @@
-# formDAM
+<p align="center">
+  <img src="assets/app-icon/formDAM-256.png" width="128" height="128" alt="FormDAM icon: a play-plate M mark on a dark squircle with a pink to violet glow">
+</p>
 
-Open-source, local-first photo library and asset manager: a managed or referenced originals store w/ a SQLite catalog, RAW & HEIC, full EXIF, ratings, labels & hierarchical keywords, smart albums, an offline map, places & trips, CLIP visual search, pets & content collections, a non-destructive editor, XMP sidecars, export, print & contact sheets, memories & slideshows, albums & passkey-locked private albums, a 30-day Recently Deleted vault, people recognition across photos & video frames, & the deduplakit visual engine bundled in as the duplicate finder. Everything runs on your machine; the engine only accepts loopback connections & no photo, coordinate or query leaves it. Recognition (Look Up, Clean Up, people, search) runs on device w/ permissively licensed models. Sharing is an AES-256 encrypted zip you send yourself, by any means, w/ a password you pass on separately; there is no share server. Sync (through a folder you choose), the family Shared Library (local network only, between formDAM apps holding the same share key) & automation access for scripts, agents & MCP tools are all opt-in & off until you turn them on; even then private, hidden & vaulted items never leave.
+<h1 align="center">FormDAM</h1>
 
-## Quickstart
+<p align="center">
+  <b>Photo library; a local-first asset manager for the Form family.</b><br>
+  A SQLite catalog, RAW and HEIC, search, maps, a non-destructive editor and private albums,<br>
+  on your machine with no account. Nothing leaves it unless you send it.
+</p>
 
-```
-./formDAM                  # the master: icon banner, install what is missing (idempotent), boot, opens http://127.0.0.1:5173
-./build_app                # the desktop app, start to finish (./formDAM desktop build runs the same script)
-setup/formDAM_oc_install   # install only: backend venv + pip deps + face, CLIP, Clean Up & Look Up models (~650 MB on disk, ~1.2 GB downloaded once, sha256-pinned) + frontend npm install
-setup/formDAM_boot         # boot only: backend (127.0.0.1:8000) & frontend dev server (127.0.0.1:5173); FORMDAM_OPEN=0 skips the browser
-setup/formDAM_banner       # the formDAM icon as an ASCII banner (NO_COLOR, FORMDAM_BANNER=0 & FORMDAM_BANNER_COLOR honored)
-```
+<p align="center">
+  <img alt="version 1.28.6" src="https://img.shields.io/badge/version-1.28.6-eef0f4?style=flat-square">
+  <img alt="Python FastAPI" src="https://img.shields.io/badge/python%20%C2%B7%20fastapi-engine-3776ab?style=flat-square&logo=python&logoColor=white">
+  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
+  <img alt="Status: active" src="https://img.shields.io/badge/status-active-d69e2e?style=flat-square">
+</p>
 
-`./formDAM` opens the interface at http://127.0.0.1:5173 with a one-time launch key in the address, which connects that browser to the engine; to connect another browser, use the address the boot script prints. A window opened without it shows a "not connected" card, because the engine answers only windows its launcher opened. The formDAM mark lives in `frontend/public/` as `formDAM-icon.svg` & `formDAM-icon.png` (source art, composed diamond app icon w/ neon glow, 512 PNG) & doubles as favicon + sidebar brand. Windows: `formDAM.bat` does the same, with its steps in `setup\`.
+<p align="center">
+  <a href="https://formdam.formai.studio/"><b>Download FormDAM on formai.studio</b></a> ·
+  <a href="https://github.com/nodemode-dev/formcompiler/releases?q=formDAM-v&expanded=true">Latest release</a> ·
+  <a href="#run-it-from-source">Run it from source</a>
+</p>
 
-Prefer a single process? Build the UI once (`cd frontend && npm run build`) & the backend serves it at http://127.0.0.1:8000 directly.
+<br>
 
-Video thumbnails, video dedup & video face scanning use ffmpeg: the desktop app downloads its own LGPL build on first run when none is on PATH; w/o it photos still work fully.
+<p align="center">
+  <img src="docs/images/formDAM-hero.jpg" alt="The FormDAM Library in All Photos view: 62 items grouped by date in a square grid, with Pinned, Albums and Utilities in the sidebar" width="100%">
+  <br>
+  <sub>The Library in All Photos view, 62 items grouped by day.</sub>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> · <a href="#everything-in-the-box">In the box</a> · <a href="#under-the-hood">Under the hood</a> · <a href="#download">Download</a> · <a href="#run-it-from-source">Run from source</a>
+</p>
+
+<table>
+  <tr>
+    <td width="25%" valign="top">
+      <h3>Local-first</h3>
+      The engine answers only loopback connections, and no photo, coordinate or query leaves your machine.
+    </td>
+    <td width="25%" valign="top">
+      <h3>Finds anything</h3>
+      One search over text, dates and places, plus CLIP visual search, run on device with permissively licensed models.
+    </td>
+    <td width="25%" valign="top">
+      <h3>Non-destructive</h3>
+      Edits, XMP sidecars and a 30-day Recently Deleted vault keep every original safe and every change reversible.
+    </td>
+    <td width="25%" valign="top">
+      <h3>Private by design</h3>
+      Passkey-locked albums, encrypted sharing packages and opt-in sync, with private items never leaving.
+    </td>
+  </tr>
+</table>
 
 ## Features
 
-- **Import**: paste a folder/file path, browse a folder on disk, or drop files & folders anywhere (onto an album to file them there); files are copied, moved or added in place (referenced), SHA-256 fingerprinted, filed as an import batch, & exact duplicates are skipped at the door. XMP sidecars from Bridge or Lightroom come along (ratings, labels, keywords, IPTC).
-- **Formats & metadata**: HEIC/HEIF, 23 camera RAW extensions via LibRaw, video via ffmpeg; EXIF, GPS, lens & exposure, Apple maker notes (Live Photo pairing, bursts, selfies, portraits), QuickTime tags.
-- **Library grid**: day-grouped tiles w/ Years / Months / All Photos views, zoom slider, combinable quick filters (media types, rating, label, keyword), eleven sort orders, stacks, Cmd-click & Shift-click selection, infinite scroll via keyset cursors.
-- **Viewer**: full-size photos & range-streamed video playback, info panel w/ camera data, location, keywords, people, subjects & recognised text, ratings & labels from the keyboard, download, delete.
-- **Organize**: 0-5 stars, seven colour labels, reject, titles, captions & alt text, a hierarchical keyword manager w/ shortcuts, smart albums, album folders, stacks & bursts, pinned views, batch rename w/ tokens, Show in Finder & Edit With (a working copy opens in the other app & each save comes back as a revertible edit).
-- **Search**: one search over every text field, dates & places, plus CLIP ("puppies in flowers"), suggestions, Advanced Find (Cmd-F) saved as smart albums.
-- **Places**: offline reverse geocoding, an offline map w/ clustered thumbnails, city & country collections, trips, location & date editing singly or in batches.
-- **Recognition**: subjects, pets (grouped per animal), content collections (documents, receipts, handwriting, illustrations, QR codes), groups of people, & Look Up in the info panel: about 384,000 species of animals, plants & fungi (BioCLIP, named to species, genus or family w/ the scientific name), dog & cat breeds, about 3,700 landmarks (any landmark in range of the photo's location competes, the best-known 1,500 otherwise), about 590 famous artworks w/ their artists, & about 1,200 foods & drinks. Media types include time-lapse, cinematic, spatial, animated & long exposure.
-- **Edit**: non-destructive adjustments (light, colour, B&W, curves, levels, definition, sharpen, noise, vignette), filters, crop & straighten, Clean Up (brush, click Select Object or pick from suggested distractions to remove them w/ LaMa; brushing over a face pixelates it), markup, lens corrections, a Live Photo Long Exposure effect, copy & paste edits, revert, video trim; RAW files add a develop section (Kelvin white balance & tint, exposure, highlight recovery, demosaic, noise, fringe).
-- **Sharing**: Share as Encrypted Package turns photos or an album into a WinZip AES-256 zip w/ a generated password (or your own of at least 16 characters; zip encryption is guessed quickly offline, so short passwords are refused); file names, metadata & edits are inside the encryption & members carry random names. Location (GPS & place names in EXIF, XMP & IPTC, in edits & Live Photo videos too) is stripped losslessly unless you include it. Opening a package never changes photos you already have; it only adds new ones & links the rest. Send the zip by Mail, Messages, AirDrop or anything else & pass the password on separately; the recipient drops it onto formDAM, enters the password & gets a new album or stack. Shared album packages carry notes both ways & merge back into the same album w/o duplicates. A static web gallery for any host is still available.
-- **Sync & Shared Library**: both off by default. Sync keeps this library the same on your other computers through a folder they all see (iCloud Drive, Dropbox, Syncthing, a NAS). The family Shared Library works only on the local network between formDAM apps holding the same share key: peers find each other by an authenticated beacon & exchange signed, encrypted requests on their own port; an app w/ another key, or anything outside private network ranges, is refused. A Both / Personal / Shared switch sits in the filter menu.
-- **Privacy**: automation access (scripts, agents, MCP tools) is off by default; Settings > Privacy turns it on & shows a token to give them. Only the app window & the desktop shell reach the engine otherwise: the launcher passes a per-launch key that the window trades for an HttpOnly session cookie, & the key is removed from the engine's environment so programs it starts never see it.
-- **Output**: XMP sidecars, File Info (IPTC) w/ templates, export to JPEG, HEIC, PNG, TIFF or WebP w/ sizing, naming, subfolders & metadata options, print & PDF contact sheets, saved workflows.
-- **Curation**: memories (generated or described) w/ generated music, slideshows, compare w/ linked zoom.
-- **Libraries**: several libraries, repair, consolidate referenced files.
-- **Albums**: create, rename, delete, add/remove via multi-select. Private albums require a passkey (scrypt-hashed) & their items disappear from every general view, incl. People & Duplicates.
-- **Vault**: one vault passkey guards Recently Deleted & doubles as the fallback key for private albums w/o their own. Unlocks issue short-lived HMAC tokens; nothing is stored in the browser. In the desktop app the passkey can be saved to the system's own store & unlocked w/ the system's own check: Touch ID & the Keychain on macOS, Windows Hello (face, fingerprint or PIN) & Credential Manager on Windows, polkit sign-in (the fingerprint reader where fprintd has a finger enrolled, otherwise the account password) & the Secret Service (GNOME Keyring, KWallet) on Linux.
-- **Recently Deleted**: trash is a database state, not a file move. Items auto-purge after 30 days (configurable), restore or delete forever any time. Duplicate resolutions land here too, so they are always reversible.
-- **People**: YuNet face detection + SFace 128-d embeddings, incremental clustering by cosine similarity. Videos are sampled at the same timestamps the dedup engine uses, so people are found in footage too. Rename clusters as you go.
-- **Duplicates**: the bundled deduplakit engine (dual-gradient dHash + confidence-masked DCT pHash + color grid) finds exact & visually-identical sets across photos & videos; resolving keeps the best copy & trashes the rest.
-- **Utilities & Collections**: screenshots & screen recordings auto-detected, Recently Saved / Recently Viewed, counts everywhere, honest empty states for what is not built yet.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/formDAM-viewer.webp" alt="The viewer open on a Venice waterfront photo with the info panel showing rating, labels, keywords, location and camera data" width="100%">
+      <br><sub>The viewer with its info panel.</sub>
+      <h3>Look closely, organize fast</h3>
+      Full-size photos and video with ratings, colour labels, keywords, location and exposure beside them. Everything works from the keyboard.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/formDAM-editor.webp" alt="The editor with the Adjust tab: lens corrections, light, colour, black and white and detail sliders beside a Venice photo" width="100%">
+      <br><sub>The non-destructive editor, Adjust tab.</sub>
+      <h3>Edit without touching the original</h3>
+      Light, colour, curves, filters, crop, markup and Clean Up, all revertible. Copy and paste edits across photos.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/formDAM-places.webp" alt="The Places view: an offline world map with clustered photo thumbnails above a grid of city collections" width="100%">
+      <br><sub>Places: an offline map with clustered thumbnails.</sub>
+      <h3>Your library on a map</h3>
+      Offline reverse geocoding turns GPS into city and country collections and trips. No map tiles are fetched.
+    </td>
+  </tr>
+</table>
 
-## Desktop app
+## Everything in the box
 
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Library and organize</h4>
+      Years, Months, All Photos · quick filters · stacks · 0 to 5 stars · colour labels · hierarchical keywords · smart albums · album folders · batch rename · Advanced Find
+    </td>
+    <td width="33%" valign="top">
+      <h4>Recognition, on device</h4>
+      People and pets · Look Up (species, breeds, landmarks, artworks, foods) · Clean Up with LaMa · documents, receipts, QR codes · CLIP search
+    </td>
+    <td width="33%" valign="top">
+      <h4>Formats</h4>
+      Opens: JPEG, PNG, WebP, TIFF, HEIC and HEIF, 23 camera RAW extensions, video via ffmpeg · Saves: JPEG, HEIC, PNG, TIFF, WebP · Sidecars: XMP
+    </td>
+  </tr>
+</table>
+
+## Under the hood
+
+- **Engine:** FastAPI and a SQLite catalog (`dam.db`) in a library folder you choose; originals are copied, moved or referenced in place, SHA-256 fingerprinted.
+- **Interface:** vanilla TypeScript and Vite with inline `currentColor` icons; the engine can serve the built UI itself.
+- **Desktop:** a Tauri shell over the engine frozen with PyInstaller; the bundle is built by `./build_app` or by FormCompiler.
+- **Local only:** a per-launch key is traded for an HttpOnly session cookie, and automation access for scripts is off until Settings > Privacy turns it on.
+
+## Download
+
+| Platform | Download | Release |
+|---|---|---|
+| macOS | [Download FormDAM for macOS](https://formai.studio/get/formdam/macos) | [FormDAM releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formDAM-v&expanded=true) |
+| Windows | [Download FormDAM for Windows](https://formai.studio/get/formdam/windows) | [FormDAM releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formDAM-v&expanded=true) |
+| Linux | [Download FormDAM for Linux](https://formai.studio/get/formdam/linux) | [FormDAM releases on FormCompiler](https://github.com/nodemode-dev/formcompiler/releases?q=formDAM-v&expanded=true) |
+
+All FormDAM builds are compiled and released from [FormCompiler](https://github.com/nodemode-dev/formcompiler); this repo holds the source.
+
+## Run it from source
+
+Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
+
+**Requires:** Python 3.10+, Node 20.19 or 22.12+. `ffmpeg` on PATH is optional and adds video thumbnails and video scanning.
+
+```sh
+git clone git@github.com:nodemode-dev/formDAM.git
+cd formDAM
+setup/formDAM_oc_install   # backend venv, pip deps, models (about 1.2 GB downloaded once, sha256-pinned), npm install
+./formDAM                  # installs what is missing, boots, opens http://127.0.0.1:5173
 ```
-./build_app            # macOS or Linux, from a fresh clone
-  --no-install         # macOS: keep the app in place instead of copying it to Applications
-  --install            # Linux: install the built .deb with apt
-  --open               # open the app when the build is done
-  --clean              # rebuild the Rust side and the frozen engine from nothing
 
-build_app.bat          # Windows, from a fresh clone
-  --install            # run the NSIS installer when the build is done
-  --open               # open the folder with the installers
-```
+`./build_app` builds the desktop app instead. On Windows use `formDAM.bat`. Set `FORMDAM_LIBRARY` to choose the library folder (default `<repo>/library`).
 
-`./build_app` checks the tools (Xcode command line tools on macOS, Python 3.10+, Node 20.19 or 22.12+, Rust, installed w/ rustup into `~/.cargo` when missing), runs `setup/build_macos_app` on macOS or `setup/build_linux_app` on Linux, then on macOS copies `formDAM.app` to `/Applications` (or `~/Applications` when that is not writable); on Linux it reports the `.deb`, which also installs the polkit action that the unlock prompt uses (`pkcheck` comes w/ polkit; a keyring daemon such as GNOME Keyring or KWallet holds the saved passkey). Every step is logged to `build_app.log`. On Windows, `build_app.bat` (or `formDAM.bat desktop build`) checks Python, Node & Rust (the MSVC toolchain rustup offers) and runs `setup\build_windows_app.bat`, which fetches the models, builds the window, freezes `formdam-backend.exe`, generates `icon.ico` & produces NSIS & MSI installers in `src-tauri\target\release\bundle`; the installer fetches WebView2 if the machine lacks it.
+| Service | URL | Notes |
+|---|---|---|
+| Interface | http://127.0.0.1:5173 | Vite dev server; open it with the launch key the boot script prints |
+| Engine | http://127.0.0.1:8000 | FastAPI; serves the built UI too after `cd frontend && npm run build` |
 
-`setup/build_macos_app` on its own fetches the face models, builds the UI, freezes the engine into a single `formdam-backend` binary (PyInstaller, selfcheck-gated), generates the icon set from `src-tauri/icons/icon.png`, & produces `formDAM.app` + a `formDAM_v<version>.dmg` via Tauri in `src-tauri/target.nosync/release/bundle/`. The bundle is unsigned; first launch is right-click > Open (or clear quarantine w/ `xattr -dr com.apple.quarantine .../formDAM.app`). The desktop app stores its library in `~/Library/Application Support/DAM/library` (an older `DAMp` folder is adopted automatically on first launch); that data folder keeps its name so existing libraries open unchanged. Engine logs go to `~/Library/Logs/formDAM`. ffmpeg stays a user-supplied PATH binary (`brew install ffmpeg`). Licensing decisions live in LICENSES.md.
+**Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to FormCompiler. See [`CLAUDE.md`](CLAUDE.md) for the repo rules.
 
-## Configuration
+## Repository
 
-| Env var | Default | Meaning |
-| --- | --- | --- |
-| `FORMDAM_LIBRARY` | `<repo>/library` | Library root (originals, cache, vault, `dam.db`) |
-| `FORMDAM_MODELS` | `backend/models` | Model directory (face, CLIP, Clean Up, Look Up) |
-| `FORMDAM_AUTOMATION` | unset | `1` lets any local caller use the API (the test suite & scripted runs need it); otherwise turn on Automation Access in Settings > Privacy |
-| `FORMDAM_SHELL_KEY` | set by the launcher | Per-launch key the desktop shell or `setup/formDAM_boot` passes to the engine; without it the engine makes one & prints the address that connects a window |
-| `FORMDAM_CONFIG` | Application Support/DAM, %APPDATA%/DAM or ~/.config/dam | Where the list of known libraries is kept |
-| `FORMDAM_FACE_THRESHOLD` | `0.55` | Cosine threshold for person clustering (also adjustable in People) |
-| `FORMDAM_TRASH_DAYS` | `30` | Days before trash auto-purges |
+| Path | What it is |
+|---|---|
+| `backend/` | FastAPI engine and SQLite catalog; `app/dedup` is the vendored deduplakit core |
+| `frontend/` | Vanilla TypeScript and Vite interface |
+| `src-tauri/` | Tauri desktop shell |
+| `setup/` | Install, boot and build scripts for macOS, Linux and Windows |
 
-The older `DAM_*` and `DAMP_*` spellings are still read, in that order, when the `FORMDAM_*` one is unset (not for `FORMDAM_AUTOMATION`, which only answers to its own name).
+---
 
-## Layout
+## Maintainers
 
-```
-backend/    FastAPI + SQLite; app/dedup is the vendored deduplakit engine core
-frontend/   vanilla TS + Vite; dark themeable UI, inline currentColor SVG icons
-library/    created on first run: originals/, cache/, vault/, dam.db
-```
+| Maintainer | Role |
+|---|---|
+| [@nodemode-ai](https://github.com/nodemode-ai) | Owner |
+| [@gbarnai](https://github.com/gbarnai) | Co-owner |
 
-## Dependency licenses
-
-| Dependency | License | Where it runs |
-| --- | --- | --- |
-| fastapi | MIT | backend |
-| uvicorn | BSD-3-Clause | backend |
-| Pillow | MIT-CMU | backend |
-| numpy | BSD-3-Clause | backend |
-| opencv-python-headless | Apache-2.0 | backend |
-| pi-heif | BSD-3-Clause (libheif and libde265 LGPL, dynamic; decode only) | backend |
-| exifread | BSD-3-Clause | backend |
-| rawpy | MIT (LibRaw LGPL-2.1 OR CDDL-1.0, dynamic) | backend |
-| onnxruntime | MIT | backend |
-| YuNet model (opencv_zoo) | MIT | backend, downloaded at install |
-| SFace model (opencv_zoo) | Apache-2.0 | backend, downloaded at install |
-| CLIP ViT-B/32 LAION-2B, int8 ONNX | MIT | backend, downloaded at install |
-| GeoNames cities5000 (reduced) | CC BY 4.0 | backend/app/data, place names |
-| Natural Earth admin-0 | Public domain | backend/app/data, map outlines |
-| LaMa inpainting (opencv/inpainting_lama ONNX) | Apache-2.0 | backend, downloaded at install, Clean Up |
-| EfficientSAM-Ti & YOLOX-s (opencv_zoo ONNX) | Apache-2.0 | backend, downloaded at install, Clean Up select & suggestions |
-| BioCLIP image encoder (int8 ONNX) & species embeddings | MIT | backend, downloaded at install, Look Up species |
-| Wikidata landmarks, artworks & dishes | CC0 | backend/app/data, Look Up |
-| pyzipper & pycryptodomex | MIT & BSD-2-Clause / public domain | backend, encrypted packages |
-| ffmpeg | LGPL/GPL | external PATH binary, called as a subprocess, never bundled |
-| vite | MIT | frontend dev/build |
-| typescript | Apache-2.0 | frontend dev/build |
-| vitest | MIT | frontend tests |
-| jsdom | MIT | frontend tests |
-
-Place data from GeoNames (geonames.org), CC BY 4.0. Country outlines from Natural Earth. Parts of the rename, EXIF and XMP code are adapted from FormLit (Apache-2.0); see LICENSES.md.
-
-Models are fetched by the installer w/ SHA-256 verification bc they are too large to ship in the repo: face (YuNet, SFace, under 40 MB), CLIP (146 MB), Clean Up (LaMa 89 MB, EfficientSAM 47 MB, YOLOX 35 MB) & Look Up (BioCLIP 84 MB plus species embeddings, downloaded once at 850 MB & stored as 192 MB int8). Look Up's landmark, art & food lists are rebuilt w/ `setup/gen_lookup_data.py`.
-
-Every component and its licence is in LICENSES.md; formDAM's own licence is at the end of this file.
-
-This product includes DNG technology under license by Adobe Systems Incorporated.
-
-## Trademarks
-
-Adobe, Bridge, Lightroom and Photoshop are either registered trademarks or trademarks of Adobe in the United States and/or other countries. Apple and Photos are trademarks of Apple Inc. formDAM is not affiliated with or endorsed by Adobe or Apple; the names describe file formats and compatibility only (XMP sidecars from Bridge or Lightroom, DNG files).
+Code owners are set in [`.github/CODEOWNERS`](.github/CODEOWNERS).
 
 ## License
 
-Apache-2.0. Copyright 2026 NodeAgentc, Inc. See `LICENSE` and `NOTICE.md`. formDAM was MIT licensed up to v1.27.5.
+FormDAM is licensed under the Apache License 2.0 ([`LICENSE`](LICENSE), SPDX `Apache-2.0`). Copyright 2026 NodeAgentc, Inc. Third-party notices: [`NOTICE.md`](NOTICE.md), [`LICENSES.md`](LICENSES.md). FormDAM was MIT licensed up to v1.27.5.
+
+This product includes DNG technology under license by Adobe Systems Incorporated.
+<sub>Adobe, Bridge, Lightroom and Photoshop are trademarks of Adobe, and Apple and Photos are trademarks of Apple Inc. FormDAM is an independent project and is not affiliated with or endorsed by them; the names describe file formats and compatibility only.</sub>
+
+<sub>Screenshot content: CC0 photos from Poly Haven.</sub>
