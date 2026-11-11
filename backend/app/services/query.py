@@ -73,6 +73,13 @@ def keyword_ids(name_or_id: Any) -> List[int]:
 
 
 def parse_date_range(text: str) -> Optional[Tuple[float, float]]:
+    try:
+        return _parse_date_range(text)
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def _parse_date_range(text: str) -> Optional[Tuple[float, float]]:
     s = text.strip().lower()
     m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", s)
     if m:

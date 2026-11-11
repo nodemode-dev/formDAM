@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/query.py parse_date_range · date-like text that is not a real date is searched as text
+- refers-to: query parse_date_range (now a wrapper), _parse_date_range (the former body, unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The regex branches built datetime() without checking ranges, so search text such as 2024-13, 2023-45, 0000-01 or 2024-02-30 (file name fragments often look like this), or a smart album date rule holding one, raised ValueError and the search, the album count or Discover answered 500; on Windows a bare year before 1970 raised OSError from timestamp(). The body moved unchanged into _parse_date_range, and parse_date_range returns None when it raises ValueError, OverflowError or OSError, so the text falls back to the plain LIKE search. Checked with a scratch run: the four strings above and 9999-12 give None and text_sql builds a clause; 2024-02-03 and 2024-02 still parse.
+
 ### routers/trash.py bio_unlock · device unlock is for the window, and fails when the vault key does not open
 - refers-to: trash bio_unlock (window_allowed or shell_allowed first; unlock_vault's result checked); keychain_enable unchanged
 - kind: fix
