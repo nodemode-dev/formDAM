@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from .. import jobs
 from ..db import ex, exn, media_dict, q, q1
 from ..services import facesvc
+from .guard import ensure_visible
 from .revalidate import NO_STORE, must_not_store, revalidated_file
 
 router = APIRouter()
@@ -225,11 +226,14 @@ def rename_person(person_id: int, body: RenameIn):
 
 @router.get("/faces/{face_id}/thumb")
 def face_thumb(face_id: int, request: Request):
+    row = q1("SELECT m.* FROM faces f JOIN media m ON m.id=f.media_id WHERE f.id=?", (face_id,))
+    if row is None:
+        raise HTTPException(404, detail="Face crop unavailable")
+    ensure_visible(row, request)
     path = facesvc.face_crop(face_id)
     if path is None:
         raise HTTPException(404, detail="Face crop unavailable")
-    row = q1("SELECT m.* FROM faces f JOIN media m ON m.id=f.media_id WHERE f.id=?", (face_id,))
-    if row is None or must_not_store(row):
+    if must_not_store(row):
         with open(path, "rb") as handle:
             return Response(handle.read(), media_type="image/jpeg", headers={"Cache-Control": NO_STORE})
     return revalidated_file(request, path, "image/jpeg")

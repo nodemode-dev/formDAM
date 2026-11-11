@@ -83,3 +83,24 @@ def test_a_face_crop_is_revalidated_and_stops_being_stored_once_hidden(client, t
     hidden = client.get(url, headers=auth)
     assert hidden.headers["cache-control"] == "no-store"
     assert "etag" not in hidden.headers
+
+
+def test_a_hidden_items_face_crop_needs_the_vault_token(client, tmp_path, monkeypatch):
+    media_id, face_id = face_of(client, tmp_path, monkeypatch)
+    url = f"/api/faces/{face_id}/thumb"
+    auth = vault_auth(client)
+    assert client.post(f"/api/media/{media_id}/hide", headers=HEADERS).status_code == 200
+    assert client.get(url).status_code == 401
+    assert client.get(url, headers=auth).status_code == 200
+
+
+def test_a_private_items_face_crop_needs_the_album_passkey(client, tmp_path, monkeypatch):
+    media_id, face_id = face_of(client, tmp_path, monkeypatch)
+    from app.db import ex
+
+    ex("UPDATE media SET private=1 WHERE id=?", (media_id,))
+    assert client.get(f"/api/faces/{face_id}/thumb").status_code == 401
+
+
+def test_a_face_crop_of_a_missing_face_is_not_found(client):
+    assert client.get("/api/faces/987654/thumb").status_code == 404
