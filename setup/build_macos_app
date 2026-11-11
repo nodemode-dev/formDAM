@@ -209,6 +209,24 @@ if ! npx --yes @tauri-apps/cli@2.12.3 build --bundles app -- --locked; then
 fi
 
 APP="$CARGO_TARGET_DIR/release/bundle/macos/FormDAM.app"
+NOTARIZED=0
+STAPLED=0
+if [ -n "$IDENTITY" ] && { { [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; } || { [ -n "${APPLE_API_KEY:-}" ] && [ -n "${APPLE_API_ISSUER:-}" ] && [ -n "${APPLE_API_KEY_PATH:-}" ]; }; }; then
+  NOTARIZED=1
+  say "Checking the notarization ticket on the app (tauri staples it but does not check that it took)"
+  for attempt in 1 2 3; do
+    if xcrun stapler validate "$APP" >/dev/null 2>&1; then STAPLED=1; break; fi
+    [ "$attempt" = 3 ] && break
+    echo "   no ticket on the app yet (attempt $attempt of 3); stapling again in $((attempt * 20))s"
+    sleep $((attempt * 20))
+    xcrun stapler staple "$APP" >/dev/null 2>&1 || true
+  done
+  if [ "$STAPLED" = 1 ]; then
+    echo "   the ticket is stapled & valid"
+  else
+    echo "   WARNING: no ticket could be stapled to the app; tauri's notarization above was accepted, so Gatekeeper finds the ticket online or on a stapled DMG"
+  fi
+fi
 say "Verifying the bundled icns (placed BEFORE the build now, so tauri's signature stays untouched)"
 if diff -q src-tauri/icons/source/icon.icns "$APP/Contents/Resources/icon.icns" >/dev/null 2>&1; then
   echo "   icon.icns is byte-identical to your provided file & the signature is tauri's own"
@@ -228,7 +246,11 @@ echo "  setup/apply_icon"
 echo
 echo "Icon: your transparent icns ships byte-exact. (Optional: an Icon Composer formDAM.icon in src-tauri/icons/ upgrades to the modern format on the next build.)"
 echo
-if [ -n "$IDENTITY" ]; then
+if [ "$STAPLED" = 1 ]; then
+  echo "Signed as: $IDENTITY, notarized, ticket stapled to the app (the DMG itself is not signed or notarized here; the packager prints the commands)"
+elif [ "$NOTARIZED" = 1 ]; then
+  echo "Signed as: $IDENTITY, notarized; no ticket stapled to the app (the DMG itself is not signed or notarized here; the packager prints the commands)"
+elif [ -n "$IDENTITY" ]; then
   echo "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)"
 else
   echo "Ad-hoc signed (no Developer ID certificate found). First launch: right-click > Open."

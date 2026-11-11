@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_macos_app · the app's stapled ticket is checked after the build
+- refers-to: build_macos_app after APP: NOTARIZED, STAPLED, the three-attempt loop around xcrun stapler validate and xcrun stapler staple, the WARNING line; the closing "Signed as" lines
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: the closing line "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)", printed for every Developer ID build, which was wrong once tauri notarized. tauri runs xcrun stapler staple after an Accepted notarization but never reads its exit status, so a staple that fails (the ticket can take a little while to be served) leaves an unstapled app and a build that says nothing. When the identity and the notarization credentials tauri reads are set (APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID, or APPLE_API_KEY, APPLE_API_ISSUER and APPLE_API_KEY_PATH; a key file tauri finds by itself in a private_keys folder is not looked for, so that set-up skips the check), the script now validates the staple before the app goes into the disk image and, when it is missing, staples again after 20 s and after 40 s more. It warns and carries on when the ticket still is not there: the app is notarized either way, Gatekeeper reads the ticket online, and formcompiler notarizes and staples the DMG, which covers what is inside it; so a slow ticket server does not fail a release. Stapling writes Contents/CodeResources, which the signature does not seal. The closing line now says which of the three states the build ended in, and that the DMG itself is not signed or notarized by these scripts.
+
 ### ../setup/build_macos_app · only the engine's executables carry entitlements
 - refers-to: build_macos_app the signing loop's case: *Mach-O*executable* w/ --entitlements, *Mach-O* w/o; the say line above it
 - kind: correction + replaced code
