@@ -114,10 +114,11 @@ if [ -z "$IDENTITY" ]; then
   IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
 fi
 if [ -n "$IDENTITY" ]; then
-  say "Signing the engine's Mach-O files w/ $IDENTITY (hardened runtime, timestamp, Entitlements.plist)"
+  say "Signing the engine's Mach-O files w/ $IDENTITY (hardened runtime, timestamp; Entitlements.plist on executables only)"
   find "$ENGINE" -type f ! -path "$ENGINE/formdam-backend" -print | while IFS= read -r f; do
     case "$(file -b "$f")" in
-      *Mach-O*) codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" -s "$IDENTITY" "$f" || { echo "could not sign $f"; exit 1; } ;;
+      *Mach-O*executable*) codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" -s "$IDENTITY" "$f" || { echo "could not sign $f"; exit 1; } ;;
+      *Mach-O*) codesign --force --options runtime --timestamp -s "$IDENTITY" "$f" || { echo "could not sign $f"; exit 1; } ;;
     esac
   done
   codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" -s "$IDENTITY" "$ENGINE/formdam-backend"

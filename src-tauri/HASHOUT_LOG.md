@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_macos_app · only the engine's executables carry entitlements
+- refers-to: build_macos_app the signing loop's case: *Mach-O*executable* w/ --entitlements, *Mach-O* w/o; the say line above it
+- kind: correction + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: one case arm, *Mach-O*) codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" ..., which gave every library in the engine tree (about 180 .so and .dylib files and the Python library) the app's three entitlements. The v1.28.3 entry below says the frozen Python needs the two cs entitlements to load its extension modules; that is true of the process, and a process takes its entitlements from its main executable only. Apple's guidance is not to put entitlements on library code: it does nothing useful, notarization does not object, and on some macOS versions the system can refuse to load such a library. The loop now reads file -b once per file as before: a description holding "executable" (thin, or any slice of a universal file) is signed w/ Entitlements.plist, every other Mach-O w/ hardened runtime and a timestamp only. The launcher formdam-backend is still signed last, w/ the entitlements, and is the only executable PyInstaller puts in the tree (multiprocessing children re-run it).
+
 ### ../setup/package_dmg · the last-resort hdiutil create retries
 - refers-to: package_dmg the else branch after fancy_dmg: BUILT, the five-attempt loop around hdiutil create -format UDZO, the ERROR line
 - kind: rationale + replaced code
