@@ -138,8 +138,14 @@ if fancy_dmg; then
   say "DMG built (volume icon flag + auto-open bless + arranged window)"
 else
   say "Fancy pass hit a busy disk; building the DMG directly (identical contents, plainer mount window)"
-  rm -f "$DMG"
-  hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+  BUILT=0
+  for attempt in 1 2 3 4 5; do
+    rm -f "$DMG"
+    if hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null; then BUILT=1; break; fi
+    echo "   hdiutil create failed (attempt $attempt of 5)"
+    [ "$attempt" = 5 ] || sleep $((attempt * 5))
+  done
+  [ "$BUILT" = 1 ] || { echo "ERROR: hdiutil could not build $DMG in five attempts"; rm -rf "$STAGE"; exit 1; }
 fi
 rm -rf "$STAGE"
 

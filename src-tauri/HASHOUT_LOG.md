@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/package_dmg · the last-resort hdiutil create retries
+- refers-to: package_dmg the else branch after fancy_dmg: BUILT, the five-attempt loop around hdiutil create -format UDZO, the ERROR line
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: rm -f "$DMG" and one hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null, which under set -e ended the whole build on its first failure. fancy_dmg returns 1 on any busy disk and this branch is what catches it, so it was the one hdiutil call w/ no second chance. "hdiutil: create failed - Resource busy" is a known race on macOS 13 and later (a system scan holds the new image for a moment), common on hosted runners; packagers answer it by trying again a few seconds later. Five attempts, 5, 10, 15 and 20 s apart, each starting from a removed $DMG; when all five fail the staging folder is removed and the script stops w/ the path it could not build.
+
 ### ../setup/build_macos_app · @tauri-apps/cli 2.12.3 through npx, PyInstaller 6.22.3
 - refers-to: build_macos_app the prerequisites block and its npx --version line, pip install pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.10, the npx icon line, the two npx build lines
 - kind: rationale + replaced code
