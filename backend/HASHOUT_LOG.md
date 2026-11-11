@@ -1,5 +1,33 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/render.py render, mediaapi.py media_file, people.py face_thumb (new routers/revalidate.py) · every media byte route is revalidated, and nothing hidden is stored
+- refers-to: revalidate REVALIDATE, NO_STORE, must_not_store, file_tag, tag_matches, revalidated_headers, revalidated_file; render.render (cached and fresh paths); mediaapi media_thumb (THUMB_CACHE folded into revalidate), media_file (ETag, 304 on a full GET, no-store when sealed); people.face_thumb (Request, row of the face's item)
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+Code review of 1.29.0: the thumbnail fix left the full-size render (/media/{id}/render) and the original (/media/{id}/file) on private, max-age=86400, and face crops (/faces/{id}/thumb) on max-age=604800, so after an item was hidden the viewer and People still showed it from the browser cache for a day or a week. Every route that serves an item's bytes now sends private, no-cache with an ETag from the served file's mtime and size and answers 304 on a matching If-None-Match, after the guard has run, so a hidden or trashed item answers 401 instead. A ranged request on the original carries the same ETag and still gets 206 (no 304 for a range). Hidden, trashed, private and vaulted items keep no-store and carry no ETag (must_not_store is the thumbnail route's existing test: vaultcrypt.protected or is_vaulted; the original also counts a sealed blob). A face crop is no-store when its item is protected. The other byte routes were checked and need nothing: edit preview, Browse Disk /disk/file, curate audio and the PDF outputs already send no-store; Browse Disk thumbnails and iPhone thumbnails are of files outside the library, which cannot be hidden. Not changed: /faces/{id}/thumb has no visibility guard at all (a hidden item's face crop is served without the vault token, now without being stored); that is an access change for People and is left for a decision. Tests: test_media_cache.py (red on the previous commit: render and file answered max-age=86400 with no ETag or 304, the face crop max-age=604800).
+
+### routers/mediaapi.py media_thumb · hidden thumbnails viewed with the vault open (review finding, does not reproduce)
+- refers-to: mediaapi media_thumb, revalidate.must_not_store, vaultcrypt.protected (_sealed_flag)
+- kind: test
+- logged: v1.29.0 · 2026-11-11
+
+The review read the thumbnail route as sending private, no-cache for a hidden item viewed while the vault is unlocked. It already sends no-store: vaultcrypt.protected counts hidden and trashed (_sealed_flag), and a hidden item is reached only with the vault token. test_media_cache.py pins it for thumb, render and file (hidden item, vault token: no-store, no ETag); these tests passed before and after this change, so there is no red run to show.
+
+### services/dedupsvc.py trash_member · the last-copy check and the trash are one statement
+- refers-to: dedupsvc trash_member (conditional UPDATE through exn), the stored keeper refusal
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+trash_member read the live copies and then trashed in a second statement, so two clicks at once on the last two live copies of a set both saw two and both trashed. The trash is now one UPDATE whose WHERE requires the item to be live and another copy of the set (stored keeper or member) to be live; SQLite takes the write lock before it evaluates the WHERE, so the second writer sees the first one's change and updates nothing, which is answered as LAST_COPY (409). The set is marked resolved when fewer than two copies are live afterwards. The stored keeper's id is refused again ({"trashed": 0}, as before 1.29.0): the re-election in list_sets shows the stored keeper whenever it is live, so the window never offers Trash on it, and when it is trashed it is not live, so accepting it was not needed for the re-election; a re-elected keeper is a member and can still be trashed by id, under the same last-copy rule. Tests: test_dedup.py, two threads held at a barrier after the live read trash the last two live copies (red: both answered trashed 1 and no copy was left), and the member route refuses the stored keeper (red: it was trashed).
+
+### services/dedupsvc.py list_sets, _live · media rows are read in one query
+- refers-to: dedupsvc ID_CHUNK, _ordered, _media_by_id, _live_from, _live, _open_sets, list_sets
+- kind: perf
+- logged: v1.29.0 · 2026-11-11
+
+list_sets ran one SELECT per copy per set. It now reads the open sets, all their members (one query) and all their media rows (one IN query per 500 ids), and builds each set from those; _live reads a set's rows in one query too. Order and content are unchanged: copies keep the stored keeper first and members by id. Test: test_dedup.py lists five sets and compares the result with the one before, at most two media reads and six statements (red: twelve media reads).
+
 ### services/dedupsvc.py list_sets, resolve, trash_member · a duplicate set always keeps one live copy
 - refers-to: dedupsvc LAST_COPY, _set_ids, _live, _best, _pick, current_keeper, list_sets, resolve (default keeper), trash_member; routers/dedup.py dedup_trash_member (409)
 - kind: fix
