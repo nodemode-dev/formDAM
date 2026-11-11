@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/importer.py import_upload · a drag-and-drop import runs in the thread pool
+- refers-to: importer import_upload (async def to def); the body unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+import_upload was the one coroutine endpoint, so the copy, hashing, metadata read, database writes and the synchronous ffmpeg poster for a dropped video all ran on uvicorn's single event loop thread, and every other request (thumbnails, job polls, /api/health) waited until the whole drop was imported. It is now a plain def like every other route, which FastAPI runs in its thread pool; UploadFile.file is an ordinary file object, and the import batch is a thread-local that is set and cleared inside the same call. Checked with a scratch run: a dropped JPEG imports and gets its batch id.
+
 ### services/syncsvc.py _apply_media · one object too large for the Shared Library no longer stops a device's journal for good
 - refers-to: syncsvc SHARED_MAX, _apply_media (the missing-object branch); familynet.seal and unseal, familyserver and the personal channel unchanged
 - kind: fix

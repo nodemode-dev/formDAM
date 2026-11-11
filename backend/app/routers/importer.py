@@ -72,7 +72,7 @@ UPLOAD_EXTS = {
 
 
 @router.post("/import/upload")
-async def import_upload(files: List[UploadFile] = File(...)):
+def import_upload(files: List[UploadFile] = File(...)):
     counts = {"imported": 0, "duplicates": 0, "skipped": 0, "failed": 0}
     imported: List[Dict[str, Any]] = []
     libraryfs.begin_batch("drop", f"{len(files)} dropped")
