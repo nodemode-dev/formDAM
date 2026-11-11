@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version 1.28.8" src="https://img.shields.io/badge/version-1.28.8-eef0f4?style=flat-square">
+  <img alt="version 1.28.9" src="https://img.shields.io/badge/version-1.28.9-eef0f4?style=flat-square">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/python%20%C2%B7%20fastapi-engine-3776ab?style=flat-square&logo=python&logoColor=white">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
   <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
