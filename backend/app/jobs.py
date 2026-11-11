@@ -1,7 +1,7 @@
 import threading
 import traceback
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 _jobs: Dict[str, Dict[str, Any]] = {}
 _lock = threading.Lock()
@@ -42,3 +42,8 @@ def running(kind: str) -> Optional[Dict[str, Any]]:
             if state["kind"] == kind and state["phase"] == "running":
                 return state
     return None
+
+
+def any_running() -> List[str]:
+    with _lock:
+        return [state["kind"] for state in _jobs.values() if state["phase"] == "running"]

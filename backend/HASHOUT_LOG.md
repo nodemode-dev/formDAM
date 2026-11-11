@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/library.py switch_library + jobs.any_running · no job of any kind may be running when the library switches
+- refers-to: jobs any_running; library switch_library busy
+- kind: fix + replaced code
+- logged: v1.28.9 · 2026-11-11
+
+Replaced: a fixed tuple of twelve job kinds (import, metadata, places, clip, faces, ocr, export, xmp, workflow, repair, memories, copy). consolidate, dedup, package, package-open, gallery, lookup and idevice-import were missing, and db.connect() follows FORMDAM_LIBRARY at once, so a consolidate job (with move, files moved out of the user's folders) or a dedup scan kept running against the new library with the old library's ids. jobs.any_running lists the kind of every job still in the running phase, and the switch answers 409 naming them while any is. Every job in this tree finishes on its own, so none can hold the switch for good. Checked with a scratch run: a running consolidate job makes the switch answer 409 naming it; test_p1_package (which switches libraries) passes.
+
 ### services/dedupsvc.py resolve + routers/dedup.py · a duplicate set is never resolved around a keeper that is trashed or not in the set
 - refers-to: dedupsvc resolve (the keeper check before anything is trashed); dedup router dedup_resolve 409; list_sets and resolve_all_exact unchanged
 - kind: fix

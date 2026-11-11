@@ -66,8 +66,7 @@ def _reset_caches() -> None:
 
 @router.post("/library/switch")
 def switch_library(body: SwitchIn):
-    busy = [kind for kind in ("import", "metadata", "places", "clip", "faces", "ocr", "export", "xmp", "workflow", "repair", "memories", "copy")
-            if jobs.running(kind)]
+    busy = sorted(set(jobs.any_running()))
     if busy:
         raise HTTPException(409, detail=f"Wait for {', '.join(busy)} to finish before switching libraries")
     path = os.path.abspath(os.path.expanduser(body.path))
