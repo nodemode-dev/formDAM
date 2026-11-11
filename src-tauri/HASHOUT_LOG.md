@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_macos_app · @tauri-apps/cli 2.12.3 through npx, PyInstaller 6.22.3
+- refers-to: build_macos_app the prerequisites block and its npx --version line, pip install pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.10, the npx icon line, the two npx build lines
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; } in the prerequisites, cargo tauri icon, cargo tauri build (twice) and an unpinned pyinstaller. The cargo line took whatever 2.x crates.io had on the day the runner's cargo bin cache was empty (2.12.4 is the newest on 2026-11-11) and compiled it from source, and after that kept whichever version the cache held, so two runs of the same commit could bundle w/ different CLIs. macOS now runs the CLI the way build_linux_app and build_windows_app.bat do, npx --yes @tauri-apps/cli@2.12.3, the same pin (tauri-bundler 2.10.3, the version the symlink and bundle-failure handling above was read against); npm is already a prerequisite and nothing is compiled for it. The icon and build lines still run from the repo root, as the cargo form did (Linux runs its build from src-tauri); the CLI looks for src-tauri/tauri.conf.json under the current folder first. npx needs the npm registry where cargo-tauri was a local binary, so the prerequisites resolve the CLI once w/ --version and stop there w/ an npm message when it cannot be had: a registry failure at the build line would otherwise read as a Rust failure and clear the release cache. PyInstaller is pinned to 6.22.3 and pyinstaller-hooks-contrib to 2026.10, the pair the 1.28.6 macOS run froze the engine w/ (the hooks decide what is collected) and the PyInstaller whose link layout the 1.28.7 change was read against; Windows stays on its own pin, 6.16.0.
+
 ### ../setup/package_dmg + ../build_app + ../setup/apply_icon · the app is FormDAM.app everywhere
 - refers-to: package_dmg default APP path, the staged app name, the Finder item name in the AppleScript, the header usage lines; build_app the four "$dest/FormDAM.app" lines of the install step; apply_icon default APP and its header
 - kind: rationale + replaced code

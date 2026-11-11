@@ -11,7 +11,7 @@ command -v python3 >/dev/null || { echo "python3 is required (https://python.org
 command -v npm >/dev/null || { echo "npm is required (https://nodejs.org)"; exit 1; }
 command -v cargo >/dev/null || { echo "Rust is required: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; exit 1; }
 xcode-select -p >/dev/null 2>&1 || { echo "Xcode command line tools are required: xcode-select --install"; exit 1; }
-cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; }
+npx --yes @tauri-apps/cli@2.12.3 --version >/dev/null || { echo "could not get @tauri-apps/cli 2.12.3 from npm (network or registry); nothing was built, rerun setup/build_macos_app when it is back"; exit 1; }
 
 say "Fetching face and visual search models (sha256-verified)"
 MODELS=backend/models
@@ -72,7 +72,7 @@ rm -rf .venv-package
 python3 -m venv .venv-package
 . .venv-package/bin/activate
 pip install --upgrade pip >/dev/null
-pip install -r requirements_macos.txt pyinstaller
+pip install -r requirements_macos.txt pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.10
 if [ ! -f models/bioclip_species_int8.npy ]; then
   python -m app.services.species prepare models/txt_emb_species.npy models/txt_emb_species.json models
   rm -f models/txt_emb_species.npy models/txt_emb_species.json
@@ -130,7 +130,7 @@ find "$ENGINE" -type l -path '*.framework/*' -exec rm -f {} +
 echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
 
 say "Generating app icons from src-tauri/icons/icon.png"
-cargo tauri icon src-tauri/icons/icon.png
+npx --yes @tauri-apps/cli@2.12.3 icon src-tauri/icons/icon.png
 say "Restoring the provided .icns (tauri's generated one flattens the transparent background)"
 cp src-tauri/icons/source/icon.icns src-tauri/icons/icon.icns
 
@@ -192,11 +192,11 @@ mkdir -p "$CARGO_TARGET_DIR"
 : > "$STAMP"
 rust_compiled() { [ -n "$(find "$CARGO_TARGET_DIR/release/formdam-desktop" "$CARGO_TARGET_DIR/release/bundle/macos/FormDAM.app" -prune -newer "$STAMP" 2>/dev/null)" ]; }
 bundle_failed() { say "Rust compiled; the bundle step failed (copying resources, signing or notarization: the error is above), so nothing is rebuilt"; exit 1; }
-if ! cargo tauri build --bundles app -- --locked; then
+if ! npx --yes @tauri-apps/cli@2.12.3 build --bundles app -- --locked; then
   if rust_compiled; then bundle_failed; fi
   say "Rust build failed; clearing the release cache once & retrying"
   cargo clean --release --manifest-path src-tauri/Cargo.toml
-  if ! cargo tauri build --bundles app -- --locked; then
+  if ! npx --yes @tauri-apps/cli@2.12.3 build --bundles app -- --locked; then
     if rust_compiled; then bundle_failed; fi
     say "Rust build failed twice; toolchain details for the report"
     rustc -vV || true
