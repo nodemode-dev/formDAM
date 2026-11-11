@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### engine/api.ts clearAlbumToken + albums.ts mountAlbumDetail · a private album re-locks when it is left
+- refers-to: engine/api.ts :: clearAlbumToken; ui/components/albums.ts :: mountAlbumDetail alive, load 401 branch, teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Private-album tokens were kept in api.ts's albumTokens map for the whole session, unlike the vault token, which the vault pages clear on unmount; so an album unlocked once reopened without its passkey for the token's 30 min life. api.ts now has clearAlbumToken, and the album page clears its album's token on unmount and also when the unlock dialog finishes after the page was left (the same late-token race as Hidden and Recently Deleted). Known and outside the frontend: the engine's token_response also sets an HttpOnly cookie on /api/media, which the frontend cannot clear, so thumbnails stay fetchable by cookie until it expires; and a token taken by the selection bar's Add to Album prompt is still kept until that album page is opened and left. Checked: tsc --noEmit. Not run: a private album in a window.
+
 ### ui/components/curate.ts openSlideshow show · only the newest slide is revealed
 - refers-to: ui/components/curate.ts :: openSlideshow showSeq, show reveal
 - kind: fix

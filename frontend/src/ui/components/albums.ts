@@ -1,5 +1,5 @@
 import { prefGet, prefSet } from "../../engine/prefstore.js";
-import { api, setAlbumToken, thumbUrl } from "../../engine/api.js";
+import { api, clearAlbumToken, setAlbumToken, thumbUrl } from "../../engine/api.js";
 import { countFmt } from "../../engine/format.js";
 import { loadAlbums, navigate, on, refreshSummary, state } from "../../engine/store.js";
 import type { Album, Media } from "../../engine/types.js";
@@ -288,6 +288,7 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
   );
   host.append(pad);
   let items: Media[] = [];
+  let alive = true;
 
 
   function sorted(): Media[] {
@@ -391,6 +392,10 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
     } catch (err) {
       if ((err as { status?: number }).status === 401 && album) {
         const ok = await unlockAlbumFlow(album);
+        if (!alive) {
+          clearAlbumToken(albumId);
+          return;
+        }
         if (ok) return load();
         navigate("#/albums");
       } else {
@@ -432,6 +437,8 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
 
   void load();
   return () => {
+    alive = false;
+    clearAlbumToken(albumId);
     unbindTiles();
     unbindSel();
   };
