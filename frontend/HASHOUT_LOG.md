@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/modal.ts onClose · closing a modal with X or the backdrop reaches its owner
+- refers-to: ui/modal.ts :: openModal onClose; ui/components/organize.ts :: openKeywordManager; ui/components/trash.ts :: vaultGate; ui/components/albums.ts :: unlockAlbumFlow
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+openModal bound its own local close to the X button and the backdrop, so owners had no way to learn of a close they did not start. The Keyword Manager wrapped modal.close to remove its on("keywords") listener, but X and the backdrop still ran the original, so every open leaked a listener patching a detached tree. The vault and private-album unlock dialogs waited for transitionend and then checked that the backdrop had left the body, but the opacity transition (160 ms) ends before openModal removes the node (180 ms), so "cancelled" was never reported: a private album stayed on a blank "Album" page and Hidden or Recently Deleted never went back. openModal now takes an optional onClose that runs once the node is removed; the Keyword Manager passes its off, and both unlock dialogs pass done(false) (a successful unlock has already settled with true by then, so the later false is ignored). Checked: tsc --noEmit. Not run: the dialogs in a window.
+
 ### styles/app.css · the app-level layers read the layer tokens; in-component and 60 values stay literal
 - refers-to: styles/app.css :: #bg-holder, .sel-bar, .viewer, .modal-backdrop, .toast-host, #app, .content, .content > .topbar, .ctx-menu, .sidebar, .preload-hud; theme/tokens.css :: --z-* (unchanged)
 - kind: fix

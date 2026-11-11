@@ -28,7 +28,7 @@ export async function vaultGate(): Promise<boolean> {
     api<{ method: string; store: string }>("/vault/device"),
   ]).then(([kc, labels]) => ({ ...kc, ...labels })).catch(() => null);
   return new Promise((resolve) => {
-    const modal = openModal(status.configured ? "Unlock Recently Deleted" : "Set a vault passkey");
+    const modal = openModal(status.configured ? "Unlock Recently Deleted" : "Set a vault passkey", undefined, () => done(false));
     const hint = status.configured
       ? "Hidden, Recently Deleted & private albums w/o their own passkey are encrypted on disk w/ the vault passkey."
       : "Pick a passkey. It encrypts Hidden, Recently Deleted & any private album that does not set its own. If you forget it, those items cannot be recovered, so save it below when offered.";
@@ -67,9 +67,6 @@ export async function vaultGate(): Promise<boolean> {
     });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") go.click();
-    });
-    modal.root.addEventListener("transitionend", () => {
-      if (!document.body.contains(modal.root)) done(false);
     });
     modal.body.append(h("p", { style: "margin:0;color:var(--text-muted);font-size:13px" }, hint), wrap, ...(kcRow ? [kcRow] : []), h("div", { class: "modal-actions" }, go));
     input.focus();

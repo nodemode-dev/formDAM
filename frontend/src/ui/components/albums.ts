@@ -20,7 +20,7 @@ import { notesFlow, packageFlow } from "./packages.js";
 
 export function unlockAlbumFlow(album: Album): Promise<boolean> {
   return new Promise((resolve) => {
-    const modal = openModal(`Unlock "${album.name}"`);
+    const modal = openModal(`Unlock "${album.name}"`, undefined, () => done(false));
     const { wrap, input } = textField("Passkey", "password", "Enter the album passkey");
     const unlockBtn = h("button", { class: "btn primary", type: "button" }, iconEl("lock"), "Unlock");
     let settled = false;
@@ -45,9 +45,6 @@ export function unlockAlbumFlow(album: Album): Promise<boolean> {
     });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") unlockBtn.click();
-    });
-    modal.root.addEventListener("transitionend", () => {
-      if (!document.body.contains(modal.root)) done(false);
     });
     modal.body.append(wrap, h("div", { class: "modal-actions" }, unlockBtn));
     input.focus();
