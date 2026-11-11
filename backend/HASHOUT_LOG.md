@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/outputsvc.py export_one · an original or a video exported without location or metadata no longer carries it
+- refers-to: outputsvc ExportError, _copy_stripped, the byte-copy branch of export_one, export_job's ExportError arm and state "failures"
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Every video, and every photo exported with "unmodified originals", was a byte copy of the library file, so "Include location" off, a hidden location and Metadata "None" were ignored: an iPhone video kept its ISO6709 location and a photo its EXIF GPS and XMP place. When any of the three applies, the branch now fails closed. A video goes through packagesvc._strip_video (ffmpeg, streams copied, all metadata and data tracks dropped; a vault item's bytes go through a temporary file beside the target that is removed); without ffmpeg, or when it fails, nothing is left at the target and the item fails with "location and metadata could not be removed from this video (ffmpeg is needed)". A photo is written through gpsscrub.scrub and kept only when gpsscrub.has_gps reads it as clean (or cannot read it and the row has no location), as packages do; otherwise it is removed and the item fails. Metadata "None" on an original photo fails with a message saying to export a rendered copy, since nothing here can strip all of a camera file's metadata without re-encoding it. Failed items are counted as skipped as before, and the messages are listed in the job's state under "failures" (the export toast still shows only the count). Checked with scratch runs: a GPS JPEG exported as an original with location off reads no GPS, with Metadata "None" is skipped with a message and leaves no file, and with the defaults still keeps its GPS; a .mov carrying location tags exported with location off shows no location in ffprobe.
+
 ### services/libraryfs.py import_one + iccsvc.run_import · a copy that is only in the Trash is not a reason to delete from the iPhone
 - refers-to: libraryfs import_one (the duplicate query and its result's "trashed" key); iccsvc run_import (the statuses list that decides deletable)
 - kind: fix

@@ -87,6 +87,47 @@ def _xmp_packet(row, opts: Dict[str, Any]) -> Optional[str]:
     return xmpsvc.build_xmp(rec)
 
 
+class ExportError(Exception):
+    pass
+
+
+def _copy_stripped(src: Any, target: str, row, opts: Dict[str, Any]) -> None:
+    from . import gpsscrub, packagesvc
+
+    if row["kind"] == "video":
+        work = src
+        if isinstance(src, (bytes, bytearray)):
+            work = target + ".src"
+            with open(work, "wb") as fh:
+                fh.write(src)
+        try:
+            done = packagesvc._strip_video(work, target)
+        except Exception:
+            done = False
+        finally:
+            if work is not src and os.path.exists(work):
+                os.remove(work)
+        if not done:
+            if os.path.exists(target):
+                os.remove(target)
+            raise ExportError(f"{row['name']}: location and metadata could not be removed from this video (ffmpeg is needed)")
+        return
+    if opts.get("metadata") == "none":
+        raise ExportError(f"{row['name']}: an unmodified original keeps its metadata; export it as a rendered copy to leave the metadata out")
+    if isinstance(src, (bytes, bytearray)):
+        data = bytes(src)
+    else:
+        with open(src, "rb") as fh:
+            data = fh.read()
+    with open(target, "wb") as fh:
+        fh.write(gpsscrub.scrub(data))
+    found = gpsscrub.has_gps(target)
+    if found is False or (found is None and row["lat"] is None):
+        return
+    os.remove(target)
+    raise ExportError(f"{row['name']}: location could not be removed from this original")
+
+
 def export_one(row, dest: str, seq: int, opts: Dict[str, Any], taken: set) -> Optional[str]:
     from ..routers.render import source_of
 
@@ -99,7 +140,9 @@ def export_one(row, dest: str, seq: int, opts: Dict[str, Any], taken: set) -> Op
     if opts.get("original") or row["kind"] != "image":
         ext = os.path.splitext(row["name"])[1]
         target = filesvc._unique(os.path.join(folder, base + ext), taken)
-        if isinstance(src, (bytes, bytearray)):
+        if not opts.get("location", True) or row["location_hidden"] or opts.get("metadata") == "none":
+            _copy_stripped(src, target, row, opts)
+        elif isinstance(src, (bytes, bytearray)):
             with open(target, "wb") as fh:
                 fh.write(src)
         else:
@@ -167,6 +210,9 @@ def export_job(ids: List[int], dest: str, opts: Dict[str, Any], state: Dict[str,
             continue
         try:
             done = export_one(row, dest, seq, merged, taken)
+        except ExportError as err:
+            state.setdefault("failures", []).append(str(err))
+            done = None
         except Exception:
             done = None
         counts["exported" if done else "skipped"] += 1
