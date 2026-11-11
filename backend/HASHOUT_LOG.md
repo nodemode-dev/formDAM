@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/syncsvc.py push · an item whose file was missing is offered again on the next push
+- refers-to: syncsvc push (seen, retry, missed and the sync_<channel>_push_retry setting)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+When _put_object failed (a referenced original on an unplugged drive, or any file briefly absent), push skipped the record but still moved push_ts to the start of the run, so the item was never offered again until its metadata changed and the other computers never got it. The ids of such rows are now kept in the setting sync_<channel>_push_retry and added to the next push's rows (those still in the channel's scope and not already selected); the list is rewritten after every push, so an item leaves it once its object is written or it falls out of scope. A file that never comes back is checked once a push and adds no journal record. Moving push_ts back instead was not done: it would re-journal every later record each minute while one file stays missing. Checked with a scratch run on a personal sync folder: a referenced item whose file was moved away gets no object; after the file returns (with its meta_ts older than push_ts) the next push writes its object and empties the retry list. The tests that touch sync pass.
+
 ### services/filesvc.py rename · a sidecar is moved only when it is this file's and the new name is free
 - refers-to: filesvc rename (the sidecar loop after os.rename)
 - kind: fix
