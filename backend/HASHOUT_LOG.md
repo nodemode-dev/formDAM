@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/edit.py export_trim · protected videos are refused and the temporary folder always goes
+- refers-to: edit export_trim (the vault check after the trim check; shutil.rmtree in a finally around ffmpeg and the import)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Export Trim on a hidden or private video pointed ffmpeg at the library path the vault had already emptied, so it answered 500 "ffmpeg could not write the clip" (and, had the plaintext been there, would have imported the clip as an ordinary visible item). It now answers 409 "Protected items stay inside the vault", as edit_with does. The dam-trim-* folder was removed with os.rmdir only after a successful import, so a failed ffmpeg run or a clip that was already in the library left it and the clip in the temp folder; it is now removed with shutil.rmtree in a finally. Checked with a scratch run: a trim export answers 200; a second one of the same clip answers 409 (duplicate) and leaves no dam-trim folder; a hidden video answers 409 with the vault message.
+
 ### routers/geo.py location and date routes + edit.py paste_edits · hidden, private and trashed items need the vault like everywhere else
 - refers-to: geo _check, set_location (ids and copy_from), location_hidden, adjust_dates; edit paste_edits (every row checked before any write)
 - kind: fix

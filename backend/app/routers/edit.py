@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -329,6 +330,10 @@ def export_trim(media_id: int, request: Request):
     row = _row(media_id, request)
     if row["kind"] != "video" or (row["trim_in"] is None and row["trim_out"] is None):
         raise HTTPException(400, detail="Set a trim first")
+    from .. import vaultcrypt
+
+    if vaultcrypt.protected(row) or vaultcrypt.is_vaulted(media_id):
+        raise HTTPException(409, detail="Protected items stay inside the vault")
     binary = ffmpeg_path()
     if not binary:
         raise HTTPException(409, detail="ffmpeg is not installed")
@@ -344,14 +349,13 @@ def export_trim(media_id: int, request: Request):
     if row["trim_out"]:
         cmd += ["-t", f"{float(row['trim_out']) - start:.3f}"]
     cmd += ["-map", "0", "-map_metadata", "0", "-c", "copy", out]
-    done = subprocess.run(cmd, capture_output=True, timeout=600)
-    if done.returncode != 0 or not os.path.isfile(out):
-        raise HTTPException(500, detail="ffmpeg could not write the clip")
-    result = libraryfs.import_one(out, move=True)
     try:
-        os.rmdir(folder)
-    except OSError:
-        pass
+        done = subprocess.run(cmd, capture_output=True, timeout=600)
+        if done.returncode != 0 or not os.path.isfile(out):
+            raise HTTPException(500, detail="ffmpeg could not write the clip")
+        result = libraryfs.import_one(out, move=True)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
     if result.get("status") != "imported":
         raise HTTPException(409, detail="The trimmed clip matches an item already in the library")
     ex("UPDATE media SET created_ts=? WHERE id=?", ((row["created_ts"] or 0) + (row["trim_in"] or 0), result["media_id"]))
