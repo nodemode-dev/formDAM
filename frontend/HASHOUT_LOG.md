@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### engine/store.ts loadMore · a failed /browse no longer stops paging for good
+- refers-to: engine/store.ts :: loadMore
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+loadMore set page.loading before the /browse fetch and cleared it only after a success, so one failed request (an engine restart, a 500, a network blip) left that filter's page loading forever: every later loadMore returned at once and the grid stopped paging, or stayed empty, until something called invalidateMedia. The rejection was also unhandled at every `void loadMore(...)` call. A failed fetch now clears page.loading and returns, so the next scroll, observer hit or "media" event tries again. Checked: tsc --noEmit; vitest run (10 passed, the paging test included). Not run: a failing engine in a window.
+
 ### ui/components/library.ts + ui/zoomctl.ts · the library topbar removes its click and zoom listeners on unmount
 - refers-to: ui/components/library.ts :: mountLibrary hideMenu, teardown; ui/zoomctl.ts :: zoomControl (now returns { el, off })
 - kind: fix

@@ -87,7 +87,13 @@ export async function loadMore(filter: FilterName): Promise<void> {
   page.loading = true;
   const params = new URLSearchParams({ spec: JSON.stringify(specFor(filter)), limit: "400" });
   if (page.next) params.set("cursor", JSON.stringify(page.next));
-  const data = await api<MediaPage>(`/browse?${params.toString()}`);
+  let data: MediaPage;
+  try {
+    data = await api<MediaPage>(`/browse?${params.toString()}`);
+  } catch {
+    page.loading = false;
+    return;
+  }
   for (const item of data.items) {
     state.byId.set(item.id, item);
     if (item.edited_ts) thumbVersions.set(item.id, item.edited_ts);
