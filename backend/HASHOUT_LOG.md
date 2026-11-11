@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/xmpsvc.py write_sidecar · a sidecar formDAM did not write is left alone, and a RAW+JPEG pair gets one sidecar each
+- refers-to: xmpsvc write_sidecar (the same-stem lookup and the check of an existing file before the write); sidecar_for, find_sidecar, sidecar_job unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+write_sidecar replaced IMG_1.xmp unconditionally. For a folder imported by reference that already held a sidecar from another app (develop settings, history), turning on sidecars, "Write sidecars" or a workflow sidecar step replaced it with a packet built from formDAM's fields only; and a RAW and a JPEG with the same stem in one folder wrote the same IMG_1.xmp, so the last one won. Now, when another media row has the same path up to its extension, this item's sidecar is IMG_1.CR2.xmp (the form find_sidecar already reads); and when the sidecar file exists and its first 64 KB do not carry x:xmptk="FormDAM" (the marker build_xmp has always written), nothing is written and the item counts as skipped (sidecar_job marks it done so it is not retried every run). Not done, for the owner: merging formDAM's fields into a foreign sidecar (parse it, set rating, label, keywords and IPTC fields, keep every other node) so such items get their metadata out too; and a pair whose formDAM IMG_1.xmp was written before this change keeps that file, which find_sidecar still reads first on a later import. Checked with a scratch run on a referenced folder: a foreign a.xmp is left byte for byte and the call returns None; with it gone, a.xmp is written and rewritten; a.png beside a.jpg gives a.png.xmp and a.jpg.xmp; a_b.jpg beside a%b.jpg is not taken for a pair. test_p1_xmp passes.
+
 ### services/outputsvc.py export_one · an original or a video exported without location or metadata no longer carries it
 - refers-to: outputsvc ExportError, _copy_stripped, the byte-copy branch of export_one, export_job's ExportError arm and state "failures"
 - kind: fix
