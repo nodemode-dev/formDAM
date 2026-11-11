@@ -325,6 +325,8 @@ export function mountPeoplePage(host: HTMLElement): () => void {
     document.removeEventListener("keydown", onKey);
     document.removeEventListener("dam-people-picked", refreshActionBar);
     offs.forEach((off) => off());
+    selectMode = false;
+    picked.clear();
   };
 }
 

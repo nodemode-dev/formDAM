@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/people.ts teardown · People opens out of Select mode
+- refers-to: ui/components/people.ts :: module selectMode, picked; mountPeoplePage teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+selectMode and picked live at module level and the page teardown left them as they were, so leaving People in Select mode and coming back drew the cards with check dots and made a card click pick instead of open, while the new button still said "Select" and the Select All button was hidden. The teardown now ends Select mode and clears the pick. Checked: tsc --noEmit. Not run: People in a window.
+
 ### ui/components/settings.ts Reset theme · every slider shows the value it resets to, Background included
 - refers-to: ui/components/settings.ts :: resetBtn click
 - kind: fix
