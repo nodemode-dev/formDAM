@@ -1,7 +1,10 @@
 import threading
 import time
 
+from app.security import LAUNCH_KEY
 from tests.conftest import HEADERS
+
+SHELL = {**HEADERS, "x-dam-shell": LAUNCH_KEY}
 
 
 def _drain_nonce(client):
@@ -16,13 +19,13 @@ def _drain_nonce(client):
 
 def test_shell_hello_drives_keychain_status(client):
     assert client.get("/api/vault/keychain/status").json() == {"available": False, "stored": False}
-    client.post("/api/internal/shell/hello", json={"bio": True, "stored": False}, headers=HEADERS)
+    client.post("/api/internal/shell/hello", json={"bio": True, "stored": False}, headers=SHELL)
     assert client.get("/api/vault/keychain/status").json() == {"available": True, "stored": False}
 
 
 def test_bio_unlock_roundtrip(client):
     client.post("/api/vault/setup", json={"passkey": "hunter22"}, headers=HEADERS)
-    client.post("/api/internal/shell/hello", json={"bio": True, "stored": True}, headers=HEADERS)
+    client.post("/api/internal/shell/hello", json={"bio": True, "stored": True}, headers=SHELL)
 
     result = {}
 
@@ -32,7 +35,7 @@ def test_bio_unlock_roundtrip(client):
     worker = threading.Thread(target=unlock)
     worker.start()
     nonce = _drain_nonce(client)
-    client.post("/api/internal/bio/result", json={"nonce": nonce, "ok": True, "passkey": "hunter22"}, headers=HEADERS)
+    client.post("/api/internal/bio/result", json={"nonce": nonce, "ok": True, "passkey": "hunter22"}, headers=SHELL)
     worker.join(timeout=5)
     assert not worker.is_alive()
     assert "token" in result["res"].json()
@@ -40,7 +43,7 @@ def test_bio_unlock_roundtrip(client):
 
 def test_keychain_enable_roundtrip_and_bad_passkey(client):
     client.post("/api/vault/setup", json={"passkey": "hunter22"}, headers=HEADERS)
-    client.post("/api/internal/shell/hello", json={"bio": True, "stored": False}, headers=HEADERS)
+    client.post("/api/internal/shell/hello", json={"bio": True, "stored": False}, headers=SHELL)
 
     assert client.post("/api/vault/keychain/enable", json={"passkey": "wrong-pass"}, headers=HEADERS).status_code == 401
 
@@ -55,7 +58,7 @@ def test_keychain_enable_roundtrip_and_bad_passkey(client):
     from app.routers.trash import PENDING
 
     assert PENDING[nonce]["passkey"] == "hunter22"
-    client.post("/api/internal/bio/result", json={"nonce": nonce, "ok": True, "stored": True}, headers=HEADERS)
+    client.post("/api/internal/bio/result", json={"nonce": nonce, "ok": True, "stored": True}, headers=SHELL)
     worker.join(timeout=5)
     assert result["res"].json() == {"ok": True}
     assert client.get("/api/vault/keychain/status").json()["stored"] is True

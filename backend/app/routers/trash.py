@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from ..config import trash_retention_days
 from ..db import ex, media_dict, q, q1
+from ..security import shell_allowed
 from ..services import libraryfs
 from ..vault import issue_token, set_vault, vault_hash, verify_passkey
 from .guard import require_vault
@@ -78,14 +79,21 @@ class BioResult(BaseModel):
     stored: bool | None = None
 
 
+def _shell_only(request: Request) -> None:
+    if not shell_allowed(request):
+        raise HTTPException(403, detail="Only the formDAM desktop shell may call this")
+
+
 @router.post("/internal/shell/hello")
-def shell_hello(body: ShellHello):
+def shell_hello(body: ShellHello, request: Request):
+    _shell_only(request)
     SHELL.update(attached=True, bio=body.bio, stored=body.stored)
     return {"ok": True}
 
 
 @router.get("/internal/bio/pending/{nonce}")
-def bio_pending(nonce: str):
+def bio_pending(nonce: str, request: Request):
+    _shell_only(request)
     entry = PENDING.get(nonce)
     if entry is None:
         raise HTTPException(404, detail="No such request")
@@ -93,7 +101,8 @@ def bio_pending(nonce: str):
 
 
 @router.post("/internal/bio/result")
-def bio_result(body: BioResult):
+def bio_result(body: BioResult, request: Request):
+    _shell_only(request)
     entry = PENDING.get(body.nonce)
     if entry is None:
         raise HTTPException(404, detail="No such request")

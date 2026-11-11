@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/trash.py and importer.py /internal/* · only the desktop shell may call the shell routes
+- refers-to: trash _shell_only, shell_hello, bio_pending, bio_result; importer shell_glass; tests/test_bio_channel SHELL headers
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The /api/internal/* routes passed the general automation gate only, so a window page or an automation token could call them. Turning on "save passkey to the Keychain" (Windows Hello, keyring) keeps the passkey in PENDING under a nonce and prints FORMDAM-CTRL KCSTORE <nonce> on stdout, which the frozen engine tees into engine.log; anyone reading that log with API access could fetch /internal/bio/pending/<nonce> and get the passkey in clear, post a false /internal/bio/result to cancel an unlock, or claim a shell is attached. Each of the four routes now answers 403 unless the request carries the shell key (security.shell_allowed), which src-tauri's engine_post and engine_get always send. The nonce still reaches the log, but it no longer opens anything without the shell key. test_bio_channel posted to these routes with the window's headers only; its internal calls now send x-dam-shell as the shell does (no assertion changed). Checked: a scratch run shows the four routes answer 403 with the window cookie and 404/200 with the shell key; test_bio_channel and test_f1_guard pass.
+
 ### services/xmpsvc.py write_sidecar · a sidecar formDAM did not write is left alone, and a RAW+JPEG pair gets one sidecar each
 - refers-to: xmpsvc write_sidecar (the same-stem lookup and the check of an existing file before the write); sidecar_for, find_sidecar, sidecar_job unchanged
 - kind: fix
