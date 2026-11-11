@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/edit.py preview and put_edits · an Edit With file is only used for the item it belongs to
+- refers-to: edit router preview (the external path is kept only when it equals the stored one), put_edits (state "external" replaced by the stored one when the file differs); extedit.external_path, _store, _adopt and package open unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+extedit.external_path takes the basename the client names and only checks the file exists in library/edits, and names are <media id>-<unix seconds>-<n>.<ext>, so they can be probed. A preview of any visible item with another item's external file name showed that file (the full Edit With result of a hidden or private photo, which the vault does not seal), and PUT /edits stored the name so /render served it from then on (and DELETE /edits would unlink it). preview now uses the client's external file only when it is the one stored for that item; put_edits keeps the client's "external" only when its file is the stored one, and otherwise puts the stored value back (none drops it), so a stale editor cannot drop a newer Edit With result either. Edit With adoption and package open still set it through _store. Checked with a scratch run: previewing item A with item B's external name shows A; B's own preview shows its external file; a PUT on A with B's name stores no external, on B keeps it.
+
 ### routers/library.py switch_library + jobs.any_running · no job of any kind may be running when the library switches
 - refers-to: jobs any_running; library switch_library busy
 - kind: fix + replaced code

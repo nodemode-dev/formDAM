@@ -105,6 +105,10 @@ def put_edits(media_id: int, body: EditIn, request: Request):
     row = _row(media_id, request)
     if row["kind"] != "image":
         raise HTTPException(415, detail="Videos are trimmed, not edited")
+    sent = body.state.get("external")
+    stored = editsvc.edits_of(media_id).get("external")
+    if sent is not None and not (isinstance(sent, dict) and isinstance(stored, dict) and sent.get("file") == stored.get("file")):
+        body.state["external"] = stored
     return _store(media_id, body.state)
 
 
@@ -195,7 +199,10 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     if row["kind"] != "image":
         raise HTTPException(415, detail="Only stills preview")
     base = editsvc.long_exposure(media_id, body.w) if body.state.get("effect") == "long_exposure" else None
-    base = base if base is not None else _base(row, body.w, body.state.get("raw"), extedit.external_path(body.state))
+    external = extedit.external_path(body.state)
+    if external is not None and external != extedit.external_path(editsvc.edits_of(media_id)):
+        external = None
+    base = base if base is not None else _base(row, body.w, body.state.get("raw"), external)
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     stages = [s for s in (body.stages or editsvc.STAGES) if s in editsvc.STAGES]
