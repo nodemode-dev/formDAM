@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from .. import jobs, libraries
 from ..config import cache_dir, library_root, originals_dir
-from ..db import init_db, q, q1, setting_get, setting_set
+from ..db import ex, init_db, q, q1, setting_get, setting_set
 from ..services import classify, decode, libraryfs, thumbs
 
 router = APIRouter()
@@ -299,6 +299,8 @@ def disk_meta(body: DiskMetaIn):
         hit = q1("SELECT id FROM media WHERE rel_path=?", (path,))
         if hit:
             xmpsvc.apply_record(hit["id"], {k: v for k, v in rec.items() if k in ("rating", "label", "keywords")})
+            if body.label == "":
+                ex("UPDATE media SET label=NULL WHERE id=?", (hit["id"],))
         written += 1
     return {"written": written}
 

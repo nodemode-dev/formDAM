@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/library.py disk_meta · clearing a label in Browse Disk also clears it on the library item
+- refers-to: library disk_meta (label NULL on the matching row when the request's label is ""); xmpsvc.apply_record unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Found by the frontend fixer while fixing the Browse Disk label toggle (frontend F15): the window now sends label "" to clear a label, disk_meta writes the sidecar without it, but xmpsvc.apply_record keeps a row's label when the record's label is empty (right for importing a sidecar that has none), so a file that is also in the library kept its old label there. disk_meta now sets the row's label to NULL itself when the request's label is "". apply_record is left alone so sidecar imports keep their behaviour. Checked with a scratch run on a referenced file: red, then "", leaves the row's label NULL; a later rating-only write does not touch it.
+
 ### services/packagesvc.py inspect and _read_manifest · a marker or manifest that is valid JSON but not an object is "not a package"
 - refers-to: packagesvc inspect (isinstance check on marker), _read_manifest (isinstance check on data)
 - kind: fix
