@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### ffmpeg_fetch.py _download · the first-run ffmpeg download uses the standard library
+- refers-to: ffmpeg_fetch _download; source, _install, fetch and the pins unchanged
+- kind: fix + replaced code
+- logged: v1.28.9 · 2026-11-11
+
+Replaced: import httpx and an httpx.stream GET with follow_redirects. httpx is only in requirements-dev.txt and requirements-test.txt, and nothing in requirements.txt or requirements_macos.txt pulls it in, so every packaged engine failed the background fetch with "No module named 'httpx'" (logged only as a warning) and never placed ffmpeg; the 1.28.4 check passed because the dev venv has httpx. _download now uses urllib.request.urlopen (follows the GitHub redirect, raises on an HTTP error) and copies the body in 1 MiB blocks; no dependency added. On macOS the TLS context also loads /etc/ssl/cert.pem, the system root bundle, because a frozen python.org-style OpenSSL may have no default CA file there; the archive's files are still checked against the SHA-256 pins before anything is installed. Checked on Linux with the system Python (no httpx installed), through this machine's proxy CA: the real Linux archive downloaded (12.2 MB), fetch() into a temporary XDG_DATA_HOME passed the pins and placed ffmpeg and ffprobe, and a wrong URL raised HTTPError 404. Not run: a frozen engine, macOS, Windows.
+
 ### routers/trash.py and importer.py /internal/* · only the desktop shell may call the shell routes
 - refers-to: trash _shell_only, shell_hello, bio_pending, bio_result; importer shell_glass; tests/test_bio_channel SHELL headers
 - kind: fix
