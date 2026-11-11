@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/formDAM_boot(.bat) · the launchers wait on and open http://localhost:5173
+- refers-to: formDAM_boot UI=, formDAM_boot.bat UI=; the closing hint in formDAM_oc_install(.bat); README Getting started and the services table
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+This release's frontend change sets Vite's server.host back to false (the family rule), so the dev server listens on whatever localhost resolves to first: 127.0.0.1 on this Linux machine, often ::1 on macOS and Windows. Both launchers waited on and opened http://127.0.0.1:5173, which then would not answer there, so the boot would wait out its loop and the browser would open a dead page. They now use http://localhost:5173 (already one of the engine's WINDOW_ORIGINS); curl and browsers try both address families for localhost. The installers' closing hint and the README say the same address. CRLF kept in the two .bat files (file and git ls-files --eol). Checked: bash -n on both bash scripts; fixer B ran the new Vite config on Linux and both 127.0.0.1:5173 and localhost:5173 answered. Not run: the launchers, macOS, Windows.
+
 ### ../build_app.bat · --install works from a folder whose path holds a parenthesis
 - refers-to: build_app.bat the "if INSTALL if defined SETUP ( echo ... & start ... )" line
 - kind: fix

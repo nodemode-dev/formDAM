@@ -65,7 +65,7 @@ echo Installation complete
 echo ===========================================
 echo.
 echo Next steps:
-echo   1. Run: formDAM.bat   (installs what is missing, boots both halves, opens http://127.0.0.1:5173)
+echo   1. Run: formDAM.bat   (installs what is missing, boots both halves, opens http://localhost:5173)
 echo   2. Optional settings: copy backend\.env.example to backend\.env
 echo.
 endlocal

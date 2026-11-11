@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 VERSION="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' frontend/package.json | head -1)"
-UI="http://127.0.0.1:5173"
+UI="http://localhost:5173"
 
 echo "==================================================="
 echo "  formDAM v${VERSION} - Boot"

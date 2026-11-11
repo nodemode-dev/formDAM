@@ -10,7 +10,7 @@ for /F "tokens=2 delims=:" %%v in ('findstr /C:"\"version\"" "%ROOT%\frontend\pa
 set "VER=%VER:"=%"
 set "VER=%VER:,=%"
 set "VER=%VER: =%"
-set "UI=http://127.0.0.1:5173"
+set "UI=http://localhost:5173"
 
 echo ===========================================
 echo formDAM v%VER% - Boot
