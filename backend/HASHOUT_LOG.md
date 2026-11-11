@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/filesvc.py rename · a sidecar is moved only when it is this file's and the new name is free
+- refers-to: filesvc rename (the sidecar loop after os.rename)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Renaming a file moved IMG_1.xmp to the new name even when IMG_1.CR2 sat beside the JPEG and the sidecar was the RAW's, and os.rename silently replaced an existing b.xmp when a.jpg became b.jpg (POSIX rename overwrites). A sidecar of the form IMG_1.JPG.xmp is still moved, since it can only be this file's; the IMG_1.xmp form is left in place when another file in the folder still has the stem IMG_1 (any extension but .xmp, so an unimported RAW counts); and nothing is moved when the target sidecar already exists. The renamed file then simply has no sidecar beside it, which import and Read Sidecars handle. Checked with a scratch run on a referenced folder: renaming the JPEG of a RAW+JPEG pair leaves IMG_1.xmp; renaming a.jpg to b.jpg leaves an existing b.xmp untouched (a.xmp stays); a lone c.jpg renamed to cc.jpg takes c.xmp to cc.xmp.
+
 ### services/query.py parse_date_range · date-like text that is not a real date is searched as text
 - refers-to: query parse_date_range (now a wrapper), _parse_date_range (the former body, unchanged)
 - kind: fix
