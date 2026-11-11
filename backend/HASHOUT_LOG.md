@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/dedupsvc.py resolve + routers/dedup.py · a duplicate set is never resolved around a keeper that is trashed or not in the set
+- refers-to: dedupsvc resolve (the keeper check before anything is trashed); dedup router dedup_resolve 409; list_sets and resolve_all_exact unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+resolve took keep_media_id (or the stored keeper) without checking it. After a scan, trashing the keeper from the grid left the set listed (its members are live), and "Keep best, trash the rest" then trashed every member too, so all copies sat in the Trash until the purge; a keep_media_id outside the set trashed the whole set and recorded an unrelated item as keeper. resolve now returns an error and trashes nothing unless the keeper is the set's keeper or one of its members and is not in the Trash; the route answers 409 with that message. A set whose stored keeper is trashed stays listed, so "Keep this one" on a member still resolves it. resolve_all_exact skips such a set. Checked with a scratch run: with the keeper trashed, resolve answers 409 and the member stays live; an outside keep_media_id answers 409; keeping the member answers 200 and trashes nothing. test_dedup passes. The window's two resolve buttons do not catch the error yet (frontend, outside this fixer's area), so the 409 shows nothing on screen.
+
 ### ffmpeg_fetch.py _download · the first-run ffmpeg download uses the standard library
 - refers-to: ffmpeg_fetch _download; source, _install, fetch and the pins unchanged
 - kind: fix + replaced code

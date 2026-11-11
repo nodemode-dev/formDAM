@@ -205,6 +205,9 @@ def resolve(set_id: int, keep_media_id: Optional[int] = None) -> Dict[str, Any]:
     keeper = keep_media_id or row["keeper_media_id"]
     members = [m["media_id"] for m in q("SELECT media_id FROM dup_members WHERE set_id=?", (set_id,))]
     pool = set(members + [row["keeper_media_id"]])
+    alive = q1("SELECT trashed_ts FROM media WHERE id=?", (keeper,))
+    if keeper not in pool or alive is None or alive["trashed_ts"] is not None:
+        return {"trashed": 0, "error": "The copy to keep is in the Trash or not in this set; choose another copy to keep"}
     pool.discard(keeper)
     stamp = time.time()
     trashed = 0
