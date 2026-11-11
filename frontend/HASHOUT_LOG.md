@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/hidden.ts + trash.ts · a vault token obtained after leaving is dropped, and a 401 retries once
+- refers-to: ui/components/hidden.ts :: mountHiddenPage gone flag, load(retried), entry IIFE, teardown; ui/components/trash.ts :: mountTrashPage entry IIFE
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Each vault page clears the token on unmount so every entry re-locks, but the token can arrive after the unmount: open Hidden or Recently Deleted with device unlock stored, click another sidebar row while the device prompt is up, then authenticate. vaultGate then set a token nobody would clear, so every later api() call carried it, the next Hidden or Recently Deleted visit and private albums without their own passkey opened without asking, and once the token expired Hidden ran vaultGate (true, a token exists), /hidden 401, vaultGate (true) ... without end, while Recently Deleted showed "Nothing in the trash". Both pages now drop a token that arrives after they are gone, and on a 401 clear the token before asking again, retrying once (Hidden toasts the error instead of looping; Recently Deleted goes back if the unlock is refused). Checked: tsc --noEmit. Not run: the device prompt in a window.
+
 ### ui/components/people.ts · Select All picks only the people the name filter shows
 - refers-to: ui/components/people.ts :: mountPeoplePage filterInput input handler, allBtn click
 - kind: fix

@@ -156,15 +156,31 @@ export function mountTrashPage(host: HTMLElement): () => void {
   let gone = false;
   void (async () => {
     const ok = await vaultGate();
-    if (gone) return;
+    if (gone) {
+      clearVaultToken();
+      return;
+    }
     if (!ok) {
       history.back();
       return;
     }
     try {
       await loadTrash();
-    } catch {
+    } catch (err) {
       /* fetch failure renders the empty state below */
+      if ((err as { status?: number }).status === 401) {
+        clearVaultToken();
+        const again = await vaultGate();
+        if (gone) {
+          clearVaultToken();
+          return;
+        }
+        if (!again) {
+          history.back();
+          return;
+        }
+        await loadTrash().catch(() => undefined);
+      }
     }
     if (!gone) render();
   })();
