@@ -158,7 +158,7 @@ export function openKeywordManager(): void {
           void loadKeywords();
         }) },
         { label: "Set Shortcut...", icon: "type", action: async () => {
-          const key = await promptText("Keyboard shortcut", k.shortcut ?? "", "One letter or digit; with photos selected, press it to toggle this keyword. Empty clears it.");
+          const key = await promptText("Keyboard shortcut", k.shortcut ?? "", "One letter or digit; with photos selected, press it to add this keyword. Empty clears it.");
           if (key !== null) void patch(k.id, { shortcut: key.slice(0, 1) });
         } },
         "sep",

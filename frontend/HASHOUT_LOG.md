@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/organize.ts Set Shortcut hint · the hint says the key adds the keyword, as it does
+- refers-to: ui/components/organize.ts :: openKeywordManager "Set Shortcut..." prompt hint; the window keydown handler (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The Set Shortcut prompt said that pressing the key with photos selected toggles the keyword, but the keydown handler only ever sends `add`, so pressing it again never removed the keyword. A real toggle needs each selected item's keywords, which the selection does not carry, so the hint now says "add". Checked: tsc --noEmit. Not run: the prompt in a window.
+
 ### ui/components/libmanage.ts uploadAll · one failed drop batch no longer drops the rest silently
 - refers-to: ui/components/libmanage.ts :: uploadAll
 - kind: fix
