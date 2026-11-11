@@ -1,11 +1,12 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from .. import jobs
-from ..db import q
+from ..db import q, q1
 from ..services import geosvc
+from .guard import ensure_visible
 
 router = APIRouter()
 
@@ -66,8 +67,14 @@ def trips():
     return {"trips": geosvc.trips()}
 
 
+def _check(ids: List[int], request: Request) -> None:
+    for media_id in ids:
+        ensure_visible(q1("SELECT * FROM media WHERE id=?", (media_id,)), request)
+
+
 @router.post("/media/location")
-def set_location(payload: LocationIn):
+def set_location(payload: LocationIn, request: Request):
+    _check(payload.ids + ([payload.copy_from] if payload.copy_from is not None else []), request)
     lat, lon = payload.lat, payload.lon
     if payload.copy_from is not None:
         src = q("SELECT lat, lon FROM media WHERE id=?", (payload.copy_from,))
@@ -83,13 +90,15 @@ def set_location(payload: LocationIn):
 
 
 @router.post("/media/location-hidden")
-def location_hidden(payload: HiddenIn):
+def location_hidden(payload: HiddenIn, request: Request):
+    _check(payload.ids, request)
     geosvc.set_location_hidden(payload.ids, payload.hidden)
     return {"ok": True, "count": len(payload.ids)}
 
 
 @router.post("/media/dates")
-def adjust_dates(payload: DatesIn):
+def adjust_dates(payload: DatesIn, request: Request):
+    _check(payload.ids, request)
     if payload.mode == "set" and payload.ts is None:
         raise HTTPException(400, detail="A date is required")
     return {"items": geosvc.adjust_dates(payload.ids, payload.mode, payload.ts, payload.delta_s)}

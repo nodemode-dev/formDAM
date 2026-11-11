@@ -157,12 +157,15 @@ def edit_with_stop(media_id: int, request: Request):
 
 
 @router.post("/media/batch/edits")
-def paste_edits(body: BatchEditIn):
+def paste_edits(body: BatchEditIn, request: Request):
     adjustments = {k: v for k, v in body.state.items() if k in PASTE_KEYS}
+    rows = [row for row in (q1("SELECT * FROM media WHERE id=?", (media_id,)) for media_id in body.ids) if row is not None]
+    for row in rows:
+        ensure_visible(row, request)
     out = []
-    for media_id in body.ids:
-        row = q1("SELECT kind FROM media WHERE id=?", (media_id,))
-        if row is None or row["kind"] != "image":
+    for row in rows:
+        media_id = row["id"]
+        if row["kind"] != "image":
             continue
         current = editsvc.edits_of(media_id)
         for key in PASTE_KEYS:

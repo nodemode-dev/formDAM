@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/geo.py location and date routes + edit.py paste_edits · hidden, private and trashed items need the vault like everywhere else
+- refers-to: geo _check, set_location (ids and copy_from), location_hidden, adjust_dates; edit paste_edits (every row checked before any write)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+These four routes never called ensure_visible, so without a vault or album token a caller could read a hidden, private or trashed item's coordinates and place names (POST /media/location with copy_from set to it), and move or clear its location, hide its location, change its capture date or overwrite its edit, which organize, output, files and the single-item edit routes all refuse with 401. Each now checks every id (and copy_from) with ensure_visible before writing anything; paste_edits checks all rows first, so a refused id leaves the others untouched. A missing id in the geo routes now answers 404 as in output's _check (paste_edits still skips it). Checked with a scratch run: each route answers 401 for a trashed item without a token and writes nothing, and answers 200 for a visible item.
+
 ### services/thumbs.py ensure_thumb · thumbnails appear whole or not at all
 - refers-to: thumbs ensure_thumb (image and video branches), _placeholder_poster, _discard
 - kind: fix
