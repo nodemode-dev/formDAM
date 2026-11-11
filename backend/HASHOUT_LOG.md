@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/trash.py bio_unlock · device unlock is for the window, and fails when the vault key does not open
+- refers-to: trash bio_unlock (window_allowed or shell_allowed first; unlock_vault's result checked); keychain_enable unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+bio_unlock sat behind the general automation gate only, so an agent with an automation token could raise the system Touch ID, Windows Hello or polkit prompt, with nothing saying a script asked, and receive a full vault token if the user approved; every other unlock needs the passkey, and the Privacy pane promises token holders cannot raise their own access. It now answers 403 unless the request comes from the window (session cookie) or the shell. It also ignored unlock_vault's result and issued a vault token even when the stored key could not be unwrapped; it now answers 500 with the message vault_unlock already gives. keychain_enable is left as is: it needs the passkey itself. Checked with a scratch run: with FORMDAM_AUTOMATION=1 and no window cookie the route answers 403; test_bio_channel (window cookie) passes.
+
 ### routers/edit.py export_trim · protected videos are refused and the temporary folder always goes
 - refers-to: edit export_trim (the vault check after the trim check; shutil.rmtree in a finally around ffmpeg and the import)
 - kind: fix

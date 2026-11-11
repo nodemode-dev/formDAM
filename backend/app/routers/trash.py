@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from ..config import trash_retention_days
 from ..db import ex, media_dict, q, q1
-from ..security import shell_allowed
+from ..security import shell_allowed, window_allowed
 from ..services import libraryfs
 from ..vault import issue_token, set_vault, vault_hash, verify_passkey
 from .guard import require_vault
@@ -159,7 +159,9 @@ def keychain_enable(body: PasskeyIn):
 
 
 @router.post("/vault/bio/unlock")
-def bio_unlock():
+def bio_unlock(request: Request):
+    if not (window_allowed(request) or shell_allowed(request)):
+        raise HTTPException(403, detail="Device unlock is only offered in the formDAM window")
     stored_hash = vault_hash()
     if stored_hash is None:
         raise HTTPException(400, detail="No vault passkey is set yet")
@@ -169,7 +171,8 @@ def bio_unlock():
     if not verify_passkey(entry["result_passkey"], stored_hash):
         raise HTTPException(401, detail=f"The passkey saved in {device_labels()['store']} no longer matches the vault passkey")
     from .. import vaultcrypt
-    vaultcrypt.unlock_vault(entry["result_passkey"])
+    if not vaultcrypt.unlock_vault(entry["result_passkey"]):
+        raise HTTPException(500, detail="The vault key could not be opened with this passkey")
     return vaultcrypt.token_response(issue_token("vault"), vaultcrypt.VAULT_COOKIE)
 
 
