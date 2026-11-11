@@ -322,10 +322,11 @@ export async function setFavorite(id: number, onFlag: boolean): Promise<void> {
   const item = state.byId.get(id);
   if (item) item.favorite = onFlag;
   const favPage = state.pages.get("favorites");
-  if (favPage) {
-    state.pages.delete("favorites");
-  }
+  const stale = Boolean(favPage) && onFlag && !favPage!.items.some((m) => m.id === id);
+  if (favPage && !onFlag) favPage.items = favPage.items.filter((m) => m.id !== id);
+  if (stale) state.pages.delete("favorites");
   emit("page");
+  if (stale) emit("media");
   if (state.viewer) emit("viewer");
 }
 

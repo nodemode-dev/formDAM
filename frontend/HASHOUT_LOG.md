@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### engine/store.ts setFavorite · un-favoriting on Favorites removes one tile instead of emptying the grid
+- refers-to: engine/store.ts :: setFavorite
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+setFavorite deleted the cached "favorites" page on every change and emitted only "page", so a mounted Favorites grid pruned every tile against the new empty page and nothing loaded it again: the load sentinel was already inside the observer margin, there was nothing to scroll, and "media" was not emitted (the same trap the invalidateMedia entry describes). Un-favoriting now removes just that item from the cached page, so the grid slides out one tile. Favoriting drops the cached page only when it does not already hold the item, and then also emits "media" so a mounted grid loads again. Checked: tsc --noEmit. Not run: the Favorites page in a window.
+
 ### ui/components/hidden.ts + trash.ts · a vault token obtained after leaving is dropped, and a 401 retries once
 - refers-to: ui/components/hidden.ts :: mountHiddenPage gone flag, load(retried), entry IIFE, teardown; ui/components/trash.ts :: mountTrashPage entry IIFE
 - kind: fix
