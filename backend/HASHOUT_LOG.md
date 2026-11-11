@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/trash.py POST /vault/lock · the window can drop the vault cookie when it locks
+- refers-to: trash vault_lock; vaultcrypt.token_response, VAULT_COOKIE, COOKIE_PATH and the 30-minute token unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Unlocking sets an HttpOnly dam_vt cookie on /api/media holding the vault token (30 minutes), so img and video tags can load hidden and trashed items. The window's re-lock on leaving Hidden or Recently Deleted only forgets its in-memory token, and there was no route to clear the cookie, so those items' thumb, file and render URLs kept answering for the rest of the half hour. POST /api/vault/lock now answers with the same cookie expired (Max-Age=0, same path, HttpOnly, SameSite=Strict). It does not revoke the token itself (tokens are stateless HMACs) and does not change the vault key's unlocked state. The window must call it when it re-locks; that call is in frontend/, outside this fixer's area, and is listed for the owner. Checked with a scratch run: after setup the cookie opens a trashed item's /file (200); after POST /vault/lock the cookie is gone and /file answers 401.
+
 ### routers/edit.py preview and put_edits · an Edit With file is only used for the item it belongs to
 - refers-to: edit router preview (the external path is kept only when it equals the stored one), put_edits (state "external" replaced by the stored one when the file differs); extedit.external_path, _store, _adopt and package open unchanged
 - kind: fix

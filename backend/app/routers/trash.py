@@ -3,6 +3,7 @@ import sys
 import time
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from ..config import trash_retention_days
@@ -45,6 +46,14 @@ def vault_unlock(body: PasskeyIn):
     if not vaultcrypt.unlock_vault(body.passkey):
         raise HTTPException(500, detail="The vault key could not be opened with this passkey")
     return vaultcrypt.token_response(issue_token("vault"), vaultcrypt.VAULT_COOKIE)
+
+
+@router.post("/vault/lock")
+def vault_lock():
+    from .. import vaultcrypt
+    response = JSONResponse({"ok": True})
+    response.delete_cookie(vaultcrypt.VAULT_COOKIE, path=vaultcrypt.COOKIE_PATH, httponly=True, samesite="strict")
+    return response
 
 
 KEYCHAIN_SERVICE = "ai.nodemode.dam.vault"
