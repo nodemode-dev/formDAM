@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### vaultcrypt.py _scrub and purge · sealing drops an item's rendered caches, and delete forever drops its Edit With files
+- refers-to: vaultcrypt _scrub (cache/render, cache/effects and cache/share by "<id>_"), purge (library/edits and library/edits/work by "<id>-"); _protect and _unprotect unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+_scrub removed only thumbnails and face crops, so hiding, making private or trashing an item left plaintext copies beside the sealed original: rendered previews in cache/render/<id>_*, the Long Exposure still in cache/effects/<id>_le.png and the full video or photo copy a Web Gallery export cached in cache/share/<id>_*; and delete forever left those plus the item's Edit With results in library/edits/<id>-* and its working copies in library/edits/work/<id>-*. Because media ids can be reused after the newest item is purged, a new import could even show the deleted photo's cached Long Exposure. _scrub (run on seal and on purge) now also removes the three caches by "<id>_", which are rebuilt from the original when needed; purge also removes the edits and work files by "<id>-" (the glob needs the dash, so id 12 never matches 123). Deferred: the Edit With result of an item that is sealed but not deleted stays in plaintext in library/edits until delete forever; removing it on seal would lose the user's edit, and the full fix is to encrypt it into the vault blob with the item's content key in _protect (as _blob(blob, ".e")) and write it back in _unprotect, which changes the vault layout. Checked with a scratch run: delete forever of a trashed item removed its edits, work, effects, share and render files and kept a file of id <id>0; test_trash and test_vault_private pass.
+
 ### routers/trash.py POST /vault/lock · the window can drop the vault cookie when it locks
 - refers-to: trash vault_lock; vaultcrypt.token_response, VAULT_COOKIE, COOKIE_PATH and the 30-minute token unchanged
 - kind: fix

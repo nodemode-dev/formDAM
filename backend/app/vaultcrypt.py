@@ -379,6 +379,9 @@ def _scrub(media_id: int) -> None:
     folder = os.path.join(cache_dir(), "thumbs")
     for path in glob.glob(os.path.join(glob.escape(folder), f"{media_id}_*")):
         _unlink(path)
+    for sub in ("render", "effects", "share"):
+        for path in glob.glob(os.path.join(glob.escape(os.path.join(cache_dir(), sub)), f"{media_id}_*")):
+            _unlink(path)
     faces = os.path.join(cache_dir(), "faces")
     for face in q("SELECT id FROM faces WHERE media_id=?", (media_id,)):
         _unlink(os.path.join(faces, f"{face['id']}.jpg"))
@@ -509,6 +512,11 @@ def purge(media_id: int) -> None:
             _drop(item["blob"])
             ex("DELETE FROM vault_items WHERE media_id=?", (media_id,))
         _scrub(media_id)
+        from .services.extedit import edits_dir, work_dir
+
+        for folder in (edits_dir(), work_dir()):
+            for path in glob.glob(os.path.join(glob.escape(folder), f"{media_id}-*")):
+                _unlink(path)
 
 
 def is_vaulted(media_id: int) -> bool:
