@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../build_app.bat · --install works from a folder whose path holds a parenthesis
+- refers-to: build_app.bat the "if INSTALL if defined SETUP ( echo ... & start ... )" line
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+cmd expands %SETUP% before it parses the parenthesised block, so an installer path under a folder such as "Projects (2026)" put an unquoted ")" into the echo, which closed the block early; after a successful build the script stopped with "... was unexpected at this time" and the installer did not run. The echo now prints "%SETUP%" in quotes, where cmd does not treat ")" or "&" as syntax; the start argument was already quoted. CRLF line endings kept (checked with file and git ls-files --eol). Not run on Windows.
+
 ### ../setup/apply_icon · the Developer ID re-sign keeps the hardened runtime, entitlements and timestamp
 - refers-to: apply_icon ENTITLEMENTS; the Developer ID branch: codesign --force --options runtime --timestamp --entitlements, its ad hoc fallback and the two messages
 - kind: correction + replaced code
