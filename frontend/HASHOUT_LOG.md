@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### engine/theme.ts loadTheme + engine/store.ts hydrateStatePrefs · a Fade blur of 0 and the quick filters survive a relaunch
+- refers-to: engine/theme.ts :: loadTheme winBlur; engine/store.ts :: hydrateStatePrefs
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+loadTheme read the saved Fade blur with a truthiness test, so a saved 0 came back as the default 28 on the next launch; it now uses `??` like the fields around it. state.quick was read with prefGet when store.ts loaded, before main.ts awaited initPrefs, so it always got the empty default; setQuickFilter saved the quick filters but nothing restored them. hydrateStatePrefs, which main.ts runs right after initPrefs, now reads "quick" beside zoom, sort and grouping. Checked: tsc --noEmit. Not run: a relaunch in a window.
+
 ### ui/components/libmanage.ts mountDiskPage keys · a label key toggles in the request, not only on the tile
 - refers-to: ui/components/libmanage.ts :: mountDiskPage keys (label branch and the paint after /disk/meta); backend app/routers/library.py :: disk_meta (unchanged)
 - kind: fix

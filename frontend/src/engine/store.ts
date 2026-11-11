@@ -300,6 +300,7 @@ export function hydrateStatePrefs(): void {
   state.zoom = prefGet<number>("zoom", 184);
   state.sort = prefGet<SortOrder>("sort", "newest");
   state.grouping = prefGet<"all" | "months" | "years">("grouping", "all");
+  state.quick = prefGet<typeof state.quick>("quick", { flags: [], minRating: 0, label: "", keyword: "" });
 }
 
 export function setSort(order: SortOrder): void {

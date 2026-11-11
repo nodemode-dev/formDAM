@@ -83,7 +83,7 @@ export function loadTheme(): ThemePrefs {
     background: parsed.background ?? DEFAULT_THEME.background,
     vibrancy: true,
     vibTint: Math.max(-100, Math.min(100, parsed.vibTint ?? DEFAULT_THEME.vibTint)),
-    winBlur: parsed.winBlur ? parsed.winBlur : DEFAULT_THEME.winBlur,
+    winBlur: parsed.winBlur ?? DEFAULT_THEME.winBlur,
     winFrost: parsed.winFrost ?? DEFAULT_THEME.winFrost,
     fade: Math.max(0, Math.min(100, parsed.fade ?? legacy)),
     side: {
