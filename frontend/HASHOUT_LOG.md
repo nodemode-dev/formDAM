@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### vite.config.ts · the dev server keeps Vite's loopback default and refuses to move off 5173
+- refers-to: vite.config.ts :: server.host, server.strictPort
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The family rule is `server.host: false` with a pinned port. The config named "127.0.0.1" and had no strictPort, so with 5173 taken Vite moved quietly to 5174 while the launchers, the engine's dev Origin list and the docs all assume 5173. host is now false (Vite listens on localhost only, never the network) and strictPort is true, so a second dev server fails instead of moving. Gotcha: with host false Vite binds to whatever localhost resolves to first; here that is 127.0.0.1, but where it resolves to ::1 first (common on macOS and Windows) http://127.0.0.1:5173, which setup/formDAM_boot and formDAM_boot.bat wait on and open, would not answer; those launchers are outside the frontend and should use http://localhost:5173 (already in the engine's WINDOW_ORIGINS). Checked: `npx vite` on Linux answered 200 on 127.0.0.1:5173 and localhost:5173 and printed Local: http://localhost:5173/; a second `npx vite` exited 1 with the port in use. Not run: macOS or Windows.
+
 ### ui/components/albums.ts renderItems · Manual sort tiles are not HTML5-draggable, so the pointer reorder owns the drag
 - refers-to: ui/components/albums.ts :: mountAlbumDetail renderItems (manual mode); ui/components/grid.ts :: tileFor draggable (unchanged)
 - kind: fix
