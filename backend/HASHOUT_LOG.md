@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### db.py connect · the WAL switch is tried again when another connection is making the same switch
+- refers-to: db connect (the loop around PRAGMA journal_mode=WAL), WAL_TRIES
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The second half of pull request 5's failed `test` check. The vault sweep was the thread in the CI output, but any thread that opens a brand-new library at the same moment as init_db gives the same error: two connections that switch a new file to WAL together get "database is locked" at once, because SQLite does not call the busy handler for that switch, so busy_timeout cannot help. Job threads (memories on every start, OCR after an import) can still be running when a test's app ends and then open the next test's library; in the app a library switch is refused while jobs run, so there only the tests have this shape. connect() now tries the switch up to WAL_TRIES (10) times, sleeping 50 ms, 100 ms and so on between tries (2.25 s in all), only when the message says locked, and closes the half-opened connection before it gives up. Measured with a scratch probe outside the repo that makes two threads call connect() on the same new library and meet just before the switch: 41 of 1500 rounds raised without the loop, 0 of 1500 with it (34 switches were tried again). Not changed: the job threads themselves still outlive a test's app; ending them needs either a wait in the test fixture or a wait at shutdown, which is the owner's choice.
+
 ### vaultcrypt.py sweep thread · the vault sweep ends with the app and stops before a library switch
 - refers-to: vaultcrypt _halt, _state["sweeper"], sweep (halt check per item), _sweep_loop, startup, stop (new); main.py lifespan exit; routers/library.py switch_library
 - kind: fix
