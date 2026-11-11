@@ -59,6 +59,7 @@ async def lifespan(app: FastAPI):
     syncsvc.ensure()
     yield
     familyserver.stop()
+    vaultcrypt.stop()
 
 
 def _reclassify_screenshots() -> None:

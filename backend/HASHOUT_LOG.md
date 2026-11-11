@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### vaultcrypt.py sweep thread · the vault sweep ends with the app and stops before a library switch
+- refers-to: vaultcrypt _halt, _state["sweeper"], sweep (halt check per item), _sweep_loop, startup, stop (new); main.py lifespan exit; routers/library.py switch_library
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The engine tests on pull request 5 failed once in CI: setting up test_window_origin_list_matches_the_engine, init_db's PRAGMA journal_mode=WAL raised "database is locked", and the captured output showed the vault sweep working in that test's new, still empty library ("item 3 not settled: no such table: settings"). The vault-sweep thread was started once per process and never stopped; it reads the library from the environment on every query, so a sweep woken by test_dedup's /api/vault/setup was still settling item 3 when the next test's app pointed DAM_LIBRARY at a new folder, and it opened that file and switched it to WAL at the same moment init_db did. Two connections switching a new file to WAL together get SQLITE_BUSY at once (the busy handler is not used there), so a busy timeout before the PRAGMA would not help and connect() is unchanged. A user can hit the same shape: POST /library/switch changes the library and runs init_db while a sweep may be mid-item (the running-jobs check does not cover it). Now stop() sets a halt flag, wakes the loop, joins the thread and forgets it; the sweep checks the flag between items; lifespan exit calls stop(), and switch_library calls it before changing the library, so startup() (after init_db) starts a fresh thread. The same thread and race are on main (pull request 5 did not change the sweep); its _scrub additions only lengthen each item a little. Checked with a scratch pytest plugin outside the repo that holds each sweep settle until the library changes: before, every run printed the vault errors in the next test's library; after, none in 100 runs of test_dedup plus test_f1_guard and 30 full suites. Not fixed here: job threads (the memories job every startup, OCR after an import when an engine is installed) also outlive a test's app and can open the next library; the switch route already refuses while jobs run.
+
 ### routers/library.py disk_meta · clearing a label in Browse Disk also clears it on the library item
 - refers-to: library disk_meta (label NULL on the matching row when the request's label is ""); xmpsvc.apply_record unchanged
 - kind: fix

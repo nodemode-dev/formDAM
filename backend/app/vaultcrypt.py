@@ -59,8 +59,9 @@ CREATE INDEX IF NOT EXISTS idx_vault_albums_album ON vault_albums(album_id);
 
 _op = threading.RLock()
 _wake = threading.Event()
+_halt = threading.Event()
 _session: Dict[str, Any] = {"vault": None, "albums": {}, "until": 0.0}
-_state = {"sweeper": False}
+_state: Dict[str, Optional[threading.Thread]] = {"sweeper": None}
 
 
 class Locked(HTTPException):
@@ -635,7 +636,7 @@ def sweep() -> int:
     if _live() or setting_get("vault_sk_prov"):
         ids += [row["media_id"] for row in q("SELECT media_id FROM vault_items")]
     for media_id in ids:
-        if library_root() != root:
+        if library_root() != root or _halt.is_set():
             return 0
         reconcile(media_id)
     with _op:
@@ -645,9 +646,11 @@ def sweep() -> int:
 
 
 def _sweep_loop() -> None:
-    while True:
+    while not _halt.is_set():
         _wake.wait(SWEEP_EVERY)
         _wake.clear()
+        if _halt.is_set():
+            break
         try:
             sweep()
         except Exception as exc:
@@ -663,7 +666,19 @@ def startup() -> None:
     for leftover in glob.glob(os.path.join(glob.escape(_vault_dir()), "*.part")):
         _unlink(leftover)
     _purge_webcache()
-    if not _state["sweeper"]:
-        _state["sweeper"] = True
-        threading.Thread(target=_sweep_loop, name="vault-sweep", daemon=True).start()
+    if _state["sweeper"] is None:
+        _halt.clear()
+        _state["sweeper"] = threading.Thread(target=_sweep_loop, name="vault-sweep", daemon=True)
+        _state["sweeper"].start()
     _wake.set()
+
+
+def stop() -> None:
+    thread = _state["sweeper"]
+    if thread is None:
+        return
+    _halt.set()
+    _wake.set()
+    thread.join()
+    _state["sweeper"] = None
+    _wake.clear()

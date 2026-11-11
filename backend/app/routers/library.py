@@ -76,12 +76,13 @@ def switch_library(body: SwitchIn):
     if not exists and os.path.isdir(path) and any(not n.startswith(".") for n in os.listdir(path)):
         path = os.path.join(path, (body.name or "formDAM Library").strip() or "formDAM Library")
     os.makedirs(path, exist_ok=True)
+    from .. import vaultcrypt
+
+    vaultcrypt.stop()
     os.environ["FORMDAM_LIBRARY"] = path
     init_db()
     os.makedirs(originals_dir(), exist_ok=True)
     os.makedirs(cache_dir(), exist_ok=True)
-    from .. import vaultcrypt
-
     vaultcrypt.startup()
     _reset_caches()
     libraries.remember(path, body.name)
