@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/settings.ts Reset theme · every slider shows the value it resets to, Background included
+- refers-to: ui/components/settings.ts :: resetBtn click
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Reset theme set prefs.vibTint, winFrost and winBlur to their defaults but left the Fade tint, Fade frost and Fade blur sliders and their value labels on the old values, so the next touch of one wrote the old neighbour values back; and it did not reset the Background effect at all (prefs.bg and its radius, glow and bloom sliders). The handler now writes those three sliders and labels, resets prefs.bg to the default, writes its three sliders and labels and passes it to the live background. Checked: tsc --noEmit. Not run: Settings in a window.
+
 ### engine/theme.ts loadTheme + engine/store.ts hydrateStatePrefs · a Fade blur of 0 and the quick filters survive a relaunch
 - refers-to: engine/theme.ts :: loadTheme winBlur; engine/store.ts :: hydrateStatePrefs
 - kind: fix
