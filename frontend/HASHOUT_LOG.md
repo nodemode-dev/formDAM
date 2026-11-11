@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/library.ts + ui/zoomctl.ts · the library topbar removes its click and zoom listeners on unmount
+- refers-to: ui/components/library.ts :: mountLibrary hideMenu, teardown; ui/zoomctl.ts :: zoomControl (now returns { el, off })
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Every mount of a library view (Library, Favorites, Videos, any #/q/ route) added a document click listener that hides the filter menu and, through zoomControl, an on("zoom") listener, and neither was removed. Each kept the old topbar (and the old grid closure through it) alive, and every click and zoom step ran all of them, growing with each route change. The click handler is now a named hideMenu removed in the teardown, and zoomControl returns its off function beside the element, which the teardown calls. Checked: tsc --noEmit. Not run: listener counts in a window.
+
 ### ui/components/infopanel.ts + viewer.ts · the info panel's store listeners leave with the viewer
 - refers-to: ui/components/infopanel.ts :: InfoPanel.dispose, createInfoPanel on("keywords"), on("meta"); ui/components/viewer.ts :: render (closing branch)
 - kind: fix

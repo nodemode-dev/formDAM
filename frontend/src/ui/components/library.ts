@@ -45,7 +45,7 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
     seg.append(btn);
   });
 
-  const zoomWrap = zoomControl();
+  const { el: zoomWrap, off: offZoom } = zoomControl();
   const sortBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Sort" }, iconEl("sortLines"));
   sortBtn.addEventListener("click", (event) => {
     const rect = sortBtn.getBoundingClientRect();
@@ -91,7 +91,8 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
     event.stopPropagation();
     menu.classList.toggle("hidden");
   });
-  document.addEventListener("click", () => menu.classList.add("hidden"));
+  const hideMenu = () => menu.classList.add("hidden");
+  document.addEventListener("click", hideMenu);
 
   const searchInput = h("input", { type: "search", placeholder: "Search", "aria-label": "Search library", spellcheck: "false", autocomplete: "off", autocorrect: "off", autocapitalize: "off" }) as HTMLInputElement;
   searchInput.addEventListener("keydown", (event) => {
@@ -164,5 +165,7 @@ export function mountLibrary(host: HTMLElement, filter: FilterName, isLibraryRoo
     disposePinch();
     offGrid();
     offs.forEach((off) => off());
+    offZoom();
+    document.removeEventListener("click", hideMenu);
   };
 }
