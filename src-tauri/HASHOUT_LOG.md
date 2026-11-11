@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_macos_app · a failed bundle step is not retried as a Rust failure
+- refers-to: build_macos_app STAMP, rust_compiled, bundle_failed, the two "if rust_compiled; then bundle_failed; fi" lines around cargo tauri build
+- kind: rationale
+- logged: v1.28.7 · 2026-11-11
+
+cargo tauri build compiles, bundles, signs and notarizes in one command and exits 1 for any of them. The script read every exit 1 as a Rust failure: in the 1.28.6 run the notarization refusal was followed by "Rust build failed", cargo clean --release (3.1 GiB), a second four-minute compile, a second notarization upload w/ the same refusal, then "Rust build failed twice" and the rustup update hint. A stamp file is written before the build; when the command fails and either release/formdam-desktop or release/bundle/macos/FormDAM.app is newer than the stamp, Rust compiled (tauri removes and recreates the .app only after a successful compile, before it signs), so the script says the bundle step failed and stops w/o cleaning or rebuilding. find -prune keeps the check to the two paths themselves. When neither is newer the old path runs unchanged: clean once, retry, toolchain report. The same check follows the retry.
+
 ### ../setup/build_macos_app · the engine tree carries no symlink into tauri's resource copy
 - refers-to: build_macos_app after ENGINE: the find over links outside *.framework (cp -L -p, rm, mv) before the signing branch; after the signing branch the find that removes links inside *.framework, and the --selfcheck run on the placed tree
 - kind: rationale
