@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### search.ts + curate.ts mountMemoryPage + grid.ts hookPager · no grid is mounted after its page is gone
+- refers-to: ui/components/search.ts :: mountSearchPage alive, run, teardown; ui/components/curate.ts :: mountMemoryPage alive, load, teardown; ui/components/grid.ts :: mountGrid hookPager(framesLeft)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Search's run() guarded only with a sequence number that the teardown bumped, so a callback arriving after the page was left (the Scan text job's done callback, or the visual-search card) started a new run() whose own ++seq overtook the teardown and mounted a grid into the detached results node. A Memory page left before /memories/{id} answered did the same. Such a grid's hookPager never found `.view` and queued itself every animation frame for the life of the window, and its store listeners were never removed. Both pages now carry an alive flag that the teardown clears and that run() and load() check before and after their await; hookPager also gives up after 600 frames (as sweepAwaiting does with its own cap), so a host that never attaches cannot loop forever. Checked: tsc --noEmit. Not run: an OCR scan left mid-way in a window.
+
 ### ui/components/grid.ts renderMonths · a late Years or Months answer no longer replaces the tiles
 - refers-to: ui/components/grid.ts :: mountGrid modeSeq, renderMode, renderMonths
 - kind: fix

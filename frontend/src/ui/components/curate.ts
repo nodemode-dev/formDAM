@@ -106,8 +106,10 @@ export function mountMemoryPage(host: HTMLElement, id: number): () => void {
   host.append(h("div", { class: "view-pad" }, h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), theme, fav, rename, del, play)), gridHost);
   let detail: MemoryDetail | null = null;
   let disposeGrid: (() => void) | null = null;
+  let alive = true;
   const load = async () => {
     detail = await api<MemoryDetail>(`/memories/${id}`);
+    if (!alive) return;
     setText(title, detail.title);
     setText(sub, `${detail.subtitle ? `${detail.subtitle} · ` : ""}${countFmt(detail.ids.length)} items`);
     theme.value = detail.music.path ? "file" : detail.music.theme;
@@ -142,7 +144,10 @@ export function mountMemoryPage(host: HTMLElement, id: number): () => void {
     navigate("#/memories");
   });
   void load();
-  return () => disposeGrid?.();
+  return () => {
+    alive = false;
+    disposeGrid?.();
+  };
 }
 
 export function groupsStrip(container: HTMLElement): () => void {

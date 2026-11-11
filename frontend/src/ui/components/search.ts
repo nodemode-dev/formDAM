@@ -129,14 +129,16 @@ export function mountSearchPage(host: HTMLElement, query: string): () => void {
     ));
   pad.append(empty);
   let seq = 0;
+  let alive = true;
   let headReady: Promise<void> = Promise.resolve();
 
   async function run(): Promise<void> {
+    if (!alive) return;
     const mine = ++seq;
     setText(sub, "Searching...");
     const spec = currentSpec();
     const [data] = await Promise.all([api<{ count: number }>(`/browse/count?spec=${encodeURIComponent(JSON.stringify(spec))}`), headReady]);
-    if (mine !== seq) return;
+    if (mine !== seq || !alive) return;
     setText(sub, `${countFmt(data.count)} match${data.count === 1 ? "" : "es"} in ${[...scopes].map((k) => SCOPES.find((s) => s.key === k)?.label).join(", ")}`);
     empty.classList.toggle("hidden", data.count > 0);
     disposeGrid?.();
@@ -161,6 +163,7 @@ export function mountSearchPage(host: HTMLElement, query: string): () => void {
   headReady = Promise.all([refreshOcrCard(), clip.refresh(), suggest()]).then(() => undefined, () => undefined);
   void run();
   return () => {
+    alive = false;
     seq++;
     disposeGrid?.();
   };

@@ -600,11 +600,11 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
   offs.push(() => {
     pagerDead = true;
   });
-  function hookPager(): void {
-    if (pagerDead) return;
+  function hookPager(framesLeft = 600): void {
+    if (pagerDead || framesLeft <= 0) return;
     const root = host.closest(".view");
     if (!root) {
-      requestAnimationFrame(hookPager);
+      requestAnimationFrame(() => hookPager(framesLeft - 1));
       return;
     }
     const onScroll = () => {
