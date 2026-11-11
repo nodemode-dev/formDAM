@@ -1,6 +1,62 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/apply_icon · the Developer ID re-sign keeps the hardened runtime, entitlements and timestamp
+- refers-to: apply_icon ENTITLEMENTS; the Developer ID branch: codesign --force --options runtime --timestamp --entitlements, its ad hoc fallback and the two messages
+- kind: correction + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: codesign --force --deep --options runtime -s "$IDENTITY" "$APP" 2>/dev/null || codesign --force --deep -s - "$APP" 2>/dev/null || true, followed by "signed as: $IDENTITY" whichever of the two had run. This is the re-sign v1.28.3 took out of package_dmg and left here: --deep w/o --entitlements and --timestamp gave the shell a signature w/o its entitlements or a secure timestamp, the error was hidden, and the message named the Developer ID even when the ad hoc fallback had signed. The branch now signs the way package_dmg's does (hardened runtime, timestamp, Entitlements.plist, no --deep: the engine lives in Resources and keeps its own signatures), shows codesign's error when it fails, falls back to ad hoc so the app still opens, and says which one happened. Stamping an icon into a notarized copy changes its signature, so the message says that copy needs notarizing again. The ad hoc branch for a Mac w/o a Developer ID is unchanged.
+
+### ../setup/build_macos_app · the app's stapled ticket is checked after the build
+- refers-to: build_macos_app after APP: NOTARIZED, STAPLED, the three-attempt loop around xcrun stapler validate and xcrun stapler staple, the WARNING line; the closing "Signed as" lines
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: the closing line "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)", printed for every Developer ID build, which was wrong once tauri notarized. tauri runs xcrun stapler staple after an Accepted notarization but never reads its exit status, so a staple that fails (the ticket can take a little while to be served) leaves an unstapled app and a build that says nothing. When the identity and the notarization credentials tauri reads are set (APPLE_ID, APPLE_PASSWORD and APPLE_TEAM_ID, or APPLE_API_KEY, APPLE_API_ISSUER and APPLE_API_KEY_PATH; a key file tauri finds by itself in a private_keys folder is not looked for, so that set-up skips the check), the script now validates the staple before the app goes into the disk image and, when it is missing, staples again after 20 s and after 40 s more. It warns and carries on when the ticket still is not there: the app is notarized either way, Gatekeeper reads the ticket online, and formcompiler notarizes and staples the DMG, which covers what is inside it; so a slow ticket server does not fail a release. Stapling writes Contents/CodeResources, which the signature does not seal. The closing line now says which of the three states the build ended in, and that the DMG itself is not signed or notarized by these scripts.
+
+### ../setup/build_macos_app · only the engine's executables carry entitlements
+- refers-to: build_macos_app the signing loop's case: *Mach-O*executable* w/ --entitlements, *Mach-O* w/o; the say line above it
+- kind: correction + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: one case arm, *Mach-O*) codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" ..., which gave every library in the engine tree (about 180 .so and .dylib files and the Python library) the app's three entitlements. The v1.28.3 entry below says the frozen Python needs the two cs entitlements to load its extension modules; that is true of the process, and a process takes its entitlements from its main executable only. Apple's guidance is not to put entitlements on library code: it does nothing useful, notarization does not object, and on some macOS versions the system can refuse to load such a library. The loop now reads file -b once per file as before: a description holding "executable" (thin, or any slice of a universal file) is signed w/ Entitlements.plist, every other Mach-O w/ hardened runtime and a timestamp only. The launcher formdam-backend is still signed last, w/ the entitlements, and is the only executable PyInstaller puts in the tree (multiprocessing children re-run it).
+
+### ../setup/package_dmg · the last-resort hdiutil create retries
+- refers-to: package_dmg the else branch after fancy_dmg: BUILT, the five-attempt loop around hdiutil create -format UDZO, the ERROR line
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: rm -f "$DMG" and one hdiutil create -volname "formDAM" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null, which under set -e ended the whole build on its first failure. fancy_dmg returns 1 on any busy disk and this branch is what catches it, so it was the one hdiutil call w/ no second chance. "hdiutil: create failed - Resource busy" is a known race on macOS 13 and later (a system scan holds the new image for a moment), common on hosted runners; packagers answer it by trying again a few seconds later. Five attempts, 5, 10, 15 and 20 s apart, each starting from a removed $DMG; when all five fail the staging folder is removed and the script stops w/ the path it could not build.
+
+### ../setup/build_macos_app · @tauri-apps/cli 2.12.3 through npx, PyInstaller 6.22.3
+- refers-to: build_macos_app the prerequisites block and its npx --version line, pip install pyinstaller==6.22.3 pyinstaller-hooks-contrib==2026.10, the npx icon line, the two npx build lines
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: cargo tauri --version >/dev/null 2>&1 || { say "Installing tauri-cli"; cargo install tauri-cli --version '^2' --locked; } in the prerequisites, cargo tauri icon, cargo tauri build (twice) and an unpinned pyinstaller. The cargo line took whatever 2.x crates.io had on the day the runner's cargo bin cache was empty (2.12.4 is the newest on 2026-11-11) and compiled it from source, and after that kept whichever version the cache held, so two runs of the same commit could bundle w/ different CLIs. macOS now runs the CLI the way build_linux_app and build_windows_app.bat do, npx --yes @tauri-apps/cli@2.12.3, the same pin (tauri-bundler 2.10.3, the version the symlink and bundle-failure handling above was read against); npm is already a prerequisite and nothing is compiled for it. The icon and build lines still run from the repo root, as the cargo form did (Linux runs its build from src-tauri); the CLI looks for src-tauri/tauri.conf.json under the current folder first. npx needs the npm registry where cargo-tauri was a local binary, so the prerequisites resolve the CLI once w/ --version and stop there w/ an npm message when it cannot be had: a registry failure at the build line would otherwise read as a Rust failure and clear the release cache. PyInstaller is pinned to 6.22.3 and pyinstaller-hooks-contrib to 2026.10, the pair the 1.28.6 macOS run froze the engine w/ (the hooks decide what is collected) and the PyInstaller whose link layout the 1.28.7 change was read against; Windows stays on its own pin, 6.16.0.
+
+### ../setup/package_dmg + ../build_app + ../setup/apply_icon · the app is FormDAM.app everywhere
+- refers-to: package_dmg default APP path, the staged app name, the Finder item name in the AppleScript, the header usage lines; build_app the four "$dest/FormDAM.app" lines of the install step; apply_icon default APP and its header
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: formDAM.app in each of those places. productName became FormDAM in 1.28.6 (tauri.conf.json, the window title, the app menu), and build_app and build_macos_app followed for the path tauri writes, but the packager still staged the app into the disk image as formDAM.app, build_app still installed it into Applications under that name, and the packager's default still pointed at a bundle tauri no longer writes. On a case-insensitive volume that only showed as the wrong capital in Finder; on a case-sensitive one setup/package_dmg run by itself stopped at "app not found". apply_icon's default follows the name the app now has once installed, and build_app's install step removes a copy under either name first, so a case-sensitive volume is not left w/ both. The volume name, the DMG file name (formDAM_v<version>.dmg, which build_app reads) and the launcher keep formDAM.
+
+### ../setup/build_macos_app · a failed bundle step is not retried as a Rust failure
+- refers-to: build_macos_app STAMP, rust_compiled, bundle_failed, the two "if rust_compiled; then bundle_failed; fi" lines around cargo tauri build
+- kind: rationale
+- logged: v1.28.7 · 2026-11-11
+
+cargo tauri build compiles, bundles, signs and notarizes in one command and exits 1 for any of them. The script read every exit 1 as a Rust failure: in the 1.28.6 run the notarization refusal was followed by "Rust build failed", cargo clean --release (3.1 GiB), a second four-minute compile, a second notarization upload w/ the same refusal, then "Rust build failed twice" and the rustup update hint. A stamp file is written before the build; when the command fails and either release/formdam-desktop or release/bundle/macos/FormDAM.app is newer than the stamp, Rust compiled (tauri removes and recreates the .app only after a successful compile, before it signs), so the script says the bundle step failed and stops w/o cleaning or rebuilding. find -prune keeps the check to the two paths themselves. When neither is newer the old path runs unchanged: clean once, retry, toolchain report. The same check follows the retry.
+
+### ../setup/build_macos_app · the engine tree carries no symlink into tauri's resource copy
+- refers-to: build_macos_app after ENGINE: the find over links outside *.framework (cp -L -p, rm, mv) before the signing branch; after the signing branch the find that removes links inside *.framework, and the --selfcheck run on the placed tree
+- kind: rationale
+- logged: v1.28.7 · 2026-11-11
+
+The first formcompiler run to reach notarization (1.28.6, macOS arm64, PyInstaller 6.22.3, Python 3.12 framework build) was refused w/ "The signature of the binary is invalid" for exactly two files: formdam-backend/_internal/Python and formdam-backend/_internal/Python.framework/Python. PyInstaller writes both as symlinks: _internal/Python -> Python.framework/Versions/3.12/Python, and inside the framework Python -> Versions/Current/Python, Resources -> Versions/Current/Resources, Versions/Current -> 3.12. The signing loop walks find -type f, so it signed the one real file, Versions/3.12/Python, and codesign signs a framework version's main executable as a bundle: the signature is bound to Versions/3.12/Resources/Info.plist and Versions/3.12/_CodeSignature. tauri copies a folder resource one file at a time: a link to a file ships as a second regular copy of its target, a link to a folder is dropped, a broken link stops the bundle. So the app carried two loose copies of a bundle-signed binary w/ no bundle around them, which is what notarization refused, while Versions/3.12/Python passed in the same run. Now each file link outside a framework becomes a real file before signing, so _internal/Python (the path the PyInstaller bootloader opens, and the @rpath/Python every extension refers to) is signed as a plain Mach-O at its own path like the other libraries. The links inside the framework are removed after signing, so Versions/3.12 is signed in the layout that already passed and the loose Python.framework/Python is no longer shipped; nothing loads through those three links. Then the placed engine runs --selfcheck, since the earlier selfcheck runs on backend/dist before any of this: a tree that cannot start now stops the build before the Rust compile. Folder links and broken links outside a framework are left as tauri always treated them. Not chosen: bundle.macOS.files keeps links but needs a macOS-only resource map; deleting Python.framework whole would save a few MB but ships a layout PyInstaller never produced.
+
 ### ../setup/build_linux_app + ../setup/build_windows_app.bat · @tauri-apps/cli pinned to 2.12.3
 - refers-to: build_linux_app and build_windows_app.bat, the npx icon and build lines
 - kind: rationale + replaced code

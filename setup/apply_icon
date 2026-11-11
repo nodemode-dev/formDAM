@@ -1,14 +1,15 @@
 #!/bin/bash
-# Stamp the provided transparent icon.icns onto an INSTALLED formDAM.app
-# (default /Applications/formDAM.app), re-sign, & nudge Finder/Dock to refresh.
+# Stamp the provided transparent icon.icns onto an INSTALLED FormDAM.app
+# (default /Applications/FormDAM.app), re-sign, & nudge Finder/Dock to refresh.
 #   setup/apply_icon
-#   setup/apply_icon "/Applications/formDAM.app"
+#   setup/apply_icon "/Applications/FormDAM.app"
 set -e
 
 say() { echo "== $1 =="; }
 
-APP="${1:-/Applications/formDAM.app}"
+APP="${1:-/Applications/FormDAM.app}"
 ICNS="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/icons/source/icon.icns"
+ENTITLEMENTS="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/Entitlements.plist"
 
 [ -d "$APP" ] || { echo "ERROR: app not found at $APP"; exit 1; }
 [ -f "$ICNS" ] || { echo "ERROR: provided icns missing at $ICNS"; exit 1; }
@@ -23,8 +24,12 @@ diff -q "$ICNS" "$APP/Contents/Resources/$ICON_NAME" >/dev/null && echo "   byte
 say "Re-signing (modifying a signed bundle invalidates its seal)"
 IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
 if [ -n "$IDENTITY" ]; then
-  codesign --force --deep --options runtime -s "$IDENTITY" "$APP" 2>/dev/null || codesign --force --deep -s - "$APP" 2>/dev/null || true
-  echo "   signed as: $IDENTITY"
+  if codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" -s "$IDENTITY" "$APP"; then
+    echo "   signed as: $IDENTITY (a notarized copy needs notarizing again: the new signature has no ticket)"
+  else
+    codesign --force --deep -s - "$APP" 2>/dev/null || true
+    echo "   Developer ID signing failed (the error is above); ad-hoc signed instead"
+  fi
 else
   codesign --force --deep -s - "$APP" 2>/dev/null || true
   echo "   ad-hoc signed (no Developer ID certificate found)"

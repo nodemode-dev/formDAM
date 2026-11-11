@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "formdam-desktop"
-version = "1.28.6"
+version = "1.28.8"
 dependencies = [
  "block2",
  "keyring",
