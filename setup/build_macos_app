@@ -102,6 +102,11 @@ rm -rf src-tauri/binaries/formdam-backend
 mkdir -p src-tauri/binaries
 cp -R backend/dist/formdam-backend src-tauri/binaries/formdam-backend
 ENGINE=src-tauri/binaries/formdam-backend
+say "Resolving the engine's file symlinks (tauri ships a link as a second copy of its target, so each becomes a real file & is signed as one)"
+find "$ENGINE" -type l ! -path '*.framework/*' -print | while IFS= read -r link; do
+  [ -f "$link" ] || continue
+  cp -L -p "$link" "$link.resolved" && rm -f "$link" && mv "$link.resolved" "$link" || { echo "could not resolve $link"; exit 1; }
+done
 ENTITLEMENTS="$PWD/src-tauri/Entitlements.plist"
 IDENTITY="${APPLE_SIGNING_IDENTITY:-}"
 if [ "$IDENTITY" = "-" ]; then IDENTITY=""; fi
@@ -120,6 +125,8 @@ if [ -n "$IDENTITY" ]; then
 else
   codesign --force --deep -s - "$ENGINE/formdam-backend" 2>/dev/null || true
 fi
+find "$ENGINE" -type l -path '*.framework/*' -exec rm -f {} +
+"$ENGINE/formdam-backend" --selfcheck
 echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
 
 say "Generating app icons from src-tauri/icons/icon.png"

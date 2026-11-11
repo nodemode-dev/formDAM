@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_macos_app · the engine tree carries no symlink into tauri's resource copy
+- refers-to: build_macos_app after ENGINE: the find over links outside *.framework (cp -L -p, rm, mv) before the signing branch; after the signing branch the find that removes links inside *.framework, and the --selfcheck run on the placed tree
+- kind: rationale
+- logged: v1.28.7 · 2026-11-11
+
+The first formcompiler run to reach notarization (1.28.6, macOS arm64, PyInstaller 6.22.3, Python 3.12 framework build) was refused w/ "The signature of the binary is invalid" for exactly two files: formdam-backend/_internal/Python and formdam-backend/_internal/Python.framework/Python. PyInstaller writes both as symlinks: _internal/Python -> Python.framework/Versions/3.12/Python, and inside the framework Python -> Versions/Current/Python, Resources -> Versions/Current/Resources, Versions/Current -> 3.12. The signing loop walks find -type f, so it signed the one real file, Versions/3.12/Python, and codesign signs a framework version's main executable as a bundle: the signature is bound to Versions/3.12/Resources/Info.plist and Versions/3.12/_CodeSignature. tauri copies a folder resource one file at a time: a link to a file ships as a second regular copy of its target, a link to a folder is dropped, a broken link stops the bundle. So the app carried two loose copies of a bundle-signed binary w/ no bundle around them, which is what notarization refused, while Versions/3.12/Python passed in the same run. Now each file link outside a framework becomes a real file before signing, so _internal/Python (the path the PyInstaller bootloader opens, and the @rpath/Python every extension refers to) is signed as a plain Mach-O at its own path like the other libraries. The links inside the framework are removed after signing, so Versions/3.12 is signed in the layout that already passed and the loose Python.framework/Python is no longer shipped; nothing loads through those three links. Then the placed engine runs --selfcheck, since the earlier selfcheck runs on backend/dist before any of this: a tree that cannot start now stops the build before the Rust compile. Folder links and broken links outside a framework are left as tauri always treated them. Not chosen: bundle.macOS.files keeps links but needs a macOS-only resource map; deleting Python.framework whole would save a few MB but ships a layout PyInstaller never produced.
+
 ### ../setup/build_linux_app + ../setup/build_windows_app.bat · @tauri-apps/cli pinned to 2.12.3
 - refers-to: build_linux_app and build_windows_app.bat, the npx icon and build lines
 - kind: rationale + replaced code
