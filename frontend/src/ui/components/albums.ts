@@ -308,6 +308,7 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
       const tile = tileFor(item, () => view.map((m) => m.id), false);
       if (sortMode === "manual") {
         tile.classList.add("reorderable");
+        tile.draggable = false;
         tile.addEventListener("pointerdown", (event) => {
           if (event.button !== 0) return;
           const startX = event.clientX;

@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/albums.ts renderItems · Manual sort tiles are not HTML5-draggable, so the pointer reorder owns the drag
+- refers-to: ui/components/albums.ts :: mountAlbumDetail renderItems (manual mode); ui/components/grid.ts :: tileFor draggable (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The album reorder was moved off HTML5 drag and drop onto pointer events, with a 7 px lift. The later drag-to-sidebar feature made every tile from tileFor draggable (with -webkit-user-drag: element in app.css), so in Manual sort the browser started its native drag after a few pixels, fired pointercancel (the Pointer Events rule when a drag operation starts) and stopped sending pointermove: the reorder's up() ran with lifted still false and nothing moved, while the sidebar drop could add the ids to the same album again. Manual-mode tiles now set draggable to false, so the pointer path owns the gesture; dragging those tiles to a sidebar album is not offered in Manual sort (it still is in the other sorts). Checked: tsc --noEmit; the cancel-on-drag behaviour read from the Pointer Events spec. Not run: a reorder in the desktop window.
+
 ### engine/store.ts loadMore · a failed /browse no longer stops paging for good
 - refers-to: engine/store.ts :: loadMore
 - kind: fix
