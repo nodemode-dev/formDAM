@@ -1,5 +1,166 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### db.py connect · the WAL switch is tried again when another connection is making the same switch
+- refers-to: db connect (the loop around PRAGMA journal_mode=WAL), WAL_TRIES
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The second half of pull request 5's failed `test` check. The vault sweep was the thread in the CI output, but any thread that opens a brand-new library at the same moment as init_db gives the same error: two connections that switch a new file to WAL together get "database is locked" at once, because SQLite does not call the busy handler for that switch, so busy_timeout cannot help. Job threads (memories on every start, OCR after an import) can still be running when a test's app ends and then open the next test's library; in the app a library switch is refused while jobs run, so there only the tests have this shape. connect() now tries the switch up to WAL_TRIES (10) times, sleeping 50 ms, 100 ms and so on between tries (2.25 s in all), only when the message says locked, and closes the half-opened connection before it gives up. Measured with a scratch probe outside the repo that makes two threads call connect() on the same new library and meet just before the switch: 41 of 1500 rounds raised without the loop, 0 of 1500 with it (34 switches were tried again). Not changed: the job threads themselves still outlive a test's app; ending them needs either a wait in the test fixture or a wait at shutdown, which is the owner's choice.
+
+### vaultcrypt.py sweep thread · the vault sweep ends with the app and stops before a library switch
+- refers-to: vaultcrypt _halt, _state["sweeper"], sweep (halt check per item), _sweep_loop, startup, stop (new); main.py lifespan exit; routers/library.py switch_library
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The engine tests on pull request 5 failed once in CI: setting up test_window_origin_list_matches_the_engine, init_db's PRAGMA journal_mode=WAL raised "database is locked", and the captured output showed the vault sweep working in that test's new, still empty library ("item 3 not settled: no such table: settings"). The vault-sweep thread was started once per process and never stopped; it reads the library from the environment on every query, so a sweep woken by test_dedup's /api/vault/setup was still settling item 3 when the next test's app pointed DAM_LIBRARY at a new folder, and it opened that file and switched it to WAL at the same moment init_db did. Two connections switching a new file to WAL together get SQLITE_BUSY at once (the busy handler is not used there), so a busy timeout before the PRAGMA would not help and connect() is unchanged. A user can hit the same shape: POST /library/switch changes the library and runs init_db while a sweep may be mid-item (the running-jobs check does not cover it). Now stop() sets a halt flag, wakes the loop, joins the thread and forgets it; the sweep checks the flag between items; lifespan exit calls stop(), and switch_library calls it before changing the library, so startup() (after init_db) starts a fresh thread. The same thread and race are on main (pull request 5 did not change the sweep); its _scrub additions only lengthen each item a little. Checked with a scratch pytest plugin outside the repo that holds each sweep settle until the library changes: before, every run printed the vault errors in the next test's library; after, none in 100 runs of test_dedup plus test_f1_guard and 30 full suites. Not fixed here: job threads (the memories job every startup, OCR after an import when an engine is installed) also outlive a test's app and can open the next library; the switch route already refuses while jobs run.
+
+### routers/library.py disk_meta · clearing a label in Browse Disk also clears it on the library item
+- refers-to: library disk_meta (label NULL on the matching row when the request's label is ""); xmpsvc.apply_record unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Found by the frontend fixer while fixing the Browse Disk label toggle (frontend F15): the window now sends label "" to clear a label, disk_meta writes the sidecar without it, but xmpsvc.apply_record keeps a row's label when the record's label is empty (right for importing a sidecar that has none), so a file that is also in the library kept its old label there. disk_meta now sets the row's label to NULL itself when the request's label is "". apply_record is left alone so sidecar imports keep their behaviour. Checked with a scratch run on a referenced file: red, then "", leaves the row's label NULL; a later rating-only write does not touch it.
+
+### services/packagesvc.py inspect and _read_manifest · a marker or manifest that is valid JSON but not an object is "not a package"
+- refers-to: packagesvc inspect (isinstance check on marker), _read_manifest (isinstance check on data)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+A zip whose formdam-share.json held valid JSON that is not an object (for example []) reached marker.get outside the try, so POST /api/packages/inspect answered 500 and the upload sat in cache/incoming until the 24-hour sweep; the manifest had the same gap in _read_manifest, where data.get raised AttributeError instead of a PackageError. Both now check for a dict first, so inspect answers "package": false and opening answers "This is not a formDAM share package". Checked with a scratch run on a zip holding [] in both members; test_p1_package passes.
+
+### services/syncsvc.py push · an item whose file was missing is offered again on the next push
+- refers-to: syncsvc push (seen, retry, missed and the sync_<channel>_push_retry setting)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+When _put_object failed (a referenced original on an unplugged drive, or any file briefly absent), push skipped the record but still moved push_ts to the start of the run, so the item was never offered again until its metadata changed and the other computers never got it. The ids of such rows are now kept in the setting sync_<channel>_push_retry and added to the next push's rows (those still in the channel's scope and not already selected); the list is rewritten after every push, so an item leaves it once its object is written or it falls out of scope. A file that never comes back is checked once a push and adds no journal record. Moving push_ts back instead was not done: it would re-journal every later record each minute while one file stays missing. Checked with a scratch run on a personal sync folder: a referenced item whose file was moved away gets no object; after the file returns (with its meta_ts older than push_ts) the next push writes its object and empties the retry list. The tests that touch sync pass.
+
+### services/filesvc.py rename · a sidecar is moved only when it is this file's and the new name is free
+- refers-to: filesvc rename (the sidecar loop after os.rename)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Renaming a file moved IMG_1.xmp to the new name even when IMG_1.CR2 sat beside the JPEG and the sidecar was the RAW's, and os.rename silently replaced an existing b.xmp when a.jpg became b.jpg (POSIX rename overwrites). A sidecar of the form IMG_1.JPG.xmp is still moved, since it can only be this file's; the IMG_1.xmp form is left in place when another file in the folder still has the stem IMG_1 (any extension but .xmp, so an unimported RAW counts); and nothing is moved when the target sidecar already exists. The renamed file then simply has no sidecar beside it, which import and Read Sidecars handle. Checked with a scratch run on a referenced folder: renaming the JPEG of a RAW+JPEG pair leaves IMG_1.xmp; renaming a.jpg to b.jpg leaves an existing b.xmp untouched (a.xmp stays); a lone c.jpg renamed to cc.jpg takes c.xmp to cc.xmp.
+
+### services/query.py parse_date_range · date-like text that is not a real date is searched as text
+- refers-to: query parse_date_range (now a wrapper), _parse_date_range (the former body, unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The regex branches built datetime() without checking ranges, so search text such as 2024-13, 2023-45, 0000-01 or 2024-02-30 (file name fragments often look like this), or a smart album date rule holding one, raised ValueError and the search, the album count or Discover answered 500; on Windows a bare year before 1970 raised OSError from timestamp(). The body moved unchanged into _parse_date_range, and parse_date_range returns None when it raises ValueError, OverflowError or OSError, so the text falls back to the plain LIKE search. Checked with a scratch run: the four strings above and 9999-12 give None and text_sql builds a clause; 2024-02-03 and 2024-02 still parse.
+
+### routers/trash.py bio_unlock · device unlock is for the window, and fails when the vault key does not open
+- refers-to: trash bio_unlock (window_allowed or shell_allowed first; unlock_vault's result checked); keychain_enable unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+bio_unlock sat behind the general automation gate only, so an agent with an automation token could raise the system Touch ID, Windows Hello or polkit prompt, with nothing saying a script asked, and receive a full vault token if the user approved; every other unlock needs the passkey, and the Privacy pane promises token holders cannot raise their own access. It now answers 403 unless the request comes from the window (session cookie) or the shell. It also ignored unlock_vault's result and issued a vault token even when the stored key could not be unwrapped; it now answers 500 with the message vault_unlock already gives. keychain_enable is left as is: it needs the passkey itself. Checked with a scratch run: with FORMDAM_AUTOMATION=1 and no window cookie the route answers 403; test_bio_channel (window cookie) passes.
+
+### routers/edit.py export_trim · protected videos are refused and the temporary folder always goes
+- refers-to: edit export_trim (the vault check after the trim check; shutil.rmtree in a finally around ffmpeg and the import)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Export Trim on a hidden or private video pointed ffmpeg at the library path the vault had already emptied, so it answered 500 "ffmpeg could not write the clip" (and, had the plaintext been there, would have imported the clip as an ordinary visible item). It now answers 409 "Protected items stay inside the vault", as edit_with does. The dam-trim-* folder was removed with os.rmdir only after a successful import, so a failed ffmpeg run or a clip that was already in the library left it and the clip in the temp folder; it is now removed with shutil.rmtree in a finally. Checked with a scratch run: a trim export answers 200; a second one of the same clip answers 409 (duplicate) and leaves no dam-trim folder; a hidden video answers 409 with the vault message.
+
+### routers/geo.py location and date routes + edit.py paste_edits · hidden, private and trashed items need the vault like everywhere else
+- refers-to: geo _check, set_location (ids and copy_from), location_hidden, adjust_dates; edit paste_edits (every row checked before any write)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+These four routes never called ensure_visible, so without a vault or album token a caller could read a hidden, private or trashed item's coordinates and place names (POST /media/location with copy_from set to it), and move or clear its location, hide its location, change its capture date or overwrite its edit, which organize, output, files and the single-item edit routes all refuse with 401. Each now checks every id (and copy_from) with ensure_visible before writing anything; paste_edits checks all rows first, so a refused id leaves the others untouched. A missing id in the geo routes now answers 404 as in output's _check (paste_edits still skips it). Checked with a scratch run: each route answers 401 for a trashed item without a token and writes nothing, and answers 200 for a visible item.
+
+### services/thumbs.py ensure_thumb · thumbnails appear whole or not at all
+- refers-to: thumbs ensure_thumb (image and video branches), _placeholder_poster, _discard
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+ensure_thumb saved the WebP straight to its final path and treats an existing file as done, so right after an import, when the grid and the CLIP, Look Up and OCR jobs ask for the same thumbnail, one thread could serve another's half-written file, two could write it at once, and a crash mid-save left a truncated thumbnail that was served for good. For videos every thread shared <out>.frame.jpg as ffmpeg's output, and a thread whose attempt failed deleted <out> that another had just finished. Each save now goes to <out>.<random>.tmp and is moved into place with os.replace (atomic on one volume), the ffmpeg frame name carries the same random token, and the failure cleanup removes only this call's frame and temporary file, never <out>. The placeholder poster is written the same way. A crash can leave a stray .tmp file, which nothing serves and which the vault's per-id scrub removes. Checked with a scratch run: 8 threads, 3 rounds each, on a new 3000x2000 image and 6 threads on a new video all returned thumbnails that PIL loads fully, with no .tmp or frame file left.
+
+### routers/importer.py import_upload · a drag-and-drop import runs in the thread pool
+- refers-to: importer import_upload (async def to def); the body unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+import_upload was the one coroutine endpoint, so the copy, hashing, metadata read, database writes and the synchronous ffmpeg poster for a dropped video all ran on uvicorn's single event loop thread, and every other request (thumbnails, job polls, /api/health) waited until the whole drop was imported. It is now a plain def like every other route, which FastAPI runs in its thread pool; UploadFile.file is an ordinary file object, and the import batch is a thread-local that is set and cleared inside the same call. Checked with a scratch run: a dropped JPEG imports and gets its batch id.
+
+### services/syncsvc.py _apply_media · one object too large for the Shared Library no longer stops a device's journal for good
+- refers-to: syncsvc SHARED_MAX, _apply_media (the missing-object branch); familynet.seal and unseal, familyserver and the personal channel unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The Shared Library seals each object as one AES-GCM message, and AES-GCM in cryptography 50.0.1 refuses more than 2**31 - 1 bytes (OverflowError "Data or associated data too long", reproduced here with a lazily mapped 2 GiB buffer). A video of 2 GiB or more therefore never reaches the other device; _apply_media returned False for the missing object, pull stored the cursor at that line and stopped, and every later record from that device (shares, edits, removals) waited forever behind it. On the shared channel, a media record whose object is missing and whose declared size is over 2**31 - 1 is now skipped with a line in the engine log, so the journal moves on; the item itself still does not arrive. A missing object below that size still waits as before, since it may only be late. Deferred: carrying such objects at all needs chunked sealing (for example 16 MiB frames framed like vaultcrypt._encrypt_stream, streamed from disk on both sides), which changes the Shared Library's wire format between versions. Checked: the size limit by the call above; test_p1_lan passes. Not run: a pull with a real 2 GiB object.
+
+### vaultcrypt.py _scrub and purge · sealing drops an item's rendered caches, and delete forever drops its Edit With files
+- refers-to: vaultcrypt _scrub (cache/render, cache/effects and cache/share by "<id>_"), purge (library/edits and library/edits/work by "<id>-"); _protect and _unprotect unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+_scrub removed only thumbnails and face crops, so hiding, making private or trashing an item left plaintext copies beside the sealed original: rendered previews in cache/render/<id>_*, the Long Exposure still in cache/effects/<id>_le.png and the full video or photo copy a Web Gallery export cached in cache/share/<id>_*; and delete forever left those plus the item's Edit With results in library/edits/<id>-* and its working copies in library/edits/work/<id>-*. Because media ids can be reused after the newest item is purged, a new import could even show the deleted photo's cached Long Exposure. _scrub (run on seal and on purge) now also removes the three caches by "<id>_", which are rebuilt from the original when needed; purge also removes the edits and work files by "<id>-" (the glob needs the dash, so id 12 never matches 123). Deferred: the Edit With result of an item that is sealed but not deleted stays in plaintext in library/edits until delete forever; removing it on seal would lose the user's edit, and the full fix is to encrypt it into the vault blob with the item's content key in _protect (as _blob(blob, ".e")) and write it back in _unprotect, which changes the vault layout. Checked with a scratch run: delete forever of a trashed item removed its edits, work, effects, share and render files and kept a file of id <id>0; test_trash and test_vault_private pass.
+
+### routers/trash.py POST /vault/lock · the window can drop the vault cookie when it locks
+- refers-to: trash vault_lock; vaultcrypt.token_response, VAULT_COOKIE, COOKIE_PATH and the 30-minute token unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Unlocking sets an HttpOnly dam_vt cookie on /api/media holding the vault token (30 minutes), so img and video tags can load hidden and trashed items. The window's re-lock on leaving Hidden or Recently Deleted only forgets its in-memory token, and there was no route to clear the cookie, so those items' thumb, file and render URLs kept answering for the rest of the half hour. POST /api/vault/lock now answers with the same cookie expired (Max-Age=0, same path, HttpOnly, SameSite=Strict). It does not revoke the token itself (tokens are stateless HMACs) and does not change the vault key's unlocked state. The window must call it when it re-locks; that call is in frontend/, outside this fixer's area, and is listed for the owner. Checked with a scratch run: after setup the cookie opens a trashed item's /file (200); after POST /vault/lock the cookie is gone and /file answers 401.
+
+### routers/edit.py preview and put_edits · an Edit With file is only used for the item it belongs to
+- refers-to: edit router preview (the external path is kept only when it equals the stored one), put_edits (state "external" replaced by the stored one when the file differs); extedit.external_path, _store, _adopt and package open unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+extedit.external_path takes the basename the client names and only checks the file exists in library/edits, and names are <media id>-<unix seconds>-<n>.<ext>, so they can be probed. A preview of any visible item with another item's external file name showed that file (the full Edit With result of a hidden or private photo, which the vault does not seal), and PUT /edits stored the name so /render served it from then on (and DELETE /edits would unlink it). preview now uses the client's external file only when it is the one stored for that item; put_edits keeps the client's "external" only when its file is the stored one, and otherwise puts the stored value back (none drops it), so a stale editor cannot drop a newer Edit With result either. Edit With adoption and package open still set it through _store. Checked with a scratch run: previewing item A with item B's external name shows A; B's own preview shows its external file; a PUT on A with B's name stores no external, on B keeps it.
+
+### routers/library.py switch_library + jobs.any_running · no job of any kind may be running when the library switches
+- refers-to: jobs any_running; library switch_library busy
+- kind: fix + replaced code
+- logged: v1.28.9 · 2026-11-11
+
+Replaced: a fixed tuple of twelve job kinds (import, metadata, places, clip, faces, ocr, export, xmp, workflow, repair, memories, copy). consolidate, dedup, package, package-open, gallery, lookup and idevice-import were missing, and db.connect() follows FORMDAM_LIBRARY at once, so a consolidate job (with move, files moved out of the user's folders) or a dedup scan kept running against the new library with the old library's ids. jobs.any_running lists the kind of every job still in the running phase, and the switch answers 409 naming them while any is. Every job in this tree finishes on its own, so none can hold the switch for good. Checked with a scratch run: a running consolidate job makes the switch answer 409 naming it; test_p1_package (which switches libraries) passes.
+
+### services/dedupsvc.py resolve + routers/dedup.py · a duplicate set is never resolved around a keeper that is trashed or not in the set
+- refers-to: dedupsvc resolve (the keeper check before anything is trashed); dedup router dedup_resolve 409; list_sets and resolve_all_exact unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+resolve took keep_media_id (or the stored keeper) without checking it. After a scan, trashing the keeper from the grid left the set listed (its members are live), and "Keep best, trash the rest" then trashed every member too, so all copies sat in the Trash until the purge; a keep_media_id outside the set trashed the whole set and recorded an unrelated item as keeper. resolve now returns an error and trashes nothing unless the keeper is the set's keeper or one of its members and is not in the Trash; the route answers 409 with that message. A set whose stored keeper is trashed stays listed, so "Keep this one" on a member still resolves it. resolve_all_exact skips such a set. Checked with a scratch run: with the keeper trashed, resolve answers 409 and the member stays live; an outside keep_media_id answers 409; keeping the member answers 200 and trashes nothing. test_dedup passes. The window's two resolve buttons do not catch the error yet (frontend, outside this fixer's area), so the 409 shows nothing on screen.
+
+### ffmpeg_fetch.py _download · the first-run ffmpeg download uses the standard library
+- refers-to: ffmpeg_fetch _download; source, _install, fetch and the pins unchanged
+- kind: fix + replaced code
+- logged: v1.28.9 · 2026-11-11
+
+Replaced: import httpx and an httpx.stream GET with follow_redirects. httpx is only in requirements-dev.txt and requirements-test.txt, and nothing in requirements.txt or requirements_macos.txt pulls it in, so every packaged engine failed the background fetch with "No module named 'httpx'" (logged only as a warning) and never placed ffmpeg; the 1.28.4 check passed because the dev venv has httpx. _download now uses urllib.request.urlopen (follows the GitHub redirect, raises on an HTTP error) and copies the body in 1 MiB blocks; no dependency added. On macOS the TLS context also loads /etc/ssl/cert.pem, the system root bundle, because a frozen python.org-style OpenSSL may have no default CA file there; the archive's files are still checked against the SHA-256 pins before anything is installed. Checked on Linux with the system Python (no httpx installed), through this machine's proxy CA: the real Linux archive downloaded (12.2 MB), fetch() into a temporary XDG_DATA_HOME passed the pins and placed ffmpeg and ffprobe, and a wrong URL raised HTTPError 404. Not run: a frozen engine, macOS, Windows.
+
+### routers/trash.py and importer.py /internal/* · only the desktop shell may call the shell routes
+- refers-to: trash _shell_only, shell_hello, bio_pending, bio_result; importer shell_glass; tests/test_bio_channel SHELL headers
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The /api/internal/* routes passed the general automation gate only, so a window page or an automation token could call them. Turning on "save passkey to the Keychain" (Windows Hello, keyring) keeps the passkey in PENDING under a nonce and prints FORMDAM-CTRL KCSTORE <nonce> on stdout, which the frozen engine tees into engine.log; anyone reading that log with API access could fetch /internal/bio/pending/<nonce> and get the passkey in clear, post a false /internal/bio/result to cancel an unlock, or claim a shell is attached. Each of the four routes now answers 403 unless the request carries the shell key (security.shell_allowed), which src-tauri's engine_post and engine_get always send. The nonce still reaches the log, but it no longer opens anything without the shell key. test_bio_channel posted to these routes with the window's headers only; its internal calls now send x-dam-shell as the shell does (no assertion changed). Checked: a scratch run shows the four routes answer 403 with the window cookie and 404/200 with the shell key; test_bio_channel and test_f1_guard pass.
+
+### services/xmpsvc.py write_sidecar · a sidecar formDAM did not write is left alone, and a RAW+JPEG pair gets one sidecar each
+- refers-to: xmpsvc write_sidecar (the same-stem lookup and the check of an existing file before the write); sidecar_for, find_sidecar, sidecar_job unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+write_sidecar replaced IMG_1.xmp unconditionally. For a folder imported by reference that already held a sidecar from another app (develop settings, history), turning on sidecars, "Write sidecars" or a workflow sidecar step replaced it with a packet built from formDAM's fields only; and a RAW and a JPEG with the same stem in one folder wrote the same IMG_1.xmp, so the last one won. Now, when another media row has the same path up to its extension, this item's sidecar is IMG_1.CR2.xmp (the form find_sidecar already reads); and when the sidecar file exists and its first 64 KB do not carry x:xmptk="FormDAM" (the marker build_xmp has always written), nothing is written and the item counts as skipped (sidecar_job marks it done so it is not retried every run). Not done, for the owner: merging formDAM's fields into a foreign sidecar (parse it, set rating, label, keywords and IPTC fields, keep every other node) so such items get their metadata out too; and a pair whose formDAM IMG_1.xmp was written before this change keeps that file, which find_sidecar still reads first on a later import. Checked with a scratch run on a referenced folder: a foreign a.xmp is left byte for byte and the call returns None; with it gone, a.xmp is written and rewritten; a.png beside a.jpg gives a.png.xmp and a.jpg.xmp; a_b.jpg beside a%b.jpg is not taken for a pair. test_p1_xmp passes.
+
+### services/outputsvc.py export_one · an original or a video exported without location or metadata no longer carries it
+- refers-to: outputsvc ExportError, _copy_stripped, the byte-copy branch of export_one, export_job's ExportError arm and state "failures"
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+Every video, and every photo exported with "unmodified originals", was a byte copy of the library file, so "Include location" off, a hidden location and Metadata "None" were ignored: an iPhone video kept its ISO6709 location and a photo its EXIF GPS and XMP place. When any of the three applies, the branch now fails closed. A video goes through packagesvc._strip_video (ffmpeg, streams copied, all metadata and data tracks dropped; a vault item's bytes go through a temporary file beside the target that is removed); without ffmpeg, or when it fails, nothing is left at the target and the item fails with "location and metadata could not be removed from this video (ffmpeg is needed)". A photo is written through gpsscrub.scrub and kept only when gpsscrub.has_gps reads it as clean (or cannot read it and the row has no location), as packages do; otherwise it is removed and the item fails. Metadata "None" on an original photo fails with a message saying to export a rendered copy, since nothing here can strip all of a camera file's metadata without re-encoding it. Failed items are counted as skipped as before, and the messages are listed in the job's state under "failures" (the export toast still shows only the count). Checked with scratch runs: a GPS JPEG exported as an original with location off reads no GPS, with Metadata "None" is skipped with a message and leaves no file, and with the defaults still keeps its GPS; a .mov carrying location tags exported with location off shows no location in ffprobe.
+
+### services/libraryfs.py import_one + iccsvc.run_import · a copy that is only in the Trash is not a reason to delete from the iPhone
+- refers-to: libraryfs import_one (the duplicate query and its result's "trashed" key); iccsvc run_import (the statuses list that decides deletable)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The duplicate check matched any row with the same sha256 and size, including one in Recently Deleted. An iPhone import with "delete after import" then counted that photo as safely in the library and deleted it from the phone, and the Trash purged the only copy 30 days later. import_one now reads trashed_ts with the match and returns "trashed": true when the matching row is in the Trash; run_import records such a result as "trashed", so an entry with one is counted as a duplicate as before but is not put on the delete list. Other callers (folder import, package open, sync pull) still read the status "duplicate" and are unchanged. Checked with a scratch run of the ICC fake bridge: import, trash, import again with delete after import deletes nothing; after restoring the row it deletes the key. test_icc and test_core pass.
+
 ### tests · family layers F1, F4, F5, F9 and the P1 gap fills for formDAM
 - refers-to: backend/tests (conftest, support, test_f1_guard, test_f4_versions, test_f5_boot, test_f9_release_profiles, test_p1_originals, test_p1_xmp, test_p1_package, test_p1_lan), backend/requirements-test.txt
 - kind: rationale

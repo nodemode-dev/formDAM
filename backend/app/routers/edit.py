@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -105,6 +106,10 @@ def put_edits(media_id: int, body: EditIn, request: Request):
     row = _row(media_id, request)
     if row["kind"] != "image":
         raise HTTPException(415, detail="Videos are trimmed, not edited")
+    sent = body.state.get("external")
+    stored = editsvc.edits_of(media_id).get("external")
+    if sent is not None and not (isinstance(sent, dict) and isinstance(stored, dict) and sent.get("file") == stored.get("file")):
+        body.state["external"] = stored
     return _store(media_id, body.state)
 
 
@@ -153,12 +158,15 @@ def edit_with_stop(media_id: int, request: Request):
 
 
 @router.post("/media/batch/edits")
-def paste_edits(body: BatchEditIn):
+def paste_edits(body: BatchEditIn, request: Request):
     adjustments = {k: v for k, v in body.state.items() if k in PASTE_KEYS}
+    rows = [row for row in (q1("SELECT * FROM media WHERE id=?", (media_id,)) for media_id in body.ids) if row is not None]
+    for row in rows:
+        ensure_visible(row, request)
     out = []
-    for media_id in body.ids:
-        row = q1("SELECT kind FROM media WHERE id=?", (media_id,))
-        if row is None or row["kind"] != "image":
+    for row in rows:
+        media_id = row["id"]
+        if row["kind"] != "image":
             continue
         current = editsvc.edits_of(media_id)
         for key in PASTE_KEYS:
@@ -195,7 +203,10 @@ def preview(media_id: int, body: PreviewIn, request: Request):
     if row["kind"] != "image":
         raise HTTPException(415, detail="Only stills preview")
     base = editsvc.long_exposure(media_id, body.w) if body.state.get("effect") == "long_exposure" else None
-    base = base if base is not None else _base(row, body.w, body.state.get("raw"), extedit.external_path(body.state))
+    external = extedit.external_path(body.state)
+    if external is not None and external != extedit.external_path(editsvc.edits_of(media_id)):
+        external = None
+    base = base if base is not None else _base(row, body.w, body.state.get("raw"), external)
     if base is None:
         raise HTTPException(404, detail="This file could not be decoded")
     stages = [s for s in (body.stages or editsvc.STAGES) if s in editsvc.STAGES]
@@ -319,6 +330,10 @@ def export_trim(media_id: int, request: Request):
     row = _row(media_id, request)
     if row["kind"] != "video" or (row["trim_in"] is None and row["trim_out"] is None):
         raise HTTPException(400, detail="Set a trim first")
+    from .. import vaultcrypt
+
+    if vaultcrypt.protected(row) or vaultcrypt.is_vaulted(media_id):
+        raise HTTPException(409, detail="Protected items stay inside the vault")
     binary = ffmpeg_path()
     if not binary:
         raise HTTPException(409, detail="ffmpeg is not installed")
@@ -334,14 +349,13 @@ def export_trim(media_id: int, request: Request):
     if row["trim_out"]:
         cmd += ["-t", f"{float(row['trim_out']) - start:.3f}"]
     cmd += ["-map", "0", "-map_metadata", "0", "-c", "copy", out]
-    done = subprocess.run(cmd, capture_output=True, timeout=600)
-    if done.returncode != 0 or not os.path.isfile(out):
-        raise HTTPException(500, detail="ffmpeg could not write the clip")
-    result = libraryfs.import_one(out, move=True)
     try:
-        os.rmdir(folder)
-    except OSError:
-        pass
+        done = subprocess.run(cmd, capture_output=True, timeout=600)
+        if done.returncode != 0 or not os.path.isfile(out):
+            raise HTTPException(500, detail="ffmpeg could not write the clip")
+        result = libraryfs.import_one(out, move=True)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
     if result.get("status") != "imported":
         raise HTTPException(409, detail="The trimmed clip matches an item already in the library")
     ex("UPDATE media SET created_ts=? WHERE id=?", ((row["created_ts"] or 0) + (row["trim_in"] or 0), result["media_id"]))

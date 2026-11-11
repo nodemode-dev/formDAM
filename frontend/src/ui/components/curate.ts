@@ -106,8 +106,10 @@ export function mountMemoryPage(host: HTMLElement, id: number): () => void {
   host.append(h("div", { class: "view-pad" }, h("div", { class: "section-head" }, title, sub, h("span", { class: "head-spacer" }), theme, fav, rename, del, play)), gridHost);
   let detail: MemoryDetail | null = null;
   let disposeGrid: (() => void) | null = null;
+  let alive = true;
   const load = async () => {
     detail = await api<MemoryDetail>(`/memories/${id}`);
+    if (!alive) return;
     setText(title, detail.title);
     setText(sub, `${detail.subtitle ? `${detail.subtitle} · ` : ""}${countFmt(detail.ids.length)} items`);
     theme.value = detail.music.path ? "file" : detail.music.theme;
@@ -142,7 +144,10 @@ export function mountMemoryPage(host: HTMLElement, id: number): () => void {
     navigate("#/memories");
   });
   void load();
-  return () => disposeGrid?.();
+  return () => {
+    alive = false;
+    disposeGrid?.();
+  };
 }
 
 export function groupsStrip(container: HTMLElement): () => void {
@@ -276,6 +281,8 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
   let playing = true;
   let timer = 0;
   let interval = 4000;
+  let ended = false;
+  let showSeq = 0;
   const music = new Music();
   const a = h("div", { class: "ss-layer" });
   const b = h("div", { class: "ss-layer" });
@@ -301,6 +308,7 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
   const startMusic = () => music.start(theme.value === "file" ? "file" : theme.value, theme.value === "file" ? opts.musicSrc : undefined);
 
   function show(i: number): void {
+    if (ended) return;
     index = (i + ids.length) % ids.length;
     const id = ids[index];
     const item = state.byId.get(id);
@@ -309,7 +317,9 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
     const media = isVideo
       ? h("video", { src: fileUrl(id), muted: true, autoplay: true, playsinline: true, class: "ss-media" }) as HTMLVideoElement
       : h("img", { class: "ss-media kenburns", alt: "", draggable: false }) as HTMLImageElement;
+    const seq = ++showSeq;
     const reveal = () => {
+      if (seq !== showSeq) return;
       back.replaceChildren(media);
       back.classList.add("on");
       front.classList.remove("on");
@@ -337,6 +347,7 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
   }
 
   function end(): void {
+    ended = true;
     window.clearTimeout(timer);
     music.stop();
     window.removeEventListener("keydown", keys, true);
@@ -367,7 +378,7 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
   setPlayIcon();
   void root.requestFullscreen?.().catch(() => undefined);
   void Promise.all(ids.filter((id) => !state.byId.has(id)).slice(0, 400).map((id) => api<Media>(`/media/${id}`).then((m) => state.byId.set(id, m)).catch(() => undefined)))
-    .then(() => { startMusic(); show(index); });
+    .then(() => { if (ended) return; startMusic(); show(index); });
 }
 
 export function openCompare(ids: number[]): void {

@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from .. import jobs, libraries
 from ..config import cache_dir, library_root, originals_dir
-from ..db import init_db, q, q1, setting_get, setting_set
+from ..db import ex, init_db, q, q1, setting_get, setting_set
 from ..services import classify, decode, libraryfs, thumbs
 
 router = APIRouter()
@@ -66,8 +66,7 @@ def _reset_caches() -> None:
 
 @router.post("/library/switch")
 def switch_library(body: SwitchIn):
-    busy = [kind for kind in ("import", "metadata", "places", "clip", "faces", "ocr", "export", "xmp", "workflow", "repair", "memories", "copy")
-            if jobs.running(kind)]
+    busy = sorted(set(jobs.any_running()))
     if busy:
         raise HTTPException(409, detail=f"Wait for {', '.join(busy)} to finish before switching libraries")
     path = os.path.abspath(os.path.expanduser(body.path))
@@ -77,12 +76,13 @@ def switch_library(body: SwitchIn):
     if not exists and os.path.isdir(path) and any(not n.startswith(".") for n in os.listdir(path)):
         path = os.path.join(path, (body.name or "formDAM Library").strip() or "formDAM Library")
     os.makedirs(path, exist_ok=True)
+    from .. import vaultcrypt
+
+    vaultcrypt.stop()
     os.environ["FORMDAM_LIBRARY"] = path
     init_db()
     os.makedirs(originals_dir(), exist_ok=True)
     os.makedirs(cache_dir(), exist_ok=True)
-    from .. import vaultcrypt
-
     vaultcrypt.startup()
     _reset_caches()
     libraries.remember(path, body.name)
@@ -300,6 +300,8 @@ def disk_meta(body: DiskMetaIn):
         hit = q1("SELECT id FROM media WHERE rel_path=?", (path,))
         if hit:
             xmpsvc.apply_record(hit["id"], {k: v for k, v in rec.items() if k in ("rating", "label", "keywords")})
+            if body.label == "":
+                ex("UPDATE media SET label=NULL WHERE id=?", (hit["id"],))
         written += 1
     return {"written": written}
 

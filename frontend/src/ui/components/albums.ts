@@ -1,5 +1,5 @@
 import { prefGet, prefSet } from "../../engine/prefstore.js";
-import { api, setAlbumToken, thumbUrl } from "../../engine/api.js";
+import { api, clearAlbumToken, setAlbumToken, thumbUrl } from "../../engine/api.js";
 import { countFmt } from "../../engine/format.js";
 import { loadAlbums, navigate, on, refreshSummary, state } from "../../engine/store.js";
 import type { Album, Media } from "../../engine/types.js";
@@ -20,7 +20,7 @@ import { notesFlow, packageFlow } from "./packages.js";
 
 export function unlockAlbumFlow(album: Album): Promise<boolean> {
   return new Promise((resolve) => {
-    const modal = openModal(`Unlock "${album.name}"`);
+    const modal = openModal(`Unlock "${album.name}"`, undefined, () => done(false));
     const { wrap, input } = textField("Passkey", "password", "Enter the album passkey");
     const unlockBtn = h("button", { class: "btn primary", type: "button" }, iconEl("lock"), "Unlock");
     let settled = false;
@@ -45,9 +45,6 @@ export function unlockAlbumFlow(album: Album): Promise<boolean> {
     });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") unlockBtn.click();
-    });
-    modal.root.addEventListener("transitionend", () => {
-      if (!document.body.contains(modal.root)) done(false);
     });
     modal.body.append(wrap, h("div", { class: "modal-actions" }, unlockBtn));
     input.focus();
@@ -291,6 +288,7 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
   );
   host.append(pad);
   let items: Media[] = [];
+  let alive = true;
 
 
   function sorted(): Media[] {
@@ -308,6 +306,7 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
       const tile = tileFor(item, () => view.map((m) => m.id), false);
       if (sortMode === "manual") {
         tile.classList.add("reorderable");
+        tile.draggable = false;
         tile.addEventListener("pointerdown", (event) => {
           if (event.button !== 0) return;
           const startX = event.clientX;
@@ -393,6 +392,10 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
     } catch (err) {
       if ((err as { status?: number }).status === 401 && album) {
         const ok = await unlockAlbumFlow(album);
+        if (!alive) {
+          clearAlbumToken(albumId);
+          return;
+        }
         if (ok) return load();
         navigate("#/albums");
       } else {
@@ -434,6 +437,8 @@ export function mountAlbumDetail(host: HTMLElement, albumId: number): () => void
 
   void load();
   return () => {
+    alive = false;
+    clearAlbumToken(albumId);
     unbindTiles();
     unbindSel();
   };

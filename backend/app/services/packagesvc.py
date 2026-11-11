@@ -269,7 +269,7 @@ def inspect(path: str) -> Dict[str, Any]:
             marker = json.loads(_read_capped(zf, MARKER, MAX_MARKER).decode("utf-8"))
     except Exception:
         return {"package": False}
-    if marker.get("format") != FORMAT:
+    if not isinstance(marker, dict) or marker.get("format") != FORMAT:
         return {"package": False}
     return {"package": True, "version": marker.get("version"), "files": len([n for n in names if NAME_RE.match(n)])}
 
@@ -285,7 +285,7 @@ def _read_manifest(zf) -> Dict[str, Any]:
         if "password" in str(exc).lower() or "bad" in str(exc).lower():
             raise PackageError("That password does not open this package") from exc
         raise PackageError("This package is damaged") from exc
-    if data.get("format") != FORMAT or not isinstance(data.get("items"), list):
+    if not isinstance(data, dict) or data.get("format") != FORMAT or not isinstance(data.get("items"), list):
         raise PackageError("This is not a formDAM share package")
     return data
 

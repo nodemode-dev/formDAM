@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="version 1.28.8" src="https://img.shields.io/badge/version-1.28.8-eef0f4?style=flat-square">
+  <img alt="version 1.28.9" src="https://img.shields.io/badge/version-1.28.9-eef0f4?style=flat-square">
   <img alt="Python FastAPI" src="https://img.shields.io/badge/python%20%C2%B7%20fastapi-engine-3776ab?style=flat-square&logo=python&logoColor=white">
   <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-native-2f7bf5?style=flat-square">
   <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-3a3a3a?style=flat-square">
@@ -130,14 +130,14 @@ Prefer it in your browser, or want to contribute? Run the web UI straight from t
 git clone git@github.com:nodemode-dev/formDAM.git
 cd formDAM
 setup/formDAM_oc_install   # backend venv, pip deps, models (about 1.2 GB downloaded once, sha256-pinned), npm install
-./formDAM                  # installs what is missing, boots, opens http://127.0.0.1:5173
+./formDAM                  # installs what is missing, boots, opens http://localhost:5173
 ```
 
 `./build_app` builds the desktop app instead. On Windows use `formDAM.bat`. Set `FORMDAM_LIBRARY` to choose the library folder (default `<repo>/library`).
 
 | Service | URL | Notes |
 |---|---|---|
-| Interface | http://127.0.0.1:5173 | Vite dev server; open it with the launch key the boot script prints |
+| Interface | http://localhost:5173 | Vite dev server; open it with the launch key the boot script prints |
 | Engine | http://127.0.0.1:8000 | FastAPI; serves the built UI too after `cd frontend && npm run build` |
 
 **Contributing:** branch from `main`, keep changes to source here, and leave packaging and releases to FormCompiler. See [`CLAUDE.md`](CLAUDE.md) for the repo rules.

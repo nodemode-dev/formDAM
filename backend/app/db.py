@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 
 LEGACY_CATALOG = "damp.db"
+WAL_TRIES = 10
 _adopt_lock = threading.Lock()
 
 
@@ -125,7 +126,15 @@ def connect() -> sqlite3.Connection:
     _adopt_legacy_catalog()
     conn = sqlite3.connect(db_path(), check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    for attempt in range(WAL_TRIES):
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            break
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc) or attempt == WAL_TRIES - 1:
+                conn.close()
+                raise
+            time.sleep(0.05 * (attempt + 1))
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=8000")
     _local.conn = conn

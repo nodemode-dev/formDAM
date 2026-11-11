@@ -15,6 +15,7 @@ from . import libraryfs
 CHANNELS = ("personal", "shared")
 ROOT = "DAM Sync"
 INTERVAL_S = 60
+SHARED_MAX = 2**31 - 1
 FIELDS = ("favorite", "rating", "label", "rejected", "title", "caption", "alt_text", "edit_json", "hidden", "trashed_ts",
           "created_ts", "lat", "lon", "location_hidden", "shared_lib", "trim_in", "trim_out")
 SYNCABLE = "m.private=0 AND m.live_of IS NULL"
@@ -208,6 +209,10 @@ def push(channel: str) -> Dict[str, int]:
     first = setting_get(_key(channel, "pushed_once")) != "1"
     started = time.time()
     rows = q(f"SELECT m.* FROM media m WHERE {_scope(channel)} AND (m.meta_ts > ? OR ?) ORDER BY m.meta_ts", (since, int(first)))
+    seen = {row["id"] for row in rows}
+    retry = [int(x) for x in (setting_get(_key(channel, "push_retry")) or "").split(",") if x.isdigit() and int(x) not in seen]
+    rows += [row for row in (q1(f"SELECT m.* FROM media m WHERE m.id=? AND {_scope(channel)}", (mid,)) for mid in retry) if row is not None]
+    missed: List[int] = []
     records: List[Dict[str, Any]] = []
     counts = {"media": 0, "objects": 0, "albums": 0, "retracted": 0}
     for row in rows:
@@ -221,6 +226,7 @@ def push(channel: str) -> Dict[str, int]:
             continue
         if _carries_object(channel, row):
             if not _put_object(base, row):
+                missed.append(row["id"])
                 continue
             counts["objects"] += 1
             video = _live_row(row["id"])
@@ -249,6 +255,7 @@ def push(channel: str) -> Dict[str, int]:
         os.replace(path + ".tmp", path)
         setting_set(_key(channel, "seq"), str(seq))
     setting_set(_key(channel, "push_ts"), str(started - 1))
+    setting_set(_key(channel, "push_retry"), ",".join(str(mid) for mid in missed))
     setting_set(_key(channel, "pushed_once"), "1")
     return counts
 
@@ -317,6 +324,9 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
             return True
         src = _object_path(base, rec["sha"], os.path.splitext(str(rec.get("name") or ""))[1])
         if src is None:
+            return True
+        if not os.path.isfile(src) and channel == "shared" and int(rec.get("size") or 0) > SHARED_MAX:
+            print(f"sync: {rec.get('name')} is 2 GiB or larger and cannot travel through the Shared Library yet; skipped", flush=True)
             return True
         if not os.path.isfile(src):
             return False

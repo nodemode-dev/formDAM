@@ -1,5 +1,173 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/infopanel.ts chips · People, Albums, Subjects and Look Up links close the viewer first
+- refers-to: ui/components/infopanel.ts :: lookupCard Show All, paint people, subjects and albums chips
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The info panel's People, Subjects and Albums chips and Look Up's Show All called navigate() while the viewer stayed open: a route change does not close the viewer, so the new page rendered behind the fixed viewer layer and the click seemed to do nothing. Each of these handlers now calls closeViewer() before navigate(). Checked: tsc --noEmit. Not run: the chips in a window.
+
+### engine/api.ts clearAlbumToken + albums.ts mountAlbumDetail · a private album re-locks when it is left
+- refers-to: engine/api.ts :: clearAlbumToken; ui/components/albums.ts :: mountAlbumDetail alive, load 401 branch, teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Private-album tokens were kept in api.ts's albumTokens map for the whole session, unlike the vault token, which the vault pages clear on unmount; so an album unlocked once reopened without its passkey for the token's 30 min life. api.ts now has clearAlbumToken, and the album page clears its album's token on unmount and also when the unlock dialog finishes after the page was left (the same late-token race as Hidden and Recently Deleted). Known and outside the frontend: the engine's token_response also sets an HttpOnly cookie on /api/media, which the frontend cannot clear, so thumbnails stay fetchable by cookie until it expires; and a token taken by the selection bar's Add to Album prompt is still kept until that album page is opened and left. Checked: tsc --noEmit. Not run: a private album in a window.
+
+### ui/components/curate.ts openSlideshow show · only the newest slide is revealed
+- refers-to: ui/components/curate.ts :: openSlideshow showSeq, show reveal
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+show() reveals an image after decode(). Two quick arrow presses picked the same back layer for both slides, and when the first decode finished after the second, its late reveal wrote into the layer already shown and then took "on" off it, leaving a black frame and the wrong image under the counter. Each show() now takes a sequence number and a reveal that is no longer the newest does nothing. Checked: tsc --noEmit. Not run: a slideshow in a window.
+
+### ui/components/organize.ts Set Shortcut hint · the hint says the key adds the keyword, as it does
+- refers-to: ui/components/organize.ts :: openKeywordManager "Set Shortcut..." prompt hint; the window keydown handler (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The Set Shortcut prompt said that pressing the key with photos selected toggles the keyword, but the keydown handler only ever sends `add`, so pressing it again never removed the keyword. A real toggle needs each selected item's keywords, which the selection does not carry, so the hint now says "add". Checked: tsc --noEmit. Not run: the prompt in a window.
+
+### ui/components/libmanage.ts uploadAll · one failed drop batch no longer drops the rest silently
+- refers-to: ui/components/libmanage.ts :: uploadAll
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+A drop uploads its files in batches of 40. A failed batch threw out of the loop with no message (the drop handler's promise was not caught): the earlier batches stayed imported, the later ones were skipped, and the album add for a drop onto an album never ran. Each batch is now tried on its own, the loop carries on, the number of files that failed is toasted as an error, and the imported ones are still added to the album and counted. Checked: tsc --noEmit. Not run: a drop with a failing batch.
+
+### ui/components/people.ts teardown · People opens out of Select mode
+- refers-to: ui/components/people.ts :: module selectMode, picked; mountPeoplePage teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+selectMode and picked live at module level and the page teardown left them as they were, so leaving People in Select mode and coming back drew the cards with check dots and made a card click pick instead of open, while the new button still said "Select" and the Select All button was hidden. The teardown now ends Select mode and clears the pick. Checked: tsc --noEmit. Not run: People in a window.
+
+### ui/components/settings.ts Reset theme · every slider shows the value it resets to, Background included
+- refers-to: ui/components/settings.ts :: resetBtn click
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Reset theme set prefs.vibTint, winFrost and winBlur to their defaults but left the Fade tint, Fade frost and Fade blur sliders and their value labels on the old values, so the next touch of one wrote the old neighbour values back; and it did not reset the Background effect at all (prefs.bg and its radius, glow and bloom sliders). The handler now writes those three sliders and labels, resets prefs.bg to the default, writes its three sliders and labels and passes it to the live background. Checked: tsc --noEmit. Not run: Settings in a window.
+
+### engine/theme.ts loadTheme + engine/store.ts hydrateStatePrefs · a Fade blur of 0 and the quick filters survive a relaunch
+- refers-to: engine/theme.ts :: loadTheme winBlur; engine/store.ts :: hydrateStatePrefs
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+loadTheme read the saved Fade blur with a truthiness test, so a saved 0 came back as the default 28 on the next launch; it now uses `??` like the fields around it. state.quick was read with prefGet when store.ts loaded, before main.ts awaited initPrefs, so it always got the empty default; setQuickFilter saved the quick filters but nothing restored them. hydrateStatePrefs, which main.ts runs right after initPrefs, now reads "quick" beside zoom, sort and grouping. Checked: tsc --noEmit. Not run: a relaunch in a window.
+
+### ui/components/libmanage.ts mountDiskPage keys · a label key toggles in the request, not only on the tile
+- refers-to: ui/components/libmanage.ts :: mountDiskPage keys (label branch and the paint after /disk/meta); backend app/routers/library.py :: disk_meta (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+In Browse Disk, pressing 6 to 9 sent the label as is, and the engine wrote it again, while the tile toggled it off when the file already had that label, so the tile showed no label and the XMP sidecar still said red until the folder was reloaded. The toggle is now decided before the request: when every picked file already has that label the request sends an empty label (which disk_meta writes and build_xmp leaves out), otherwise the label; the tiles are painted with exactly what was sent. Known and outside the frontend: for a file that is also in the library, xmpsvc.apply_record ignores an empty label, so the library row keeps its old label. Checked: tsc --noEmit; disk_meta and build_xmp read for the empty-label path. Not run: Browse Disk in a window.
+
+### ui/components/grid.ts selectAnchor · shift-click ranges start from this view's last pick
+- refers-to: ui/components/grid.ts :: selectAnchor, module on("route"), tileFor tile-check click and shift range
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The shift-click anchor is a module global set only by Cmd/Ctrl clicks or plain clicks while selecting. syncRoute clears the selection on every route change but not the anchor, so a range in Favorites could start from a photo picked in Library; a selection started with the tile's check button set no anchor, so the next shift-click toggled one tile instead of a range; and each id in a range called toggleSelect, emitting "selection" once per id (every grid's selection listener walks all its tiles, so a long range cost n squared). The anchor is now reset on "route", the check button sets it, and a range adds its ids to the selection in one pass with a single "selection" emit. Checked: tsc --noEmit; vitest run (10 passed). Not run: shift ranges in a window.
+
+### ui/components/importer.ts · leaving Import before /idevice/status answers starts no device polling
+- refers-to: ui/components/importer.ts :: mountImportPage alive, /idevice/status then, teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+/idevice/status probes usbmuxd and can be slow. When the user left Import before it answered, the teardown ran while phoneTimer was still null, and the answer then started a 3 s interval polling /idevice/devices that nothing would clear. The page now carries an alive flag cleared in the teardown, and the status answer does nothing once it is false. Checked: tsc --noEmit. Not run: the Import page with a slow status probe.
+
+### search.ts + curate.ts mountMemoryPage + grid.ts hookPager · no grid is mounted after its page is gone
+- refers-to: ui/components/search.ts :: mountSearchPage alive, run, teardown; ui/components/curate.ts :: mountMemoryPage alive, load, teardown; ui/components/grid.ts :: mountGrid hookPager(framesLeft)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Search's run() guarded only with a sequence number that the teardown bumped, so a callback arriving after the page was left (the Scan text job's done callback, or the visual-search card) started a new run() whose own ++seq overtook the teardown and mounted a grid into the detached results node. A Memory page left before /memories/{id} answered did the same. Such a grid's hookPager never found `.view` and queued itself every animation frame for the life of the window, and its store listeners were never removed. Both pages now carry an alive flag that the teardown clears and that run() and load() check before and after their await; hookPager also gives up after 600 frames (as sweepAwaiting does with its own cap), so a host that never attaches cannot loop forever. Checked: tsc --noEmit. Not run: an OCR scan left mid-way in a window.
+
+### ui/components/grid.ts renderMonths · a late Years or Months answer no longer replaces the tiles
+- refers-to: ui/components/grid.ts :: mountGrid modeSeq, renderMode, renderMonths
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+renderMonths awaited /media/summary and then replaced the grid with month cards without checking that the mode was still the one asked for. Clicking Months and then All Photos before the answer came (large library, first use) let the late answer swap the freshly appended tiles for month cards while `rendered` still listed them, so All Photos showed month cards and appendItems skipped every item as already drawn; the same race ran between Months and Years. renderMode now bumps a sequence number, and renderMonths drops an answer whose sequence is stale or that arrives after month mode ended. Checked: tsc --noEmit. Not run: the toggle on a throttled network.
+
+### ui/modal.ts onClose · closing a modal with X or the backdrop reaches its owner
+- refers-to: ui/modal.ts :: openModal onClose; ui/components/organize.ts :: openKeywordManager; ui/components/trash.ts :: vaultGate; ui/components/albums.ts :: unlockAlbumFlow
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+openModal bound its own local close to the X button and the backdrop, so owners had no way to learn of a close they did not start. The Keyword Manager wrapped modal.close to remove its on("keywords") listener, but X and the backdrop still ran the original, so every open leaked a listener patching a detached tree. The vault and private-album unlock dialogs waited for transitionend and then checked that the backdrop had left the body, but the opacity transition (160 ms) ends before openModal removes the node (180 ms), so "cancelled" was never reported: a private album stayed on a blank "Album" page and Hidden or Recently Deleted never went back. openModal now takes an optional onClose that runs once the node is removed; the Keyword Manager passes its off, and both unlock dialogs pass done(false) (a successful unlock has already settled with true by then, so the later false is ignored). Checked: tsc --noEmit. Not run: the dialogs in a window.
+
+### styles/app.css · the app-level layers read the layer tokens; in-component and 60 values stay literal
+- refers-to: styles/app.css :: #bg-holder, .sel-bar, .viewer, .modal-backdrop, .toast-host, #app, .content, .content > .topbar, .ctx-menu, .sidebar, .preload-hud; theme/tokens.css :: --z-* (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The family rule is that z-index uses the layer tokens; app.css used literal numbers that matched tokens.css only by value. Every app.css value with an exact token now reads it (0 base, 1 content, 20 sticky, 25 sidebar, 90 popover, 100 viewer, 200 modal, 300 toast), so the computed stacking is unchanged. Left literal on purpose, still carried debt: `.menu` and `.marquee-rect` at 60 (no token has 60, and choosing one is a design call) and the small in-component orders (`.sel-dot` 3, `.kind-mark` 2, `.film-strip-wrap` 5, `.film-cap` 2, `.zoom-box` 4, `.live-btn` 6, `.stage-live` 4, `.ptile img` 1, `.ptile-dur` 2), where mapping 2, 3, 4 and 6 onto the single --z-raised (5) would change their order; theme/glass.css and theme/background.js are the generated theme kit and are not hand-edited. Checked: npm run build (tsc and vite build) passed and the built CSS carries the var(--z-*) values beside the tokens' :root block. Not run: the window.
+
+### vite.config.ts · the dev server keeps Vite's loopback default and refuses to move off 5173
+- refers-to: vite.config.ts :: server.host, server.strictPort
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The family rule is `server.host: false` with a pinned port. The config named "127.0.0.1" and had no strictPort, so with 5173 taken Vite moved quietly to 5174 while the launchers, the engine's dev Origin list and the docs all assume 5173. host is now false (Vite listens on localhost only, never the network) and strictPort is true, so a second dev server fails instead of moving. Gotcha: with host false Vite binds to whatever localhost resolves to first; here that is 127.0.0.1, but where it resolves to ::1 first (common on macOS and Windows) http://127.0.0.1:5173, which setup/formDAM_boot and formDAM_boot.bat wait on and open, would not answer; those launchers are outside the frontend and should use http://localhost:5173 (already in the engine's WINDOW_ORIGINS). Checked: `npx vite` on Linux answered 200 on 127.0.0.1:5173 and localhost:5173 and printed Local: http://localhost:5173/; a second `npx vite` exited 1 with the port in use. Not run: macOS or Windows.
+
+### ui/components/albums.ts renderItems · Manual sort tiles are not HTML5-draggable, so the pointer reorder owns the drag
+- refers-to: ui/components/albums.ts :: mountAlbumDetail renderItems (manual mode); ui/components/grid.ts :: tileFor draggable (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The album reorder was moved off HTML5 drag and drop onto pointer events, with a 7 px lift. The later drag-to-sidebar feature made every tile from tileFor draggable (with -webkit-user-drag: element in app.css), so in Manual sort the browser started its native drag after a few pixels, fired pointercancel (the Pointer Events rule when a drag operation starts) and stopped sending pointermove: the reorder's up() ran with lifted still false and nothing moved, while the sidebar drop could add the ids to the same album again. Manual-mode tiles now set draggable to false, so the pointer path owns the gesture; dragging those tiles to a sidebar album is not offered in Manual sort (it still is in the other sorts). Checked: tsc --noEmit; the cancel-on-drag behaviour read from the Pointer Events spec. Not run: a reorder in the desktop window.
+
+### engine/store.ts loadMore · a failed /browse no longer stops paging for good
+- refers-to: engine/store.ts :: loadMore
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+loadMore set page.loading before the /browse fetch and cleared it only after a success, so one failed request (an engine restart, a 500, a network blip) left that filter's page loading forever: every later loadMore returned at once and the grid stopped paging, or stayed empty, until something called invalidateMedia. The rejection was also unhandled at every `void loadMore(...)` call. A failed fetch now clears page.loading and returns, so the next scroll, observer hit or "media" event tries again. Checked: tsc --noEmit; vitest run (10 passed, the paging test included). Not run: a failing engine in a window.
+
+### ui/components/library.ts + ui/zoomctl.ts · the library topbar removes its click and zoom listeners on unmount
+- refers-to: ui/components/library.ts :: mountLibrary hideMenu, teardown; ui/zoomctl.ts :: zoomControl (now returns { el, off })
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Every mount of a library view (Library, Favorites, Videos, any #/q/ route) added a document click listener that hides the filter menu and, through zoomControl, an on("zoom") listener, and neither was removed. Each kept the old topbar (and the old grid closure through it) alive, and every click and zoom step ran all of them, growing with each route change. The click handler is now a named hideMenu removed in the teardown, and zoomControl returns its off function beside the element, which the teardown calls. Checked: tsc --noEmit. Not run: listener counts in a window.
+
+### ui/components/infopanel.ts + viewer.ts · the info panel's store listeners leave with the viewer
+- refers-to: ui/components/infopanel.ts :: InfoPanel.dispose, createInfoPanel on("keywords"), on("meta"); ui/components/viewer.ts :: render (closing branch)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Every viewer open after a close builds a new viewer and a new info panel, and createInfoPanel registered on("keywords") and on("meta") without ever removing them. Each pair kept the whole previous viewer tree alive (stage images, film strip, panel), and every keywords or meta event repainted all the dead panels, growing with each open. createInfoPanel now keeps both off functions and returns them as dispose(), which the viewer calls when it closes. Checked: tsc --noEmit. Not run: listener counts in a window.
+
+### ui/components/curate.ts openSlideshow · closing before the items load starts nothing
+- refers-to: ui/components/curate.ts :: openSlideshow ended flag, show, end, the item-fetch then
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+A slideshow opened from Memories fetches up to 400 items it does not hold yet, then starts the music and the first slide. Pressing Esc before those fetches finished ran end() first; the late then() still called startMusic() and show(), so WebAudio music played with no slideshow on screen and show() rescheduled itself every 4 s for the life of the window, with no control left to stop it. end() now sets an ended flag; the late then() and show() return when it is set. Checked: tsc --noEmit. Not run: a slideshow on a throttled network.
+
+### engine/store.ts setFavorite · un-favoriting on Favorites removes one tile instead of emptying the grid
+- refers-to: engine/store.ts :: setFavorite
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+setFavorite deleted the cached "favorites" page on every change and emitted only "page", so a mounted Favorites grid pruned every tile against the new empty page and nothing loaded it again: the load sentinel was already inside the observer margin, there was nothing to scroll, and "media" was not emitted (the same trap the invalidateMedia entry describes). Un-favoriting now removes just that item from the cached page, so the grid slides out one tile. Favoriting drops the cached page only when it does not already hold the item, and then also emits "media" so a mounted grid loads again. Checked: tsc --noEmit. Not run: the Favorites page in a window.
+
+### ui/components/hidden.ts + trash.ts · a vault token obtained after leaving is dropped, and a 401 retries once
+- refers-to: ui/components/hidden.ts :: mountHiddenPage gone flag, load(retried), entry IIFE, teardown; ui/components/trash.ts :: mountTrashPage entry IIFE
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Each vault page clears the token on unmount so every entry re-locks, but the token can arrive after the unmount: open Hidden or Recently Deleted with device unlock stored, click another sidebar row while the device prompt is up, then authenticate. vaultGate then set a token nobody would clear, so every later api() call carried it, the next Hidden or Recently Deleted visit and private albums without their own passkey opened without asking, and once the token expired Hidden ran vaultGate (true, a token exists), /hidden 401, vaultGate (true) ... without end, while Recently Deleted showed "Nothing in the trash". Both pages now drop a token that arrives after they are gone, and on a 401 clear the token before asking again, retrying once (Hidden toasts the error instead of looping; Recently Deleted goes back if the unlock is refused). Checked: tsc --noEmit. Not run: the device prompt in a window.
+
+### ui/components/people.ts · Select All picks only the people the name filter shows
+- refers-to: ui/components/people.ts :: mountPeoplePage filterInput input handler, allBtn click
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Select All built its list from state.people while the grid showed only the people matching Search people, so typing a name, Select, Select All and Remove (or Hide, or Merge) acted on every person in the library, including the hidden ones. Select All now takes the same filtered list renderPeople shows, and changing the filter clears the picked set (and resets the button to Select All), so a pick can never include a card the user cannot see. Checked: tsc --noEmit. Not run: the People page in a window.
+
 ### public/splash.html · the logo no longer moves while the page streams in
 - refers-to: public/splash.html :: body (padding-top, justify-content), p (height, line-height)
 - kind: rationale

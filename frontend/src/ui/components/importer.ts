@@ -453,7 +453,9 @@ export function mountImportPage(host: HTMLElement): () => void {
     }
   }
   refreshBtn.addEventListener("click", () => { lastRoster = "-"; void refreshDevices(true); });
+  let alive = true;
   void api<{ supported: boolean; platform?: string; hint?: string }>("/idevice/status").then((res) => {
+    if (!alive) return;
     if (res.supported) {
       phoneSection.classList.remove("hidden");
       if (res.hint) setPhoneStatus(res.hint);
@@ -489,6 +491,7 @@ export function mountImportPage(host: HTMLElement): () => void {
   host.append(pad);
   input.focus();
   return () => {
+    alive = false;
     if (phoneTimer !== null) window.clearInterval(phoneTimer);
     if (!phoneImporting) closeBrowse(true);
   };

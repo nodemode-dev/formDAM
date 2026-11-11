@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 import subprocess
@@ -53,9 +54,13 @@ def rename(ids: List[int], template: str, start: int = 1, custom: str = "") -> L
             entry.update(ok=False, reason="Name taken")
             continue
         os.rename(src, dest)
-        for side in (src + ".xmp", os.path.splitext(src)[0] + ".xmp"):
+        stem = os.path.splitext(src)[0]
+        paired = [p for p in glob.glob(glob.escape(stem) + ".*") if not p.lower().endswith(".xmp")]
+        for side in (src + ".xmp", stem + ".xmp"):
             if os.path.isfile(side):
-                os.rename(side, os.path.splitext(dest)[0] + ".xmp")
+                target = os.path.splitext(dest)[0] + ".xmp"
+                if not os.path.exists(target) and (side == src + ".xmp" or not paired):
+                    os.rename(side, target)
                 break
         rel = dest if row["referenced"] else os.path.relpath(dest, libraryfs.originals_dir())
         ex("UPDATE media SET rel_path=?, name=? WHERE id=?", (rel, entry["new"], entry["id"]))

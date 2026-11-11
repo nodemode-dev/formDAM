@@ -1,6 +1,6 @@
 import { api } from "../../engine/api.js";
 import { formatDuration, fullStamp, humanBytes } from "../../engine/format.js";
-import { keywordState, loadKeywords, navigate, on, patched, saveMeta, state } from "../../engine/store.js";
+import { closeViewer, keywordState, loadKeywords, navigate, on, patched, saveMeta, state } from "../../engine/store.js";
 import type { LookupResult, MediaDetails } from "../../engine/types.js";
 import { h } from "../dom.js";
 import { iconEl } from "../icons.js";
@@ -13,6 +13,7 @@ export interface InfoPanel {
   el: HTMLElement;
   show: (id: number) => void;
   refresh: () => void;
+  dispose: () => void;
 }
 
 interface Row {
@@ -175,7 +176,7 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
   const lookupSection = h("div", { class: "info-section hidden" }, h("div", { class: "info-k" }, "Look Up"), lookupList);
   function lookupCard(r: LookupResult): HTMLElement {
     const showAll = h("button", { class: "link-btn", type: "button" }, "Show All");
-    showAll.addEventListener("click", () => navigate(`#/search/${encodeURIComponent(r.name.toLowerCase())}`));
+    showAll.addEventListener("click", () => { closeViewer(); navigate(`#/search/${encodeURIComponent(r.name.toLowerCase())}`); });
     const learn = h("button", { class: "link-btn", type: "button" }, "Learn More");
     learn.addEventListener("click", () => void api("/system/learn-more", { method: "POST", body: JSON.stringify({ title: r.wiki }) }).catch(() => toast("Could not open the browser")));
     const alts = (r.alternatives ?? []).join(", ");
@@ -218,17 +219,17 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     });
     patchList(peopleList, d.people, (p) => String(p.id), (p) => {
       const chip = h("button", { class: "chip link", type: "button" }, p.name ?? "Unnamed");
-      chip.addEventListener("click", () => navigate(`#/person/${p.id}`));
+      chip.addEventListener("click", () => { closeViewer(); navigate(`#/person/${p.id}`); });
       return chip;
     });
     patchList(subjectList, d.subjects, (s) => s.label, (s) => {
       const chip = h("button", { class: "chip link", type: "button" }, s.label);
-      chip.addEventListener("click", () => navigate(`#/search/${encodeURIComponent(s.label)}`));
+      chip.addEventListener("click", () => { closeViewer(); navigate(`#/search/${encodeURIComponent(s.label)}`); });
       return chip;
     });
     patchList(albumList, d.albums ?? [], (a) => String(a.id), (a) => {
       const chip = h("button", { class: "chip link", type: "button" }, a.name);
-      chip.addEventListener("click", () => navigate(`#/album/${a.id}`));
+      chip.addEventListener("click", () => { closeViewer(); navigate(`#/album/${a.id}`); });
       return chip;
     });
     peopleList.parentElement!.classList.toggle("hidden", d.people.length === 0);
@@ -303,8 +304,8 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     if (currentId === id) await load(id);
   }
 
-  on("keywords", syncKwData);
-  on("meta", () => {
+  const offKeywords = on("keywords", syncKwData);
+  const offMeta = on("meta", () => {
     if (currentId !== null && patched.ids.includes(currentId) && current) {
       const fresh = state.byId.get(currentId);
       if (fresh) {
@@ -330,6 +331,10 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     },
     refresh() {
       if (currentId !== null) void load(currentId);
+    },
+    dispose() {
+      offKeywords();
+      offMeta();
     },
   };
 }

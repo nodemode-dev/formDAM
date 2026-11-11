@@ -88,7 +88,10 @@ export function mountPeoplePage(host: HTMLElement): () => void {
   let nameFilter = "";
   filterInput.addEventListener("input", () => {
     nameFilter = filterInput.value.trim().toLowerCase();
+    picked.clear();
+    allBtn.textContent = "Select All";
     renderPeople();
+    refreshActionBar();
   });
   const filterWrap = h("span", { class: "search-wrap" }, iconEl("search"), filterInput);
   const selectBtn = h("button", { class: "btn", type: "button" }, "Select") as HTMLButtonElement;
@@ -161,7 +164,9 @@ export function mountPeoplePage(host: HTMLElement): () => void {
   }
   selectBtn.addEventListener("click", () => setSelectMode(!selectMode));
   allBtn.addEventListener("click", () => {
-    const everyone = state.people.map((p) => p.id);
+    const everyone = (nameFilter
+      ? state.people.filter((p) => (p.name ?? "unnamed").toLowerCase().includes(nameFilter))
+      : state.people).map((p) => p.id);
     const allPicked = everyone.every((id) => picked.has(id));
     picked.clear();
     if (!allPicked) everyone.forEach((id) => picked.add(id));
@@ -320,6 +325,8 @@ export function mountPeoplePage(host: HTMLElement): () => void {
     document.removeEventListener("keydown", onKey);
     document.removeEventListener("dam-people-picked", refreshActionBar);
     offs.forEach((off) => off());
+    selectMode = false;
+    picked.clear();
   };
 }
 

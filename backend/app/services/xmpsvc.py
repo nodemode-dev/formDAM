@@ -314,6 +314,20 @@ def write_sidecar(media_id: int) -> Optional[str]:
     if rec is None:
         return None
     side = sidecar_for(src)
+    stem = os.path.splitext(row["rel_path"])[0]
+    pattern = stem.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + ".%"
+    for other in q("SELECT rel_path FROM media WHERE id<>? AND rel_path LIKE ? ESCAPE '\\'", (media_id, pattern)):
+        if os.path.splitext(other["rel_path"])[0] == stem:
+            side = src + ".xmp"
+            break
+    if os.path.isfile(side):
+        try:
+            with open(side, "r", encoding="utf-8", errors="replace") as fh:
+                head = fh.read(65536)
+        except OSError:
+            return None
+        if 'x:xmptk="FormDAM"' not in head:
+            return None
     tmp = side + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(build_xmp(rec))

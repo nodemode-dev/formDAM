@@ -7,7 +7,7 @@ export interface ModalHandle {
   close: () => void;
 }
 
-export function openModal(title: string, width = 420): ModalHandle {
+export function openModal(title: string, width = 420, onClose?: () => void): ModalHandle {
   const body = h("div", { class: "modal-body" });
   const closeBtn = h("button", { class: "icon-btn", type: "button", "aria-label": "Close" }, iconEl("close"));
   const panel = h(
@@ -19,7 +19,10 @@ export function openModal(title: string, width = 420): ModalHandle {
   const root = h("div", { class: "modal-backdrop" }, panel);
   const close = () => {
     root.classList.remove("modal-open");
-    setTimeout(() => root.remove(), 180);
+    setTimeout(() => {
+      root.remove();
+      onClose?.();
+    }, 180);
   };
   closeBtn.addEventListener("click", close);
   root.addEventListener("click", (event) => {

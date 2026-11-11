@@ -3,12 +3,13 @@ import tempfile
 import shutil
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
 
 from .. import jobs
 from ..db import setting_get, setting_set
+from ..security import shell_allowed
 from ..services import followon, idevicesvc, libraryfs, thumbs
 
 router = APIRouter()
@@ -71,7 +72,7 @@ UPLOAD_EXTS = {
 
 
 @router.post("/import/upload")
-async def import_upload(files: List[UploadFile] = File(...)):
+def import_upload(files: List[UploadFile] = File(...)):
     counts = {"imported": 0, "duplicates": 0, "skipped": 0, "failed": 0}
     imported: List[Dict[str, Any]] = []
     libraryfs.begin_batch("drop", f"{len(files)} dropped")
@@ -113,7 +114,9 @@ class GlassDiagIn(BaseModel):
 
 
 @router.post("/internal/shell/glass")
-def shell_glass(body: GlassDiagIn):
+def shell_glass(body: GlassDiagIn, request: Request):
+    if not shell_allowed(request):
+        raise HTTPException(403, detail="Only the formDAM desktop shell may call this")
     setting_set("glass_diag", body.diag[:400])
     return {"ok": True}
 

@@ -87,7 +87,13 @@ export async function loadMore(filter: FilterName): Promise<void> {
   page.loading = true;
   const params = new URLSearchParams({ spec: JSON.stringify(specFor(filter)), limit: "400" });
   if (page.next) params.set("cursor", JSON.stringify(page.next));
-  const data = await api<MediaPage>(`/browse?${params.toString()}`);
+  let data: MediaPage;
+  try {
+    data = await api<MediaPage>(`/browse?${params.toString()}`);
+  } catch {
+    page.loading = false;
+    return;
+  }
   for (const item of data.items) {
     state.byId.set(item.id, item);
     if (item.edited_ts) thumbVersions.set(item.id, item.edited_ts);
@@ -294,6 +300,7 @@ export function hydrateStatePrefs(): void {
   state.zoom = prefGet<number>("zoom", 184);
   state.sort = prefGet<SortOrder>("sort", "newest");
   state.grouping = prefGet<"all" | "months" | "years">("grouping", "all");
+  state.quick = prefGet<typeof state.quick>("quick", { flags: [], minRating: 0, label: "", keyword: "" });
 }
 
 export function setSort(order: SortOrder): void {
@@ -322,10 +329,11 @@ export async function setFavorite(id: number, onFlag: boolean): Promise<void> {
   const item = state.byId.get(id);
   if (item) item.favorite = onFlag;
   const favPage = state.pages.get("favorites");
-  if (favPage) {
-    state.pages.delete("favorites");
-  }
+  const stale = Boolean(favPage) && onFlag && !favPage!.items.some((m) => m.id === id);
+  if (favPage && !onFlag) favPage.items = favPage.items.filter((m) => m.id !== id);
+  if (stale) state.pages.delete("favorites");
   emit("page");
+  if (stale) emit("media");
   if (state.viewer) emit("viewer");
 }
 

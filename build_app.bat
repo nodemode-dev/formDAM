@@ -23,7 +23,7 @@ set "SETUP="
 for %%F in ("src-tauri\target\release\bundle\nsis\*.exe") do set "SETUP=%%~fF"
 echo.
 echo [formDAM] done. The installers are in src-tauri\target\release\bundle (nsis and msi)
-if "%INSTALL%"=="1" if defined SETUP ( echo [formDAM] running %SETUP% & start "" /wait "%SETUP%" )
+if "%INSTALL%"=="1" if defined SETUP ( echo [formDAM] running "%SETUP%" & start "" /wait "%SETUP%" )
 if "%OPEN%"=="1" start "" "src-tauri\target\release\bundle"
 exit /b 0
 

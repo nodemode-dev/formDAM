@@ -71,7 +71,7 @@ export function assignKeywordsFlow(ids: number[]): void {
 }
 
 export function openKeywordManager(): void {
-  const modal = openModal("Keyword Manager", 560);
+  const modal = openModal("Keyword Manager", 560, () => off());
   const tree = h("div", { class: "kw-tree" });
   const newIn = input("", "New keyword (Parent|Child makes a hierarchy)");
   const addBtn = h("button", { class: "btn", type: "button" }, iconEl("plus"), "Add") as HTMLButtonElement;
@@ -158,7 +158,7 @@ export function openKeywordManager(): void {
           void loadKeywords();
         }) },
         { label: "Set Shortcut...", icon: "type", action: async () => {
-          const key = await promptText("Keyboard shortcut", k.shortcut ?? "", "One letter or digit; with photos selected, press it to toggle this keyword. Empty clears it.");
+          const key = await promptText("Keyboard shortcut", k.shortcut ?? "", "One letter or digit; with photos selected, press it to add this keyword. Empty clears it.");
           if (key !== null) void patch(k.id, { shortcut: key.slice(0, 1) });
         } },
         "sep",
@@ -192,11 +192,6 @@ export function openKeywordManager(): void {
     node.style.paddingLeft = `${8 + depthOf(k.id) * 16}px`;
   });
   const off = on("keywords", sync);
-  const closeOrig = modal.close;
-  modal.close = () => {
-    off();
-    closeOrig();
-  };
   modal.body.append(
     h("div", { class: "row-gap" }, newIn, addBtn),
     h("div", { class: "field-label" }, "Right-click a keyword to rename, nest, merge, set a shortcut or delete it. Double-click shows its photos."),

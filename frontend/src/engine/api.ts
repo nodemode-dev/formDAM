@@ -44,6 +44,10 @@ export function setAlbumToken(albumId: number, token: string): void {
   albumTokens.set(albumId, token);
 }
 
+export function clearAlbumToken(albumId: number): void {
+  albumTokens.delete(albumId);
+}
+
 export function authToken(albumId?: number): string {
   if (albumId !== undefined && albumTokens.has(albumId)) return albumTokens.get(albumId)!;
   return vaultToken;

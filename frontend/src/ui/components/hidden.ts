@@ -23,6 +23,7 @@ export function mountHiddenPage(host: HTMLElement): () => void {
   host.append(pad);
   let items: Media[] = [];
   let vaultOk = false;
+  let gone = false;
 
   function render(): void {
     if (!vaultOk) {
@@ -64,7 +65,7 @@ export function mountHiddenPage(host: HTMLElement): () => void {
     );
   }
 
-  async function load(): Promise<void> {
+  async function load(retried = false): Promise<void> {
     try {
       const data = await api<{ items: Media[] }>("/hidden");
       items = data.items;
@@ -72,10 +73,20 @@ export function mountHiddenPage(host: HTMLElement): () => void {
       render();
     } catch (err) {
       if ((err as { status?: number }).status === 401) {
+        clearVaultToken();
+        if (gone) return;
+        if (retried) {
+          toast(String((err as Error).message), "error");
+          return;
+        }
         const ok = await vaultGate();
+        if (gone) {
+          clearVaultToken();
+          return;
+        }
         if (ok) {
           vaultOk = true;
-          return load();
+          return load(true);
         }
         history.back();
       } else {
@@ -87,6 +98,10 @@ export function mountHiddenPage(host: HTMLElement): () => void {
   render();
   void (async () => {
     const ok = await vaultGate();
+    if (gone) {
+      clearVaultToken();
+      return;
+    }
     if (!ok) {
       history.back();
       return;
@@ -95,6 +110,7 @@ export function mountHiddenPage(host: HTMLElement): () => void {
     await load();
   })();
   return () => {
+    gone = true;
     clearVaultToken();
     unbindTiles();
     unbindSel();
