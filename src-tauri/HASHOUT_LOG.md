@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/apply_icon · the Developer ID re-sign keeps the hardened runtime, entitlements and timestamp
+- refers-to: apply_icon ENTITLEMENTS; the Developer ID branch: codesign --force --options runtime --timestamp --entitlements, its ad hoc fallback and the two messages
+- kind: correction + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: codesign --force --deep --options runtime -s "$IDENTITY" "$APP" 2>/dev/null || codesign --force --deep -s - "$APP" 2>/dev/null || true, followed by "signed as: $IDENTITY" whichever of the two had run. This is the re-sign v1.28.3 took out of package_dmg and left here: --deep w/o --entitlements and --timestamp gave the shell a signature w/o its entitlements or a secure timestamp, the error was hidden, and the message named the Developer ID even when the ad hoc fallback had signed. The branch now signs the way package_dmg's does (hardened runtime, timestamp, Entitlements.plist, no --deep: the engine lives in Resources and keeps its own signatures), shows codesign's error when it fails, falls back to ad hoc so the app still opens, and says which one happened. Stamping an icon into a notarized copy changes its signature, so the message says that copy needs notarizing again. The ad hoc branch for a Mac w/o a Developer ID is unchanged.
+
 ### ../setup/build_macos_app · the app's stapled ticket is checked after the build
 - refers-to: build_macos_app after APP: NOTARIZED, STAPLED, the three-attempt loop around xcrun stapler validate and xcrun stapler staple, the WARNING line; the closing "Signed as" lines
 - kind: rationale + replaced code
