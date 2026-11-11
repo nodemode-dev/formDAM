@@ -1,4 +1,5 @@
 import os
+import secrets
 import subprocess
 from typing import Optional
 
@@ -76,13 +77,19 @@ def ensure_thumb(media_id: int, rel_path: str, kind: str, requested: int) -> Opt
                 frame = decode.open_image(src, rel_path, max_long=size)
             if frame is None:
                 return None
-            frame.convert("RGB").save(out, "WEBP", quality=80, method=4)
+            tmp = f"{out}.{secrets.token_hex(4)}.tmp"
+            try:
+                frame.convert("RGB").save(tmp, "WEBP", quality=80, method=4)
+                os.replace(tmp, out)
+            finally:
+                _discard(tmp)
             return out
         except Exception:
             return None
     ffmpeg = ffmpeg_path()
     if ffmpeg:
-        grab = out + ".frame.jpg"
+        token = secrets.token_hex(4)
+        grab, tmp = f"{out}.{token}.frame.jpg", f"{out}.{token}.tmp"
         for seek in ("0", "0.5"):
             try:
                 subprocess.run(
@@ -92,7 +99,8 @@ def ensure_thumb(media_id: int, rel_path: str, kind: str, requested: int) -> Opt
                 )
                 if os.path.isfile(grab) and os.path.getsize(grab) > 0:
                     with Image.open(grab) as img:
-                        img.convert("RGB").save(out, "WEBP", quality=80, method=4)
+                        img.convert("RGB").save(tmp, "WEBP", quality=80, method=4)
+                    os.replace(tmp, out)
                     os.unlink(grab)
                     for stale in (f"{media_id}_{size}_ph.webp", f"{media_id}_{size}_ph.jpg"):
                         stale_path = os.path.join(os.path.dirname(out), stale)
@@ -101,12 +109,8 @@ def ensure_thumb(media_id: int, rel_path: str, kind: str, requested: int) -> Opt
                     return out
             except Exception:
                 pass
-            for leftover in (grab, out):
-                if os.path.isfile(leftover):
-                    try:
-                        os.unlink(leftover)
-                    except OSError:
-                        pass
+            for leftover in (grab, tmp):
+                _discard(leftover)
     ph = os.path.join(os.path.dirname(out), f"{media_id}_{size}_ph.webp")
     if not os.path.isfile(ph):
         _placeholder_poster(ph, size)
@@ -116,4 +120,17 @@ def ensure_thumb(media_id: int, rel_path: str, kind: str, requested: int) -> Opt
 def _placeholder_poster(target: str, size: int) -> None:
     height = max(2, int(size * 9 / 16))
     img = Image.new("RGB", (size, height), (24, 22, 18))
-    img.save(target, "WEBP", quality=80, method=4)
+    tmp = f"{target}.{secrets.token_hex(4)}.tmp"
+    try:
+        img.save(tmp, "WEBP", quality=80, method=4)
+        os.replace(tmp, target)
+    finally:
+        _discard(tmp)
+
+
+def _discard(path: str) -> None:
+    if os.path.isfile(path):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass

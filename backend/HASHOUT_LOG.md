@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/thumbs.py ensure_thumb · thumbnails appear whole or not at all
+- refers-to: thumbs ensure_thumb (image and video branches), _placeholder_poster, _discard
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+ensure_thumb saved the WebP straight to its final path and treats an existing file as done, so right after an import, when the grid and the CLIP, Look Up and OCR jobs ask for the same thumbnail, one thread could serve another's half-written file, two could write it at once, and a crash mid-save left a truncated thumbnail that was served for good. For videos every thread shared <out>.frame.jpg as ffmpeg's output, and a thread whose attempt failed deleted <out> that another had just finished. Each save now goes to <out>.<random>.tmp and is moved into place with os.replace (atomic on one volume), the ffmpeg frame name carries the same random token, and the failure cleanup removes only this call's frame and temporary file, never <out>. The placeholder poster is written the same way. A crash can leave a stray .tmp file, which nothing serves and which the vault's per-id scrub removes. Checked with a scratch run: 8 threads, 3 rounds each, on a new 3000x2000 image and 6 threads on a new video all returned thumbnails that PIL loads fully, with no .tmp or frame file left.
+
 ### routers/importer.py import_upload · a drag-and-drop import runs in the thread pool
 - refers-to: importer import_upload (async def to def); the body unchanged
 - kind: fix
