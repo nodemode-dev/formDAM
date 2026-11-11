@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/infopanel.ts chips · People, Albums, Subjects and Look Up links close the viewer first
+- refers-to: ui/components/infopanel.ts :: lookupCard Show All, paint people, subjects and albums chips
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The info panel's People, Subjects and Albums chips and Look Up's Show All called navigate() while the viewer stayed open: a route change does not close the viewer, so the new page rendered behind the fixed viewer layer and the click seemed to do nothing. Each of these handlers now calls closeViewer() before navigate(). Checked: tsc --noEmit. Not run: the chips in a window.
+
 ### engine/api.ts clearAlbumToken + albums.ts mountAlbumDetail · a private album re-locks when it is left
 - refers-to: engine/api.ts :: clearAlbumToken; ui/components/albums.ts :: mountAlbumDetail alive, load 401 branch, teardown
 - kind: fix
