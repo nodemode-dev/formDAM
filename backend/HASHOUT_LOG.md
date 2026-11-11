@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/packagesvc.py inspect and _read_manifest · a marker or manifest that is valid JSON but not an object is "not a package"
+- refers-to: packagesvc inspect (isinstance check on marker), _read_manifest (isinstance check on data)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+A zip whose formdam-share.json held valid JSON that is not an object (for example []) reached marker.get outside the try, so POST /api/packages/inspect answered 500 and the upload sat in cache/incoming until the 24-hour sweep; the manifest had the same gap in _read_manifest, where data.get raised AttributeError instead of a PackageError. Both now check for a dict first, so inspect answers "package": false and opening answers "This is not a formDAM share package". Checked with a scratch run on a zip holding [] in both members; test_p1_package passes.
+
 ### services/syncsvc.py push · an item whose file was missing is offered again on the next push
 - refers-to: syncsvc push (seen, retry, missed and the sync_<channel>_push_retry setting)
 - kind: fix
