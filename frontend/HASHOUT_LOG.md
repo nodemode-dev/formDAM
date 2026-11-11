@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/libmanage.ts mountDiskPage keys · a label key toggles in the request, not only on the tile
+- refers-to: ui/components/libmanage.ts :: mountDiskPage keys (label branch and the paint after /disk/meta); backend app/routers/library.py :: disk_meta (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+In Browse Disk, pressing 6 to 9 sent the label as is, and the engine wrote it again, while the tile toggled it off when the file already had that label, so the tile showed no label and the XMP sidecar still said red until the folder was reloaded. The toggle is now decided before the request: when every picked file already has that label the request sends an empty label (which disk_meta writes and build_xmp leaves out), otherwise the label; the tiles are painted with exactly what was sent. Known and outside the frontend: for a file that is also in the library, xmpsvc.apply_record ignores an empty label, so the library row keeps its old label. Checked: tsc --noEmit; disk_meta and build_xmp read for the empty-label path. Not run: Browse Disk in a window.
+
 ### ui/components/grid.ts selectAnchor · shift-click ranges start from this view's last pick
 - refers-to: ui/components/grid.ts :: selectAnchor, module on("route"), tileFor tile-check click and shift range
 - kind: fix

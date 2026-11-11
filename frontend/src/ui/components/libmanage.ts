@@ -236,7 +236,10 @@ export function mountDiskPage(host: HTMLElement, startPath: string): () => void 
     if (event.metaKey || event.ctrlKey || event.altKey || (target && target.closest("input, textarea, select"))) return;
     const body: Record<string, unknown> = { paths: [...picked] };
     if (/^[0-5]$/.test(event.key)) body.rating = Number(event.key);
-    else if (DISK_LABEL_KEYS[event.key]) body.label = DISK_LABEL_KEYS[event.key];
+    else if (DISK_LABEL_KEYS[event.key]) {
+      const label = DISK_LABEL_KEYS[event.key];
+      body.label = listing.files.every((f) => !picked.has(f.path) || f.label === label) ? "" : label;
+    }
     else if (event.key.toLowerCase() === "x") body.rating = -1;
     else return;
     event.preventDefault();
@@ -245,7 +248,7 @@ export function mountDiskPage(host: HTMLElement, startPath: string): () => void 
       for (const f of data.files) {
         if (!picked.has(f.path)) continue;
         if ("rating" in body) f.rating = body.rating as number;
-        if ("label" in body) f.label = f.label === body.label ? "" : String(body.label);
+        if ("label" in body) f.label = String(body.label);
       }
       grid.querySelectorAll<HTMLElement>(".disk-tile").forEach((node, i) => { const f = data.files[i]; if (f && picked.has(f.path)) paintDiskMeta(node, f); });
       toast(`Wrote XMP for ${countFmt(picked.size)} file${picked.size === 1 ? "" : "s"}`);
