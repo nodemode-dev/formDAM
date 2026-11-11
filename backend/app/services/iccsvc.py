@@ -183,7 +183,7 @@ def run_import(
                     continue
                 result = import_file(path)
                 status = result.get("status") or ""
-                statuses.append(status)
+                statuses.append("trashed" if result.get("trashed") else status)
                 if status == "imported":
                     counts["imported"] += 1
                 elif status == "duplicate":

@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/libraryfs.py import_one + iccsvc.run_import · a copy that is only in the Trash is not a reason to delete from the iPhone
+- refers-to: libraryfs import_one (the duplicate query and its result's "trashed" key); iccsvc run_import (the statuses list that decides deletable)
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The duplicate check matched any row with the same sha256 and size, including one in Recently Deleted. An iPhone import with "delete after import" then counted that photo as safely in the library and deleted it from the phone, and the Trash purged the only copy 30 days later. import_one now reads trashed_ts with the match and returns "trashed": true when the matching row is in the Trash; run_import records such a result as "trashed", so an entry with one is counted as a duplicate as before but is not put on the delete list. Other callers (folder import, package open, sync pull) still read the status "duplicate" and are unchanged. Checked with a scratch run of the ICC fake bridge: import, trash, import again with delete after import deletes nothing; after restoring the row it deletes the key. test_icc and test_core pass.
+
 ### tests · family layers F1, F4, F5, F9 and the P1 gap fills for formDAM
 - refers-to: backend/tests (conftest, support, test_f1_guard, test_f4_versions, test_f5_boot, test_f9_release_profiles, test_p1_originals, test_p1_xmp, test_p1_package, test_p1_lan), backend/requirements-test.txt
 - kind: rationale

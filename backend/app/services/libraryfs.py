@@ -60,9 +60,9 @@ def import_one(path: str, move: bool = False, reference: bool = False) -> Dict[s
         return {"status": "skipped-kind"}
     size = os.path.getsize(path)
     sha = sha256_of(path)
-    existing = q1("SELECT id FROM media WHERE sha256=? AND size=?", (sha, size))
+    existing = q1("SELECT id, trashed_ts FROM media WHERE sha256=? AND size=?", (sha, size))
     if existing:
-        return {"status": "duplicate", "media_id": existing["id"]}
+        return {"status": "duplicate", "media_id": existing["id"], "trashed": existing["trashed_ts"] is not None}
     width = height = None
     duration = None
     exif_ts = None
