@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/grid.ts selectAnchor · shift-click ranges start from this view's last pick
+- refers-to: ui/components/grid.ts :: selectAnchor, module on("route"), tileFor tile-check click and shift range
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The shift-click anchor is a module global set only by Cmd/Ctrl clicks or plain clicks while selecting. syncRoute clears the selection on every route change but not the anchor, so a range in Favorites could start from a photo picked in Library; a selection started with the tile's check button set no anchor, so the next shift-click toggled one tile instead of a range; and each id in a range called toggleSelect, emitting "selection" once per id (every grid's selection listener walks all its tiles, so a long range cost n squared). The anchor is now reset on "route", the check button sets it, and a range adds its ids to the selection in one pass with a single "selection" emit. Checked: tsc --noEmit; vitest run (10 passed). Not run: shift ranges in a window.
+
 ### ui/components/importer.ts · leaving Import before /idevice/status answers starts no device polling
 - refers-to: ui/components/importer.ts :: mountImportPage alive, /idevice/status then, teardown
 - kind: fix

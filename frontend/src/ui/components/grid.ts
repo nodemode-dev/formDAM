@@ -1,7 +1,7 @@
 import { api, fileUrl, thumbUrl } from "../../engine/api.js";
 import { countFmt, dayKey, dayLabel, formatDuration, monthLabel } from "../../engine/format.js";
 import {
-  dropFromCaches, loadMore, on, openViewer, pageFor, patched, periodSummary, setFavorite, setGrouping, setSelected, specFor, state, toggleSelect, trashMedia,
+  dropFromCaches, emitTopic, loadMore, on, openViewer, pageFor, patched, periodSummary, setFavorite, setGrouping, setSelected, specFor, state, toggleSelect, trashMedia,
 } from "../../engine/store.js";
 import type { FilterName, Media } from "../../engine/types.js";
 import { h } from "../dom.js";
@@ -292,6 +292,9 @@ export function loadThumb(img: HTMLImageElement, mediaId: number, size: number):
 
 export const tileHooks: { ctx: Array<(item: Media) => CtxEntry[]> } = { ctx: [] };
 let selectAnchor: number | null = null;
+on("route", () => {
+  selectAnchor = null;
+});
 
 export function paintTileMeta(tile: HTMLElement, item: Media): void {
   const thumb = tile.querySelector<HTMLImageElement>(":scope > img");
@@ -378,6 +381,7 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
     check.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleSelect(item.id);
+      selectAnchor = item.id;
     });
     tile.append(check);
   }
@@ -387,7 +391,8 @@ export function tileFor(item: Media, context: () => number[], selectable = true,
       const a = ids.indexOf(selectAnchor);
       const b = ids.indexOf(item.id);
       if (a >= 0 && b >= 0) {
-        for (const id of ids.slice(Math.min(a, b), Math.max(a, b) + 1)) if (!state.selection.has(id)) toggleSelect(id);
+        for (const id of ids.slice(Math.min(a, b), Math.max(a, b) + 1)) state.selection.add(id);
+        emitTopic("selection");
         return;
       }
     }
