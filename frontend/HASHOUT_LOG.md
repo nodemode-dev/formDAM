@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/people.ts · Select All picks only the people the name filter shows
+- refers-to: ui/components/people.ts :: mountPeoplePage filterInput input handler, allBtn click
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Select All built its list from state.people while the grid showed only the people matching Search people, so typing a name, Select, Select All and Remove (or Hide, or Merge) acted on every person in the library, including the hidden ones. Select All now takes the same filtered list renderPeople shows, and changing the filter clears the picked set (and resets the button to Select All), so a pick can never include a card the user cannot see. Checked: tsc --noEmit. Not run: the People page in a window.
+
 ### public/splash.html · the logo no longer moves while the page streams in
 - refers-to: public/splash.html :: body (padding-top, justify-content), p (height, line-height)
 - kind: rationale
