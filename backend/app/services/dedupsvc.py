@@ -1,7 +1,7 @@
 import time
 from typing import Any, Dict, List, Optional
 
-from ..db import ex, exmany, q, q1
+from ..db import ex, exmany, exn, q, q1
 from ..dedup import visual
 from . import libraryfs
 
@@ -150,14 +150,34 @@ def scan_job(state: Dict[str, Any], threshold: int, include_videos: bool = True,
 LAST_COPY = "This is the last copy in this set that is not in the Trash; keep it or restore another copy first"
 
 
+ID_CHUNK = 500
+
+
+def _ordered(keeper_id: int, members: List[int]) -> List[int]:
+    return [keeper_id, *[m for m in members if m != keeper_id]]
+
+
 def _set_ids(row) -> List[int]:
     members = [m["media_id"] for m in q("SELECT media_id FROM dup_members WHERE set_id=? ORDER BY media_id", (row["id"],))]
-    return [row["keeper_media_id"], *[m for m in members if m != row["keeper_media_id"]]]
+    return _ordered(row["keeper_media_id"], members)
+
+
+def _media_by_id(ids: List[int]) -> Dict[int, Dict[str, Any]]:
+    unique = sorted(set(ids))
+    found: Dict[int, Dict[str, Any]] = {}
+    for start in range(0, len(unique), ID_CHUNK):
+        chunk = unique[start:start + ID_CHUNK]
+        marks = ",".join("?" * len(chunk))
+        found.update({r["id"]: dict(r) for r in q(f"SELECT * FROM media WHERE id IN ({marks})", chunk)})
+    return found
+
+
+def _live_from(ids: List[int], rows: Dict[int, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [dict(rows[i]) for i in ids if i in rows and rows[i]["trashed_ts"] is None]
 
 
 def _live(ids: List[int]) -> List[Dict[str, Any]]:
-    rows = [q1("SELECT * FROM media WHERE id=?", (media_id,)) for media_id in ids]
-    return [dict(r) for r in rows if r is not None and r["trashed_ts"] is None]
+    return _live_from(ids, _media_by_id(ids))
 
 
 def _best(live: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -179,11 +199,32 @@ def current_keeper(row) -> Optional[int]:
     return keeper["id"] if keeper else None
 
 
+def _open_sets() -> List[Dict[str, Any]]:
+    rows = q("SELECT * FROM dup_sets WHERE resolved_ts IS NULL ORDER BY match_kind DESC, id")
+    members: Dict[int, List[Any]] = {r["id"]: [] for r in rows}
+    for m in q(
+        """SELECT dm.set_id, dm.media_id, dm.similarity FROM dup_members dm
+           JOIN dup_sets s ON s.id=dm.set_id WHERE s.resolved_ts IS NULL ORDER BY dm.media_id"""
+    ):
+        if m["set_id"] in members:
+            members[m["set_id"]].append(m)
+    return [
+        {
+            "row": r,
+            "ids": _ordered(r["keeper_media_id"], [m["media_id"] for m in members[r["id"]]]),
+            "sims": {m["media_id"]: m["similarity"] for m in members[r["id"]]},
+        }
+        for r in rows
+    ]
+
+
 def list_sets() -> List[Dict[str, Any]]:
     sets = []
-    for row in q("SELECT * FROM dup_sets WHERE resolved_ts IS NULL ORDER BY match_kind DESC, id"):
-        sims = {m["media_id"]: m["similarity"] for m in q("SELECT media_id, similarity FROM dup_members WHERE set_id=?", (row["id"],))}
-        live = _live(_set_ids(row))
+    opened = _open_sets()
+    media = _media_by_id([i for entry in opened for i in entry["ids"]])
+    for entry in opened:
+        row, sims = entry["row"], entry["sims"]
+        live = _live_from(entry["ids"], media)
         if len(live) < 2:
             continue
         keeper = _pick(row, live)
@@ -260,15 +301,21 @@ def resolve_all_exact() -> Dict[str, Any]:
 def trash_member(set_id: int, media_id: int) -> Dict[str, Any]:
     row = q1("SELECT * FROM dup_sets WHERE id=?", (set_id,))
     ids = _set_ids(row) if row is not None else []
-    if media_id not in ids:
+    if media_id not in ids[1:]:
         return {"trashed": 0}
-    live = [m["id"] for m in _live(ids)]
-    if media_id not in live:
+    if media_id not in [m["id"] for m in _live(ids)]:
         return {"trashed": 0}
-    if len(live) == 1:
-        return {"trashed": 0, "error": LAST_COPY}
+    others = [i for i in ids if i != media_id]
+    marks = ",".join("?" * len(others))
     stamp = time.time()
-    ex("UPDATE media SET trashed_ts=?, trash_reason=? WHERE id=?", (stamp, f"duplicate:{set_id}", media_id))
-    if len(live) == 2:
-        ex("UPDATE dup_sets SET resolved_ts=? WHERE id=?", (stamp, set_id))
+    changed = exn(
+        f"""UPDATE media SET trashed_ts=?, trash_reason=? WHERE id=? AND trashed_ts IS NULL
+            AND EXISTS (SELECT 1 FROM media o WHERE o.id IN ({marks}) AND o.trashed_ts IS NULL)""",
+        (stamp, f"duplicate:{set_id}", media_id, *others),
+    )
+    if changed == 0:
+        still = q1("SELECT trashed_ts FROM media WHERE id=?", (media_id,))
+        return {"trashed": 0, "error": LAST_COPY} if still and still["trashed_ts"] is None else {"trashed": 0}
+    if len(_live(ids)) < 2:
+        ex("UPDATE dup_sets SET resolved_ts=? WHERE id=? AND resolved_ts IS NULL", (stamp, set_id))
     return {"trashed": 1}
