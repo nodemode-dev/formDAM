@@ -1,5 +1,19 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/dedup.ts guarded · a refused duplicate action shows its reason
+- refers-to: dedup.ts refreshAfterChange, guarded; resolveBtn, keepThis, trashOne and exactBtn handlers
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+Post-merge QA of 1.28.9: "Keep best, trash the rest" on a set whose keeper was trashed got a 409 and the page showed nothing; the handler had no catch, so the ApiError became an uncaught promise rejection. The four action handlers now run through guarded(), which shows the message with the error toast (the same form as the scan button's) and reloads the sets, since a refusal usually means the page is out of date. Test: tests/dedup.test.ts clicks each of the four buttons against a 409 and expects an error toast and no unhandled rejection (all four red on 1.28.9).
+
+### ui/components/libmanage.ts + styles/parity.css .lib-page .section-head · the Libraries header fits the window
+- refers-to: parity.css the four .lib-page .section-head rules; libmanage.ts meta.title
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+At 1440x900 a long library path pushed "New Library..." past the right edge and wrapped both button labels onto two lines: the path span is nowrap and every flex child could shrink to its longest word. On the Libraries page the header children no longer shrink, the buttons stay on one line, and only the path line shrinks and ends in an ellipsis; its full path is the span's title. Test: test_window.py test_libraries_page_keeps_its_buttons_inside_the_window_with_a_long_path (the engine's /api/library answer is given a long path; red on 1.28.9: the button's right edge was at 1834 px in a 1440 px window).
+
 ### ui/components/infopanel.ts chips · People, Albums, Subjects and Look Up links close the viewer first
 - refers-to: ui/components/infopanel.ts :: lookupCard Show All, paint people, subjects and albums chips
 - kind: fix

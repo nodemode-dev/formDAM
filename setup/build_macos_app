@@ -108,11 +108,8 @@ find "$ENGINE" -type l ! -path '*.framework/*' -print | while IFS= read -r link;
   cp -L -p "$link" "$link.resolved" && rm -f "$link" && mv "$link.resolved" "$link" || { echo "could not resolve $link"; exit 1; }
 done
 ENTITLEMENTS="$PWD/src-tauri/Entitlements.plist"
-IDENTITY="${APPLE_SIGNING_IDENTITY:-}"
-if [ "$IDENTITY" = "-" ]; then IDENTITY=""; fi
-if [ -z "$IDENTITY" ]; then
-  IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
-fi
+. setup/macos_identity
+macos_identity
 if [ -n "$IDENTITY" ]; then
   say "Signing the engine's Mach-O files w/ $IDENTITY (hardened runtime, timestamp; Entitlements.plist on executables only)"
   find "$ENGINE" -type f ! -path "$ENGINE/formdam-backend" -print | while IFS= read -r f; do
@@ -130,9 +127,12 @@ find "$ENGINE" -type l -path '*.framework/*' -exec rm -f {} +
 "$ENGINE/formdam-backend" --selfcheck
 echo "engine: src-tauri/binaries/formdam-backend/ (bundled via resources)"
 
-say "Generating app icons from src-tauri/icons/icon.png"
-npx --yes @tauri-apps/cli@2.12.3 icon src-tauri/icons/icon.png
-say "Restoring the provided .icns (tauri's generated one flattens the transparent background)"
+say "Generating the .ico from src-tauri/icons/icon.png (in a scratch folder, so the tracked icon.png is never rewritten)"
+icontmp="$(mktemp -d)"
+npx --yes @tauri-apps/cli@2.12.3 icon src-tauri/icons/icon.png -o "$icontmp"
+cp "$icontmp/icon.ico" src-tauri/icons/icon.ico
+rm -rf "$icontmp"
+say "Placing the provided .icns (tauri's generated one flattens the transparent background)"
 cp src-tauri/icons/source/icon.icns src-tauri/icons/icon.icns
 
 say "Ensuring Info.plist carries the device-import usage string"
@@ -150,6 +150,8 @@ PYPLIST
 if [ -n "$IDENTITY" ]; then
   say "Developer ID found; tauri will sign the bundle as: $IDENTITY"
   export APPLE_SIGNING_IDENTITY="$IDENTITY"
+elif [ "$MACOS_ADHOC" = 1 ]; then
+  say "APPLE_SIGNING_IDENTITY is '-'; tauri will ad-hoc sign and the keychain is not searched"
 else
   say "No Developer ID certificate in the keychain; tauri will ad-hoc sign (fine for local use)"
 fi
@@ -252,6 +254,8 @@ elif [ "$NOTARIZED" = 1 ]; then
   echo "Signed as: $IDENTITY, notarized; no ticket stapled to the app (the DMG itself is not signed or notarized here; the packager prints the commands)"
 elif [ -n "$IDENTITY" ]; then
   echo "Signed as: $IDENTITY (notarize before public release; the packager prints the commands)"
+elif [ "$MACOS_ADHOC" = 1 ]; then
+  echo "Ad-hoc signed (APPLE_SIGNING_IDENTITY is '-'; the keychain was not searched). First launch: right-click > Open."
 else
   echo "Ad-hoc signed (no Developer ID certificate found). First launch: right-click > Open."
   echo "To sign for real: enroll at developer.apple.com, create a Developer ID Application"

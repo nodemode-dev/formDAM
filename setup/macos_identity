@@ -1,0 +1,16 @@
+macos_identity() {
+  case "${APPLE_SIGNING_IDENTITY:-}" in
+    -)
+      MACOS_ADHOC=1
+      IDENTITY=""
+      ;;
+    "")
+      MACOS_ADHOC=0
+      IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
+      ;;
+    *)
+      MACOS_ADHOC=0
+      IDENTITY="$APPLE_SIGNING_IDENTITY"
+      ;;
+  esac
+}

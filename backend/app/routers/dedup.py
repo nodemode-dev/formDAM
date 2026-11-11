@@ -55,7 +55,10 @@ def dedup_resolve(set_id: int, body: ResolveIn):
 def dedup_trash_member(set_id: int, media_id: int):
     if q1("SELECT id FROM dup_sets WHERE id=?", (set_id,)) is None:
         raise HTTPException(404, detail="No such duplicate set")
-    return dedupsvc.trash_member(set_id, media_id)
+    result = dedupsvc.trash_member(set_id, media_id)
+    if result.get("error"):
+        raise HTTPException(409, detail=result["error"])
+    return result
 
 
 @router.post("/dedup/resolve-exact")

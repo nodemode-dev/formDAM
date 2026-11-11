@@ -24,9 +24,8 @@ case "$ICON_NAME" in *.icns) : ;; *) ICON_NAME="$ICON_NAME.icns" ;; esac
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")
 
 ENTITLEMENTS="$ROOT/src-tauri/Entitlements.plist"
-IDENTITY="${APPLE_SIGNING_IDENTITY:-}"
-[ "$IDENTITY" != "-" ] || IDENTITY=""
-[ -n "$IDENTITY" ] || IDENTITY=$(security find-identity -v -p codesigning 2>/dev/null | awk -F '"' '/Developer ID Application/ {print $2; exit}')
+. "$ROOT/setup/macos_identity"
+macos_identity
 
 # Strip quarantine first; it is not part of the seal, so a signed app stays valid.
 xattr -cr "$APP" 2>/dev/null || true

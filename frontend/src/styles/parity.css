@@ -227,6 +227,10 @@ select.field-input { appearance: none; padding-right: 22px; background-image: li
 .cmp-stars { bottom: 8px; color: #ffd36a; }
 .cmp-stars:empty { display: none; }
 .lib-page .ed-sec-title { margin: var(--space-4) 0 var(--space-2); }
+.lib-page .section-head > * { flex: none; }
+.lib-page .section-head .btn { white-space: nowrap; }
+.lib-page .section-head .topbar-sub { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lib-page .section-head .head-spacer { flex: 1 0 0; }
 .repair-report { display: flex; flex-direction: column; gap: 4px; margin-top: var(--space-2); font-size: 13px; color: var(--text-muted); }
 .disk-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-weight: 600; }
 .crumb { font-size: 15px; color: var(--text); }

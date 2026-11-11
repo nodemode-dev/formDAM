@@ -22,6 +22,21 @@ function cell(item: Media, tag: string | null, sim: number | null): HTMLElement 
   return h("div", { class: "dup-cell" }, shot, meta);
 }
 
+function refreshAfterChange(): void {
+  invalidateMedia();
+  void loadDedupSets();
+  void refreshSummary();
+}
+
+async function guarded(action: () => Promise<void>): Promise<void> {
+  try {
+    await action();
+  } catch (err) {
+    toast(String((err as Error).message), "error");
+    void loadDedupSets().catch(() => undefined);
+  }
+}
+
 export function mountDedupPage(host: HTMLElement): () => void {
   const slider = h("input", { type: "range", min: "58", max: "100", step: "1", value: "94" }) as HTMLInputElement;
   const sliderVal = h("span", { style: "font-variant-numeric:tabular-nums;color:var(--text-muted)" }, "94");
@@ -71,35 +86,29 @@ export function mountDedupPage(host: HTMLElement): () => void {
 
   function renderSet(set: DupSet): HTMLElement {
     const resolveBtn = h("button", { class: "btn", type: "button" }, iconEl("check"), "Keep best, trash the rest");
-    resolveBtn.addEventListener("click", async () => {
+    resolveBtn.addEventListener("click", () => void guarded(async () => {
       const res = await api<{ trashed: number }>(`/dedup/sets/${set.id}/resolve`, { method: "POST", body: JSON.stringify({}) });
       toast(`Moved ${countFmt(res.trashed)} to Recently Deleted`);
-      invalidateMedia();
-      void loadDedupSets();
-      void refreshSummary();
-    });
+      refreshAfterChange();
+    }));
 
     function memberCell(item: typeof set.keeper, isKeeper: boolean): HTMLElement {
       const node = cell(item, isKeeper ? "Keeper" : null, isKeeper ? null : (item.pair_sim ?? set.similarity));
       if (!isKeeper) {
         const actions = h("div", { style: "display:flex;gap:6px;margin-top:6px" });
         const keepThis = h("button", { class: "btn", type: "button", style: "padding:3px 10px;font-size:11.5px" }, "Keep this one");
-        keepThis.addEventListener("click", async () => {
+        keepThis.addEventListener("click", () => void guarded(async () => {
           const res = await api<{ trashed: number }>(`/dedup/sets/${set.id}/resolve`, {
             method: "POST", body: JSON.stringify({ keep_media_id: item.id }),
           });
           toast(`Kept ${item.name}; moved ${countFmt(res.trashed)} to Recently Deleted`);
-          invalidateMedia();
-          void loadDedupSets();
-          void refreshSummary();
-        });
+          refreshAfterChange();
+        }));
         const trashOne = h("button", { class: "btn danger", type: "button", style: "padding:3px 10px;font-size:11.5px" }, "Trash");
-        trashOne.addEventListener("click", async () => {
+        trashOne.addEventListener("click", () => void guarded(async () => {
           await api(`/dedup/sets/${set.id}/members/${item.id}/trash`, { method: "POST" });
-          invalidateMedia();
-          void loadDedupSets();
-          void refreshSummary();
-        });
+          refreshAfterChange();
+        }));
         actions.append(keepThis, trashOne);
         node.append(actions);
       }
@@ -173,13 +182,11 @@ export function mountDedupPage(host: HTMLElement): () => void {
     }
   });
 
-  exactBtn.addEventListener("click", async () => {
+  exactBtn.addEventListener("click", () => void guarded(async () => {
     const res = await api<{ trashed: number }>("/dedup/resolve-exact", { method: "POST" });
     toast(`Moved ${countFmt(res.trashed)} exact copies to Recently Deleted`);
-    invalidateMedia();
-    void loadDedupSets();
-    void refreshSummary();
-  });
+    refreshAfterChange();
+  }));
 
   const off = on("dedup", render);
   render();
