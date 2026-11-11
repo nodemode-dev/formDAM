@@ -1,13 +1,13 @@
 #!/bin/bash
-# Stamp the provided transparent icon.icns onto an INSTALLED formDAM.app
-# (default /Applications/formDAM.app), re-sign, & nudge Finder/Dock to refresh.
+# Stamp the provided transparent icon.icns onto an INSTALLED FormDAM.app
+# (default /Applications/FormDAM.app), re-sign, & nudge Finder/Dock to refresh.
 #   setup/apply_icon
-#   setup/apply_icon "/Applications/formDAM.app"
+#   setup/apply_icon "/Applications/FormDAM.app"
 set -e
 
 say() { echo "== $1 =="; }
 
-APP="${1:-/Applications/formDAM.app}"
+APP="${1:-/Applications/FormDAM.app}"
 ICNS="$(cd "$(dirname "$0")/.." && pwd)/src-tauri/icons/source/icon.icns"
 
 [ -d "$APP" ] || { echo "ERROR: app not found at $APP"; exit 1; }

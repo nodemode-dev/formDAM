@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/package_dmg + ../build_app + ../setup/apply_icon · the app is FormDAM.app everywhere
+- refers-to: package_dmg default APP path, the staged app name, the Finder item name in the AppleScript, the header usage lines; build_app the four "$dest/FormDAM.app" lines of the install step; apply_icon default APP and its header
+- kind: rationale + replaced code
+- logged: v1.28.8 · 2026-11-11
+
+Replaced: formDAM.app in each of those places. productName became FormDAM in 1.28.6 (tauri.conf.json, the window title, the app menu), and build_app and build_macos_app followed for the path tauri writes, but the packager still staged the app into the disk image as formDAM.app, build_app still installed it into Applications under that name, and the packager's default still pointed at a bundle tauri no longer writes. On a case-insensitive volume that only showed as the wrong capital in Finder; on a case-sensitive one setup/package_dmg run by itself stopped at "app not found". apply_icon's default follows the name the app now has once installed, and build_app's install step removes a copy under either name first, so a case-sensitive volume is not left w/ both. The volume name, the DMG file name (formDAM_v<version>.dmg, which build_app reads) and the launcher keep formDAM.
+
 ### ../setup/build_macos_app · a failed bundle step is not retried as a Rust failure
 - refers-to: build_macos_app STAMP, rust_compiled, bundle_failed, the two "if rust_compiled; then bundle_failed; fi" lines around cargo tauri build
 - kind: rationale

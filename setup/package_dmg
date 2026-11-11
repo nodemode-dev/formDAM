@@ -1,18 +1,18 @@
 #!/bin/bash
-# formDAM release packager: turn a built formDAM.app into a distributable DMG,
+# formDAM release packager: turn a built FormDAM.app into a distributable DMG,
 # w/ the provided transparent icon.icns enforced byte-for-byte, the volume
 # icon set, & the Finder window blessed to auto-open on mount.
-# Run this AFTER setup/build_macos_app (or against any formDAM.app you point it at).
+# Run this AFTER setup/build_macos_app (or against any FormDAM.app you point it at).
 #
 #   setup/package_dmg                                        # uses the default build output
-#   setup/package_dmg /path/to/formDAM.app                   # package a specific app
-#   setup/package_dmg /path/to/formDAM.app /path/to/outdir   # choose where the DMG lands
+#   setup/package_dmg /path/to/FormDAM.app                   # package a specific app
+#   setup/package_dmg /path/to/FormDAM.app /path/to/outdir   # choose where the DMG lands
 set -e
 
 say() { echo "== $1 =="; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${1:-$ROOT/src-tauri/target.nosync/release/bundle/macos/formDAM.app}"
+APP="${1:-$ROOT/src-tauri/target.nosync/release/bundle/macos/FormDAM.app}"
 OUTDIR="${2:-$ROOT/src-tauri/target.nosync/release/bundle}"
 ICNS="$ROOT/src-tauri/icons/source/icon.icns"
 
@@ -66,7 +66,7 @@ fi
 
 say "Staging the DMG contents"
 STAGE=$(mktemp -d)
-cp -R "$APP" "$STAGE/formDAM.app"
+cp -R "$APP" "$STAGE/FormDAM.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$ICNS" "$STAGE/.VolumeIcon.icns"
 touch "$STAGE/.metadata_never_index"
@@ -106,7 +106,7 @@ tell application "Finder"
     set arrangement of icon view options of container window to not arranged
     set icon size of icon view options of container window to 104
     try
-      set position of item "formDAM.app" of container window to {150, 190}
+      set position of item "FormDAM.app" of container window to {150, 190}
       set position of item "Applications" of container window to {430, 190}
     end try
     update without registering applications

@@ -105,10 +105,10 @@ if [ "$os" = macos ]; then
       osascript -e 'tell application "formDAM" to quit' >/dev/null 2>&1 || true
       sleep 2
     fi
-    rm -rf "$dest/formDAM.app"
-    ditto "$app" "$dest/formDAM.app"
-    xattr -dr com.apple.quarantine "$dest/formDAM.app" 2>/dev/null || true
-    target_app="$dest/formDAM.app"
+    rm -rf "$dest/formDAM.app" "$dest/FormDAM.app"
+    ditto "$app" "$dest/FormDAM.app"
+    xattr -dr com.apple.quarantine "$dest/FormDAM.app" 2>/dev/null || true
+    target_app="$dest/FormDAM.app"
     say "installed: $target_app"
   fi
   if [ "$open_app" = 1 ]; then open "${target_app:-$app}"; fi
