@@ -37,3 +37,56 @@ def test_visual_dedup_end_to_end(client, tmp_path):
     token = client.post("/api/vault/setup", json={"passkey": "vaultkey"}, headers=HEADERS).json()["token"]
     trash = client.get("/api/trash", headers={**HEADERS, "x-dam-vault": token}).json()["items"]
     assert trash[0]["trash_reason"].startswith("duplicate:")
+
+
+def near_set(client, tmp_path):
+    src = tmp_path / "near"
+    os.makedirs(src)
+    base = pattern(400, 300)
+    base.save(src / "master.png", "PNG")
+    base.save(src / "resaved.jpg", "JPEG", quality=40)
+    base.resize((200, 150)).save(src / "small.jpg", "JPEG", quality=80)
+    assert import_dir(client, src)["imported"] == 3
+    state = wait_job(client, client.post("/api/dedup/scan", json={}, headers=HEADERS).json()["job_id"])
+    assert state["counts"]["visual_sets"] == 1
+    vset = client.get("/api/dedup/sets").json()["sets"][0]
+    ids = {m["name"]: m["id"] for m in [vset["keeper"], *vset["members"]]}
+    assert len(ids) == 3 and vset["keeper"]["name"] != "small.jpg"
+    keeper = vset["keeper"]["id"]
+    full = next(i for name, i in ids.items() if name != "small.jpg" and i != keeper)
+    return vset["id"], keeper, full, ids["small.jpg"]
+
+
+def live_ids(client, ids):
+    return sorted(i for i in ids if client.get(f"/api/media/{i}").status_code == 200)
+
+
+def test_trashing_every_member_after_the_keeper_was_trashed_is_refused(client, tmp_path):
+    set_id, keeper, full, small = near_set(client, tmp_path)
+    assert client.post(f"/api/media/{keeper}/trash", headers=HEADERS).status_code == 200
+    first = client.post(f"/api/dedup/sets/{set_id}/members/{small}/trash", headers=HEADERS)
+    assert first.status_code == 200 and first.json()["trashed"] == 1
+    last = client.post(f"/api/dedup/sets/{set_id}/members/{full}/trash", headers=HEADERS)
+    assert last.status_code == 409
+    assert "last copy" in last.json()["detail"]
+    assert live_ids(client, [keeper, full, small]) == [full]
+
+
+def test_a_set_whose_keeper_is_trashed_lists_the_best_live_copy_as_keeper(client, tmp_path):
+    set_id, keeper, full, small = near_set(client, tmp_path)
+    client.post(f"/api/media/{keeper}/trash", headers=HEADERS)
+    sets = client.get("/api/dedup/sets").json()["sets"]
+    assert len(sets) == 1
+    assert sets[0]["keeper"]["id"] == full
+    assert sets[0]["keeper"]["trashed_ts"] is None
+    assert [m["id"] for m in sets[0]["members"]] == [small]
+    result = client.post(f"/api/dedup/sets/{set_id}/resolve", json={}, headers=HEADERS)
+    assert result.status_code == 200 and result.json()["trashed"] == 1
+    assert live_ids(client, [keeper, full, small]) == [full]
+
+
+def test_a_set_left_with_one_live_copy_is_not_listed(client, tmp_path):
+    _, keeper, _, small = near_set(client, tmp_path)
+    client.post(f"/api/media/{keeper}/trash", headers=HEADERS)
+    client.post(f"/api/media/{small}/trash", headers=HEADERS)
+    assert client.get("/api/dedup/sets").json()["sets"] == []

@@ -128,3 +128,34 @@ def test_window_loads_throttled_without_shift_errors_or_refusals(engine, path):
     assert not failed, f"failed requests: {failed}"
     assert not errors, f"console errors: {errors}"
     assert cls <= CLS_LIMIT, f"layout shift {cls}: {shifts}"
+
+
+LONG_PATH = "/Users/someone/Pictures/" + "/".join(["a-deeply-nested-library-folder"] * 6) + "/formDAM Library"
+
+
+def test_libraries_page_keeps_its_buttons_inside_the_window_with_a_long_path(engine):
+    import json
+
+    from playwright.sync_api import sync_playwright
+
+    def lengthen(route):
+        response = route.fetch()
+        body = response.json()
+        body["path"] = LONG_PATH
+        route.fulfill(response=response, body=json.dumps(body))
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.route("**/api/library", lengthen)
+        page.goto(f"{engine}/#dam-key={LAUNCH_KEY}", wait_until="load", timeout=120_000)
+        page.wait_for_load_state("networkidle", timeout=120_000)
+        page.goto(f"{engine}/#/libraries")
+        page.get_by_text(LONG_PATH, exact=False).first.wait_for(timeout=30_000)
+        boxes = [page.get_by_role("button", name=name, exact=True).bounding_box() for name in ("Open Library...", "New Library...")]
+        width = page.evaluate("document.documentElement.clientWidth")
+        browser.close()
+    for box in boxes:
+        assert box is not None
+        assert box["x"] + box["width"] <= width, f"button clipped at the right edge: {box} in {width}"
+        assert box["height"] < 40, f"button label wrapped: {box}"

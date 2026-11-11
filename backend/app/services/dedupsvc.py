@@ -147,25 +147,54 @@ def scan_job(state: Dict[str, Any], threshold: int, include_videos: bool = True,
         counts["visual_sets"] += 1
 
 
+LAST_COPY = "This is the last copy in this set that is not in the Trash; keep it or restore another copy first"
+
+
+def _set_ids(row) -> List[int]:
+    members = [m["media_id"] for m in q("SELECT media_id FROM dup_members WHERE set_id=? ORDER BY media_id", (row["id"],))]
+    return [row["keeper_media_id"], *[m for m in members if m != row["keeper_media_id"]]]
+
+
+def _live(ids: List[int]) -> List[Dict[str, Any]]:
+    rows = [q1("SELECT * FROM media WHERE id=?", (media_id,)) for media_id in ids]
+    return [dict(r) for r in rows if r is not None and r["trashed_ts"] is None]
+
+
+def _best(live: List[Dict[str, Any]]) -> Dict[str, Any]:
+    return _keeper_sort([
+        {**m, "pixels": (m["width"] or 0) * (m["height"] or 0), "size": m["size"] or 0, "created": m["created_ts"]}
+        for m in live
+    ])[0]
+
+
+def _pick(row, live: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not live:
+        return None
+    stored = next((m for m in live if m["id"] == row["keeper_media_id"]), None)
+    return stored or _best(live)
+
+
+def current_keeper(row) -> Optional[int]:
+    keeper = _pick(row, _live(_set_ids(row)))
+    return keeper["id"] if keeper else None
+
+
 def list_sets() -> List[Dict[str, Any]]:
     sets = []
     for row in q("SELECT * FROM dup_sets WHERE resolved_ts IS NULL ORDER BY match_kind DESC, id"):
-        members = q(
-            """SELECT dm.similarity AS pair_sim, m.* FROM dup_members dm
-               JOIN media m ON m.id = dm.media_id WHERE dm.set_id=? ORDER BY dm.media_id""",
-            (row["id"],),
-        )
-        keeper = q1("SELECT * FROM media WHERE id=?", (row["keeper_media_id"],))
-        if keeper is None:
+        sims = {m["media_id"]: m["similarity"] for m in q("SELECT media_id, similarity FROM dup_members WHERE set_id=?", (row["id"],))}
+        live = _live(_set_ids(row))
+        if len(live) < 2:
             continue
-        live = [dict(m) for m in members if m["trashed_ts"] is None]
+        keeper = _pick(row, live)
+        members = [{"pair_sim": sims.get(m["id"], row["similarity"]), **m} for m in live if m["id"] != keeper["id"]]
         sets.append({
             "id": row["id"], "match_kind": row["match_kind"], "similarity": row["similarity"],
-            "keeper": dict(keeper),
-            "members": live,
-            "reclaimable": sum(m["size"] for m in live),
+            "keeper": keeper,
+            "members": members,
+            "reclaimable": sum(m["size"] for m in members),
         })
-    return [s for s in sets if s["members"]]
+    return sets
 
 
 CARRY_MAX = ("favorite", "rating")
@@ -202,7 +231,7 @@ def resolve(set_id: int, keep_media_id: Optional[int] = None) -> Dict[str, Any]:
     row = q1("SELECT * FROM dup_sets WHERE id=?", (set_id,))
     if row is None:
         return {"trashed": 0}
-    keeper = keep_media_id or row["keeper_media_id"]
+    keeper = keep_media_id or current_keeper(row) or row["keeper_media_id"]
     members = [m["media_id"] for m in q("SELECT media_id FROM dup_members WHERE set_id=?", (set_id,))]
     pool = set(members + [row["keeper_media_id"]])
     alive = q1("SELECT trashed_ts FROM media WHERE id=?", (keeper,))
@@ -229,18 +258,17 @@ def resolve_all_exact() -> Dict[str, Any]:
 
 
 def trash_member(set_id: int, media_id: int) -> Dict[str, Any]:
-    member = q1("SELECT media_id FROM dup_members WHERE set_id=? AND media_id=?", (set_id, media_id))
-    if member is None:
+    row = q1("SELECT * FROM dup_sets WHERE id=?", (set_id,))
+    ids = _set_ids(row) if row is not None else []
+    if media_id not in ids:
         return {"trashed": 0}
-    target = q1("SELECT trashed_ts FROM media WHERE id=?", (media_id,))
-    if target is None or target["trashed_ts"] is not None:
+    live = [m["id"] for m in _live(ids)]
+    if media_id not in live:
         return {"trashed": 0}
-    ex("UPDATE media SET trashed_ts=?, trash_reason=? WHERE id=?", (time.time(), f"duplicate:{set_id}", media_id))
-    remaining = q1(
-        """SELECT COUNT(*) AS n FROM dup_members dm JOIN media m ON m.id=dm.media_id
-           WHERE dm.set_id=? AND m.trashed_ts IS NULL""",
-        (set_id,),
-    )
-    if remaining["n"] == 0:
-        ex("UPDATE dup_sets SET resolved_ts=? WHERE id=?", (time.time(), set_id))
+    if len(live) == 1:
+        return {"trashed": 0, "error": LAST_COPY}
+    stamp = time.time()
+    ex("UPDATE media SET trashed_ts=?, trash_reason=? WHERE id=?", (stamp, f"duplicate:{set_id}", media_id))
+    if len(live) == 2:
+        ex("UPDATE dup_sets SET resolved_ts=? WHERE id=?", (stamp, set_id))
     return {"trashed": 1}

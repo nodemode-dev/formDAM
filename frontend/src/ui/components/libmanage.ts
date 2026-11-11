@@ -68,6 +68,7 @@ export function mountLibraryPage(host: HTMLElement): () => void {
     const info = await api<LibraryInfo>("/library");
     setText(title, info.name);
     setText(meta, `${info.path} · ${countFmt(info.items)} items · ${humanBytes(info.bytes)}`);
+    meta.title = info.path;
     setText(refNote, info.referenced ? `${countFmt(info.referenced)} items are referenced in place and stay outside the library folder.` : "No referenced items; every original lives inside the library.");
     consolidateBtn.disabled = !info.referenced;
     patchList(list, info.libraries, (l) => l.path, (l) => {

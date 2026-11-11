@@ -1,5 +1,33 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/dedupsvc.py list_sets, resolve, trash_member · a duplicate set always keeps one live copy
+- refers-to: dedupsvc LAST_COPY, _set_ids, _live, _best, _pick, current_keeper, list_sets, resolve (default keeper), trash_member; routers/dedup.py dedup_trash_member (409)
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+Post-merge QA of 1.28.9: a set found from photo00.jpg and two near copies (keeper 4, members 1 and 12); the keeper was trashed from the grid, Duplicates still listed the set with the trashed keeper, and its two per-member Trash buttons put all three copies in Recently Deleted. resolve() already refused a trashed keeper; trash_member() had no such check and only marked the set resolved once no member was live, never counting the keeper. Now a set's copies are its stored keeper plus its members, and trash_member refuses (409, LAST_COPY) when the copy is the only one of them not in the Trash; it marks the set resolved when it leaves exactly one. list_sets lists a set only while two or more copies are live, and when the stored keeper is trashed (or deleted forever) it shows the best live copy as keeper by the scan's own rule (_keeper_sort: most pixels, then largest file, oldest, lowest id; pixels from the media row's width and height, since a listing cannot fingerprint). resolve() with no keep_media_id uses the same pick, so "Keep best, trash the rest" works on such a set instead of refusing; an explicit keep_media_id that is trashed is still refused. The re-election is not written back: if the old keeper is restored it is the keeper again. Tests: test_dedup.py, three new tests (red on 1.28.9: the last member trash answered 200, the listed keeper was the trashed copy, a set with one live copy was still listed).
+
+### routers/mediaapi.py media_thumb · thumbnails are revalidated, so hiding an item takes effect in the window at once
+- refers-to: mediaapi THUMB_CACHE, media_thumb (ETag from the thumbnail file's mtime and size, 304 on a matching If-None-Match)
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+Post-merge QA of 1.28.9: thumbnails were sent with Cache-Control private, max-age=604800, so after an item was hidden (without a vault token the engine answers 401 for it) Chromium still served its thumbnail from cache for a week, to fetch and to an img alike. They are now private, no-cache with an ETag: the browser keeps them but asks every time, the guard runs first, and a hidden or trashed item answers 401 instead of 304, while a visible one costs a bodiless 304 on loopback. Keying the URL by a hide version was rejected: the old URL stays in the cache, and views that only hold an id (albums, memories, the map, the filmstrip) would still reach it. Sealed and private thumbnails keep no-store. Test: test_thumb_cache.py (red on 1.28.9: the header was max-age). Checked in Chromium against the built window: before hide fetch 200 and img loaded; after hide fetch 401 and img error.
+
+### ../setup/macos_identity (new), build_macos_app, package_dmg · APPLE_SIGNING_IDENTITY "-" means ad hoc and the keychain is not searched
+- refers-to: setup/macos_identity macos_identity (IDENTITY, MACOS_ADHOC); build_macos_app the identity block, the tauri signing line and the closing line; package_dmg the identity block
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+Both scripts turned "-" into an empty identity and then searched the keychain for a Developer ID, so a build asked for ad hoc (formcompiler and tauri use "-" for that) could still sign with whatever certificate the machine holds. The identity is now resolved in one sourced POSIX function: "-" gives an empty IDENTITY and MACOS_ADHOC=1 without calling security, an empty value searches the keychain as before, and any other value is used as given. APPLE_SIGNING_IDENTITY stays "-" in the environment, so tauri signs ad hoc. Tests: test_macos_signing.py runs the helper under sh with a stand-in security that records whether it was called (no keychain is read); with 1.28.9's logic in the helper the "-" case found the stand-in's Developer ID, and 1.28.9's scripts fail the check that both use the helper. Not run: a macOS build.
+
+### ../setup/build_macos_app icons + .gitignore · a build no longer leaves the tree dirty
+- refers-to: build_macos_app the icon step (tauri icon -o a mktemp folder, only icon.ico copied back); .gitignore src-tauri/icons/android/, ios/, iconassets/, src-tauri/Info.plist
+- kind: fix
+- logged: v1.29.0 · 2026-11-11
+
+`tauri icon src-tauri/icons/icon.png` without -o writes into src-tauri/icons, so every macOS build rewrote the tracked icon.png and left android/ and ios/ untracked; the Info.plist the script writes was untracked too. The step now generates into a scratch folder like the Linux and Windows scripts and copies back only icon.ico (the macOS bundle needs the icns from source/ and the ico and png tauri.conf.json lists); the generated outputs are ignored. Not changed: the optional Icon Composer step still edits tauri.conf.json when src-tauri/icons/formDAM.icon exists (it is not in the tree, and that code appends to bundle.resources as if it were a list while it is a map). Test: test_build_tree_clean.py (red on 1.28.9: the macOS icon call had no -o and the outputs were not ignored). Checked on macOS: the old call in a copy left icon.png modified and android/ and ios/ untracked; the new block left only ignored files.
+
 ### db.py connect · the WAL switch is tried again when another connection is making the same switch
 - refers-to: db connect (the loop around PRAGMA journal_mode=WAL), WAL_TRIES
 - kind: fix

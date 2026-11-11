@@ -176,6 +176,9 @@ def trash_media(media_id: int, request: Request):
     return {"ok": True}
 
 
+THUMB_CACHE = "private, no-cache"
+
+
 @router.get("/media/{media_id}/thumb")
 def media_thumb(media_id: int, request: Request, s: int = Query(384, ge=64, le=1024)):
     row = q1("SELECT * FROM media WHERE id=?", (media_id,))
@@ -190,7 +193,12 @@ def media_thumb(media_id: int, request: Request, s: int = Query(384, ge=64, le=1
     if path is None:
         raise HTTPException(404, detail="Thumbnail unavailable")
     mime = "image/webp" if path.endswith(".webp") else "image/jpeg"
-    return FileResponse(path, media_type=mime, headers={"Cache-Control": "private, max-age=604800"})
+    stat = os.stat(path)
+    tag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+    headers = {"Cache-Control": THUMB_CACHE, "ETag": tag}
+    if tag in [part.strip() for part in request.headers.get("if-none-match", "").split(",")]:
+        return Response(status_code=304, headers=headers)
+    return FileResponse(path, media_type=mime, headers=headers)
 
 
 def _iter_range(path: str, start: int, end: int) -> Iterator[bytes]:

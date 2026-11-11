@@ -22,6 +22,10 @@ src-tauri/icons/*.ico
 src-tauri/icons/[0-9]*.png
 src-tauri/icons/Square*.png
 src-tauri/icons/StoreLogo.png
+src-tauri/icons/android/
+src-tauri/icons/ios/
+src-tauri/icons/iconassets/
+src-tauri/Info.plist
 backend/.venv-package/
 backend/dist/
 backend/build/
