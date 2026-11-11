@@ -1,13 +1,14 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from .. import jobs
 from ..db import ex, exn, media_dict, q, q1
 from ..services import facesvc
+from .revalidate import NO_STORE, must_not_store, revalidated_file
 
 router = APIRouter()
 
@@ -223,8 +224,12 @@ def rename_person(person_id: int, body: RenameIn):
 
 
 @router.get("/faces/{face_id}/thumb")
-def face_thumb(face_id: int):
+def face_thumb(face_id: int, request: Request):
     path = facesvc.face_crop(face_id)
     if path is None:
         raise HTTPException(404, detail="Face crop unavailable")
-    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=604800"})
+    row = q1("SELECT m.* FROM faces f JOIN media m ON m.id=f.media_id WHERE f.id=?", (face_id,))
+    if row is None or must_not_store(row):
+        with open(path, "rb") as handle:
+            return Response(handle.read(), media_type="image/jpeg", headers={"Cache-Control": NO_STORE})
+    return revalidated_file(request, path, "image/jpeg")

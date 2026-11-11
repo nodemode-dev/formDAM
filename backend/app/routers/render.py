@@ -3,12 +3,13 @@ import io
 import os
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 
 from ..config import cache_dir
 from ..db import q1
 from ..services import decode, editsvc, libraryfs
 from .guard import ensure_visible
+from .revalidate import NO_STORE, file_tag, must_not_store, revalidated_file, revalidated_headers
 
 router = APIRouter()
 WIDTHS = (640, 1280, 2048, 3072, 4096)
@@ -69,20 +70,18 @@ def render(media_id: int, request: Request, w: int = Query(2048, ge=64, le=8192)
     width = _bucket(w)
     stamp = hashlib.sha1(f"{row['edit_json'] or ''}|{row['edited_ts'] or 0}".encode()).hexdigest()[:12]
     cached = os.path.join(render_folder(), f"{media_id}_{width}_{stamp}.webp")
-    from .. import vaultcrypt
-
-    if not vaultcrypt.protected(row) and not vaultcrypt.is_vaulted(media_id) and os.path.isfile(cached):
-        return FileResponse(cached, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
+    if not must_not_store(row) and os.path.isfile(cached):
+        return revalidated_file(request, cached, "image/webp")
     img, protected = render_image(row, width)
     if img is None:
         raise HTTPException(404, detail="This file could not be decoded")
     buf = io.BytesIO()
     img.convert("RGBA" if img.mode == "RGBA" else "RGB").save(buf, "WEBP", quality=88, method=4)
     data = buf.getvalue()
-    if protected or vaultcrypt.is_vaulted(media_id):
-        return Response(data, media_type="image/webp", headers={"Cache-Control": "no-store"})
+    if protected or must_not_store(row):
+        return Response(data, media_type="image/webp", headers={"Cache-Control": NO_STORE})
     tmp = cached + ".tmp"
     with open(tmp, "wb") as handle:
         handle.write(data)
     os.replace(tmp, cached)
-    return Response(data, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"})
+    return Response(data, media_type="image/webp", headers=revalidated_headers(file_tag(cached)))

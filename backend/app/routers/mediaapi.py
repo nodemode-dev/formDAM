@@ -3,12 +3,13 @@ import re
 from typing import Iterator, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from ..db import ex, media_dict, now, q, q1
 from ..services import libraryfs, thumbs
 from .guard import ensure_visible
+from .revalidate import NO_STORE, file_tag, must_not_store, revalidated_file, revalidated_headers, tag_matches
 
 router = APIRouter()
 RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
@@ -176,29 +177,20 @@ def trash_media(media_id: int, request: Request):
     return {"ok": True}
 
 
-THUMB_CACHE = "private, no-cache"
-
-
 @router.get("/media/{media_id}/thumb")
 def media_thumb(media_id: int, request: Request, s: int = Query(384, ge=64, le=1024)):
     row = q1("SELECT * FROM media WHERE id=?", (media_id,))
     ensure_visible(row, request)
     from .. import vaultcrypt
-    if vaultcrypt.protected(row) or vaultcrypt.is_vaulted(media_id):
+    if must_not_store(row):
         data = vaultcrypt.thumb_bytes(row, s)
         if data is None:
             raise HTTPException(404, detail="Thumbnail unavailable")
-        return Response(data, media_type="image/webp", headers={"Cache-Control": "no-store"})
+        return Response(data, media_type="image/webp", headers={"Cache-Control": NO_STORE})
     path = thumbs.ensure_thumb(media_id, row["rel_path"], row["kind"], s)
     if path is None:
         raise HTTPException(404, detail="Thumbnail unavailable")
-    mime = "image/webp" if path.endswith(".webp") else "image/jpeg"
-    stat = os.stat(path)
-    tag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
-    headers = {"Cache-Control": THUMB_CACHE, "ETag": tag}
-    if tag in [part.strip() for part in request.headers.get("if-none-match", "").split(",")]:
-        return Response(status_code=304, headers=headers)
-    return FileResponse(path, media_type=mime, headers=headers)
+    return revalidated_file(request, path, "image/webp" if path.endswith(".webp") else "image/jpeg")
 
 
 def _iter_range(path: str, start: int, end: int) -> Iterator[bytes]:
@@ -239,8 +231,8 @@ def media_file(media_id: int, request: Request):
     row = q1("SELECT * FROM media WHERE id=?", (media_id,))
     ensure_visible(row, request)
     from .. import vaultcrypt
-    guarded = vaultcrypt.protected(row)
     sealed = vaultcrypt.opener(row)
+    guarded = must_not_store(row) or sealed is not None
     path = libraryfs.abs_path(row["rel_path"])
     if sealed is None and not os.path.isfile(path):
         raise HTTPException(404, detail="Original file missing on disk")
@@ -249,8 +241,13 @@ def media_file(media_id: int, request: Request):
     def reader(start: int, end: int) -> Iterator[bytes]:
         return sealed.iter_range(start, end) if sealed is not None else _iter_range(path, start, end)
 
-    headers = {"Accept-Ranges": "bytes", "Cache-Control": "no-store" if guarded else "private, max-age=86400"}
     range_header = request.headers.get("range")
+    if guarded:
+        headers = {"Accept-Ranges": "bytes", "Cache-Control": NO_STORE}
+    else:
+        headers = revalidated_headers(file_tag(path), {"Accept-Ranges": "bytes"})
+        if not range_header and tag_matches(request, headers["ETag"]):
+            return Response(status_code=304, headers=headers)
     if range_header:
         parsed = _parse_range(range_header, size)
         if parsed is None:
