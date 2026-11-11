@@ -15,6 +15,7 @@ from . import libraryfs
 CHANNELS = ("personal", "shared")
 ROOT = "DAM Sync"
 INTERVAL_S = 60
+SHARED_MAX = 2**31 - 1
 FIELDS = ("favorite", "rating", "label", "rejected", "title", "caption", "alt_text", "edit_json", "hidden", "trashed_ts",
           "created_ts", "lat", "lon", "location_hidden", "shared_lib", "trim_in", "trim_out")
 SYNCABLE = "m.private=0 AND m.live_of IS NULL"
@@ -317,6 +318,9 @@ def _apply_media(channel: str, base: str, rec: Dict[str, Any]) -> bool:
             return True
         src = _object_path(base, rec["sha"], os.path.splitext(str(rec.get("name") or ""))[1])
         if src is None:
+            return True
+        if not os.path.isfile(src) and channel == "shared" and int(rec.get("size") or 0) > SHARED_MAX:
+            print(f"sync: {rec.get('name')} is 2 GiB or larger and cannot travel through the Shared Library yet; skipped", flush=True)
             return True
         if not os.path.isfile(src):
             return False

@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/syncsvc.py _apply_media · one object too large for the Shared Library no longer stops a device's journal for good
+- refers-to: syncsvc SHARED_MAX, _apply_media (the missing-object branch); familynet.seal and unseal, familyserver and the personal channel unchanged
+- kind: fix
+- logged: v1.28.9 · 2026-11-11
+
+The Shared Library seals each object as one AES-GCM message, and AES-GCM in cryptography 50.0.1 refuses more than 2**31 - 1 bytes (OverflowError "Data or associated data too long", reproduced here with a lazily mapped 2 GiB buffer). A video of 2 GiB or more therefore never reaches the other device; _apply_media returned False for the missing object, pull stored the cursor at that line and stopped, and every later record from that device (shares, edits, removals) waited forever behind it. On the shared channel, a media record whose object is missing and whose declared size is over 2**31 - 1 is now skipped with a line in the engine log, so the journal moves on; the item itself still does not arrive. A missing object below that size still waits as before, since it may only be late. Deferred: carrying such objects at all needs chunked sealing (for example 16 MiB frames framed like vaultcrypt._encrypt_stream, streamed from disk on both sides), which changes the Shared Library's wire format between versions. Checked: the size limit by the call above; test_p1_lan passes. Not run: a pull with a real 2 GiB object.
+
 ### vaultcrypt.py _scrub and purge · sealing drops an item's rendered caches, and delete forever drops its Edit With files
 - refers-to: vaultcrypt _scrub (cache/render, cache/effects and cache/share by "<id>_"), purge (library/edits and library/edits/work by "<id>-"); _protect and _unprotect unchanged
 - kind: fix
