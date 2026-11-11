@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/grid.ts renderMonths · a late Years or Months answer no longer replaces the tiles
+- refers-to: ui/components/grid.ts :: mountGrid modeSeq, renderMode, renderMonths
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+renderMonths awaited /media/summary and then replaced the grid with month cards without checking that the mode was still the one asked for. Clicking Months and then All Photos before the answer came (large library, first use) let the late answer swap the freshly appended tiles for month cards while `rendered` still listed them, so All Photos showed month cards and appendItems skipped every item as already drawn; the same race ran between Months and Years. renderMode now bumps a sequence number, and renderMonths drops an answer whose sequence is stale or that arrives after month mode ended. Checked: tsc --noEmit. Not run: the toggle on a throttled network.
+
 ### ui/modal.ts onClose · closing a modal with X or the backdrop reaches its owner
 - refers-to: ui/modal.ts :: openModal onClose; ui/components/organize.ts :: openKeywordManager; ui/components/trash.ts :: vaultGate; ui/components/albums.ts :: unlockAlbumFlow
 - kind: fix

@@ -419,6 +419,7 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
   const rendered = new Map<number, HTMLElement>();
   const dayNodes = new Map<string, { section: HTMLElement; grid: HTMLElement; count: HTMLElement; n: number }>();
   let monthMode = false;
+  let modeSeq = 0;
 
   function context(): number[] {
     return pageFor(filter).items.map((m) => m.id);
@@ -512,7 +513,9 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
 
   async function renderMonths(level: "month" | "year"): Promise<void> {
     monthMode = true;
+    const seq = modeSeq;
     const data = await periodSummary(level);
+    if (seq !== modeSeq || !monthMode) return;
     const grid = h("div", { class: "month-grid" });
     for (const period of data.periods) {
       const covers = h("div", { class: "month-covers" });
@@ -536,6 +539,7 @@ export function mountGrid(host: HTMLElement, filter: FilterName, showControls: b
   }
 
   function renderMode(): void {
+    modeSeq++;
     if (state.grouping === "all" || !showControls) {
       if (monthMode) {
         monthMode = false;
