@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/curate.ts openSlideshow · closing before the items load starts nothing
+- refers-to: ui/components/curate.ts :: openSlideshow ended flag, show, end, the item-fetch then
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+A slideshow opened from Memories fetches up to 400 items it does not hold yet, then starts the music and the first slide. Pressing Esc before those fetches finished ran end() first; the late then() still called startMusic() and show(), so WebAudio music played with no slideshow on screen and show() rescheduled itself every 4 s for the life of the window, with no control left to stop it. end() now sets an ended flag; the late then() and show() return when it is set. Checked: tsc --noEmit. Not run: a slideshow on a throttled network.
+
 ### engine/store.ts setFavorite · un-favoriting on Favorites removes one tile instead of emptying the grid
 - refers-to: engine/store.ts :: setFavorite
 - kind: fix
