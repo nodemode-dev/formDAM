@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/libmanage.ts uploadAll · one failed drop batch no longer drops the rest silently
+- refers-to: ui/components/libmanage.ts :: uploadAll
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+A drop uploads its files in batches of 40. A failed batch threw out of the loop with no message (the drop handler's promise was not caught): the earlier batches stayed imported, the later ones were skipped, and the album add for a drop onto an album never ran. Each batch is now tried on its own, the loop carries on, the number of files that failed is toasted as an error, and the imported ones are still added to the album and counted. Checked: tsc --noEmit. Not run: a drop with a failing batch.
+
 ### ui/components/people.ts teardown · People opens out of Select mode
 - refers-to: ui/components/people.ts :: module selectMode, picked; mountPeoplePage teardown
 - kind: fix

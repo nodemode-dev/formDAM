@@ -299,13 +299,20 @@ async function uploadAll(files: File[], albumId: number | null): Promise<void> {
   toast(`Importing ${countFmt(files.length)} file${files.length === 1 ? "" : "s"}...`);
   const ids: number[] = [];
   let imported = 0;
+  let failed = 0;
   for (let i = 0; i < files.length; i += 40) {
     const form = new FormData();
-    for (const file of files.slice(i, i + 40)) form.append("files", file, file.name);
-    const res = await apiUpload<{ counts: { imported: number }; ids: number[] }>("/import/upload", form);
-    imported += res.counts.imported;
-    ids.push(...(res.ids ?? []));
+    const batch = files.slice(i, i + 40);
+    for (const file of batch) form.append("files", file, file.name);
+    try {
+      const res = await apiUpload<{ counts: { imported: number }; ids: number[] }>("/import/upload", form);
+      imported += res.counts.imported;
+      ids.push(...(res.ids ?? []));
+    } catch {
+      failed += batch.length;
+    }
   }
+  if (failed) toast(`${countFmt(failed)} file${failed === 1 ? "" : "s"} could not be imported`, "error");
   if (albumId !== null && ids.length) {
     await api(`/albums/${albumId}/items`, { method: "POST", body: JSON.stringify({ media_ids: ids }) });
     void loadAlbums();
