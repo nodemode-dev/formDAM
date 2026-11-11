@@ -500,6 +500,7 @@ export function mountViewer(host: HTMLElement): void {
         const dead = root;
         setTimeout(() => dead.remove(), 170);
         root = null;
+        info.dispose();
       }
       filmIds = null;
       filmTrack = null;

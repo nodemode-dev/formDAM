@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/infopanel.ts + viewer.ts · the info panel's store listeners leave with the viewer
+- refers-to: ui/components/infopanel.ts :: InfoPanel.dispose, createInfoPanel on("keywords"), on("meta"); ui/components/viewer.ts :: render (closing branch)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+Every viewer open after a close builds a new viewer and a new info panel, and createInfoPanel registered on("keywords") and on("meta") without ever removing them. Each pair kept the whole previous viewer tree alive (stage images, film strip, panel), and every keywords or meta event repainted all the dead panels, growing with each open. createInfoPanel now keeps both off functions and returns them as dispose(), which the viewer calls when it closes. Checked: tsc --noEmit. Not run: listener counts in a window.
+
 ### ui/components/curate.ts openSlideshow · closing before the items load starts nothing
 - refers-to: ui/components/curate.ts :: openSlideshow ended flag, show, end, the item-fetch then
 - kind: fix

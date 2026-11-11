@@ -13,6 +13,7 @@ export interface InfoPanel {
   el: HTMLElement;
   show: (id: number) => void;
   refresh: () => void;
+  dispose: () => void;
 }
 
 interface Row {
@@ -303,8 +304,8 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     if (currentId === id) await load(id);
   }
 
-  on("keywords", syncKwData);
-  on("meta", () => {
+  const offKeywords = on("keywords", syncKwData);
+  const offMeta = on("meta", () => {
     if (currentId !== null && patched.ids.includes(currentId) && current) {
       const fresh = state.byId.get(currentId);
       if (fresh) {
@@ -330,6 +331,10 @@ export function createInfoPanel(onLocationEdit?: (id: number) => void, onDateEdi
     },
     refresh() {
       if (currentId !== null) void load(currentId);
+    },
+    dispose() {
+      offKeywords();
+      offMeta();
     },
   };
 }
