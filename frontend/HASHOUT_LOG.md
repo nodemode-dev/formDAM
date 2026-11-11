@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/importer.ts · leaving Import before /idevice/status answers starts no device polling
+- refers-to: ui/components/importer.ts :: mountImportPage alive, /idevice/status then, teardown
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+/idevice/status probes usbmuxd and can be slow. When the user left Import before it answered, the teardown ran while phoneTimer was still null, and the answer then started a 3 s interval polling /idevice/devices that nothing would clear. The page now carries an alive flag cleared in the teardown, and the status answer does nothing once it is false. Checked: tsc --noEmit. Not run: the Import page with a slow status probe.
+
 ### search.ts + curate.ts mountMemoryPage + grid.ts hookPager · no grid is mounted after its page is gone
 - refers-to: ui/components/search.ts :: mountSearchPage alive, run, teardown; ui/components/curate.ts :: mountMemoryPage alive, load, teardown; ui/components/grid.ts :: mountGrid hookPager(framesLeft)
 - kind: fix
