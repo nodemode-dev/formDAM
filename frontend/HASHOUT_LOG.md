@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### styles/app.css · the app-level layers read the layer tokens; in-component and 60 values stay literal
+- refers-to: styles/app.css :: #bg-holder, .sel-bar, .viewer, .modal-backdrop, .toast-host, #app, .content, .content > .topbar, .ctx-menu, .sidebar, .preload-hud; theme/tokens.css :: --z-* (unchanged)
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+The family rule is that z-index uses the layer tokens; app.css used literal numbers that matched tokens.css only by value. Every app.css value with an exact token now reads it (0 base, 1 content, 20 sticky, 25 sidebar, 90 popover, 100 viewer, 200 modal, 300 toast), so the computed stacking is unchanged. Left literal on purpose, still carried debt: `.menu` and `.marquee-rect` at 60 (no token has 60, and choosing one is a design call) and the small in-component orders (`.sel-dot` 3, `.kind-mark` 2, `.film-strip-wrap` 5, `.film-cap` 2, `.zoom-box` 4, `.live-btn` 6, `.stage-live` 4, `.ptile img` 1, `.ptile-dur` 2), where mapping 2, 3, 4 and 6 onto the single --z-raised (5) would change their order; theme/glass.css and theme/background.js are the generated theme kit and are not hand-edited. Checked: npm run build (tsc and vite build) passed and the built CSS carries the var(--z-*) values beside the tokens' :root block. Not run: the window.
+
 ### vite.config.ts · the dev server keeps Vite's loopback default and refuses to move off 5173
 - refers-to: vite.config.ts :: server.host, server.strictPort
 - kind: fix
