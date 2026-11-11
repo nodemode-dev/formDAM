@@ -282,6 +282,7 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
   let timer = 0;
   let interval = 4000;
   let ended = false;
+  let showSeq = 0;
   const music = new Music();
   const a = h("div", { class: "ss-layer" });
   const b = h("div", { class: "ss-layer" });
@@ -316,7 +317,9 @@ export function openSlideshow(ids: number[], opts: { title?: string; subtitle?: 
     const media = isVideo
       ? h("video", { src: fileUrl(id), muted: true, autoplay: true, playsinline: true, class: "ss-media" }) as HTMLVideoElement
       : h("img", { class: "ss-media kenburns", alt: "", draggable: false }) as HTMLImageElement;
+    const seq = ++showSeq;
     const reveal = () => {
+      if (seq !== showSeq) return;
       back.replaceChildren(media);
       back.classList.add("on");
       front.classList.remove("on");

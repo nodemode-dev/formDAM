@@ -1,5 +1,12 @@
 # frontend HASHOUT_LOG · formDAM
 current: v1.27.7 · 2026-10-25
+### ui/components/curate.ts openSlideshow show · only the newest slide is revealed
+- refers-to: ui/components/curate.ts :: openSlideshow showSeq, show reveal
+- kind: fix
+- logged: v1.28.9 · 2026-11-10
+
+show() reveals an image after decode(). Two quick arrow presses picked the same back layer for both slides, and when the first decode finished after the second, its late reveal wrote into the layer already shown and then took "on" off it, leaving a black frame and the wrong image under the counter. Each show() now takes a sequence number and a reveal that is no longer the newest does nothing. Checked: tsc --noEmit. Not run: a slideshow in a window.
+
 ### ui/components/organize.ts Set Shortcut hint · the hint says the key adds the keyword, as it does
 - refers-to: ui/components/organize.ts :: openKeywordManager "Set Shortcut..." prompt hint; the window keydown handler (unchanged)
 - kind: fix
