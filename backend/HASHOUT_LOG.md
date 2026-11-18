@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/trash.py _purge_row, delete_forever, empty_trash, purge_expired · a file that cannot be removed stays in the Trash and the rest carry on
+- refers-to: trash _purge_row (now returns True or False, and removes the file before it touches vault data or rows), delete_forever (409), empty_trash and purge_expired (count the rows actually purged); main.py lifespan (purge_expired at start, unchanged); tests/test_trash_locked.py
+- kind: fix
+- logged: v1.30.0 · 2026-11-18
+
+_purge_row dropped the item's edit and vault data first and then called os.unlink on the original with no guard. A file another program holds open (Windows) raised out of the loop: empty_trash answered 500 and stopped, purge_expired stopped, and since purge_expired also runs in the lifespan before the engine serves, the engine did not start at all while one expired original was locked, every launch. The unlink now comes first and an OSError makes _purge_row return False before anything else is touched, so the row, its vault data and its edits stay and the next sweep or launch tries again. delete_forever answers 409 "The file is in use by another program, so it stays in the Trash" for that one item; empty_trash and purge_expired go on with the other items and return how many were purged. Order matters: with the old order a locked file would have lost its vault blob and edit files while its row stayed. Checked here on Linux with os.unlink made to raise PermissionError for one original, the file's row trashed by a direct UPDATE the way the duplicate resolver does it (a trashed item is normally sealed into the vault at once and has no original on disk to remove, so this path only meets a file when the seal has not happened yet or has failed): before, purge_expired and the engine start both raised PermissionError and nothing was purged; after, the engine starts, the other two items are purged, the locked one stays, and it is purged on the next call once free. Not run on Windows, where the lock itself would come from another program.
+
 ### services/filesvc.py open_with · only an application from the window's own list is opened
 - refers-to: filesvc open_with, editor_apps; routers/files.py open_with (POST /media/{id}/open); routers/edit.py edit_with and services/extedit.py start (the other callers); tests/test_open_with.py
 - kind: fix

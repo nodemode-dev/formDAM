@@ -225,14 +225,17 @@ def restore(media_id: int, request: Request):
     return {"ok": True}
 
 
-def _purge_row(row) -> None:
+def _purge_row(row) -> bool:
     from .. import vaultcrypt
-    vaultcrypt.purge(row["id"])
     keys = row.keys() if hasattr(row, "keys") else []
-    companion = q1("SELECT * FROM media WHERE live_of=?", (row["id"],)) if "live_of" in keys else None
     path = libraryfs.abs_path(row["rel_path"])
     if os.path.isfile(path) and not ("referenced" in keys and row["referenced"]):
-        os.unlink(path)
+        try:
+            os.unlink(path)
+        except OSError:
+            return False
+    vaultcrypt.purge(row["id"])
+    companion = q1("SELECT * FROM media WHERE live_of=?", (row["id"],)) if "live_of" in keys else None
     ex("DELETE FROM faces WHERE media_id=?", (row["id"],))
     ex("DELETE FROM album_items WHERE media_id=?", (row["id"],))
     ex("DELETE FROM media_keywords WHERE media_id=?", (row["id"],))
@@ -242,6 +245,7 @@ def _purge_row(row) -> None:
         ex("UPDATE media SET live_video_id=NULL WHERE id=?", (row["live_of"],))
     if companion is not None:
         _purge_row(companion)
+    return True
 
 
 @router.delete("/trash/{media_id}")
@@ -250,7 +254,8 @@ def delete_forever(media_id: int, request: Request):
     row = q1("SELECT * FROM media WHERE id=? AND trashed_ts IS NOT NULL", (media_id,))
     if row is None:
         raise HTTPException(404, detail="Not in the trash")
-    _purge_row(row)
+    if not _purge_row(row):
+        raise HTTPException(409, detail="The file is in use by another program, so it stays in the Trash. Try again later.")
     return {"ok": True}
 
 
@@ -258,14 +263,10 @@ def delete_forever(media_id: int, request: Request):
 def empty_trash(request: Request):
     require_vault(request)
     rows = q("SELECT * FROM media WHERE trashed_ts IS NOT NULL")
-    for row in rows:
-        _purge_row(row)
-    return {"deleted": len(rows)}
+    return {"deleted": sum(1 for row in rows if _purge_row(row))}
 
 
 def purge_expired() -> int:
     cutoff = time.time() - trash_retention_days() * 86400
     rows = q("SELECT * FROM media WHERE trashed_ts IS NOT NULL AND trashed_ts < ?", (cutoff,))
-    for row in rows:
-        _purge_row(row)
-    return len(rows)
+    return sum(1 for row in rows if _purge_row(row))
