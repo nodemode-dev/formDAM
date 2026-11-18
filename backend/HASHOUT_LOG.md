@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/filesvc.py rename · a file that cannot be renamed is reported and the batch goes on
+- refers-to: filesvc rename (the os.rename of the original and of its sidecar); routers/files.py rename; tests/test_rename_failure.py
+- kind: fix
+- logged: v1.30.0 · 2026-11-18
+
+rename called os.rename with no guard, so a failure on file N (an original that is gone from disk but still in the catalog, a locked or read-only file) escaped as a 500 after files 1 to N-1 had been renamed and their rows updated, and the window was never told which file stopped it or that the rest were not tried. The rename of the original is now caught: that entry gets ok false and the reason "The file could not be renamed", its row is left alone, and the loop goes on. The window already treats ok false as not renamed (it counts only ok entries, and the preview shows the reason). The sidecar rename after it is caught too and left where it is, because the original had already moved and an escape there would have skipped the UPDATE and left the catalog pointing at the old name. Checked here: three imported photos, the second one's file deleted from disk, rename of all three: before, 500, the first renamed, the third untouched; after, 200, entries ok true, false and true, the first and third renamed in the catalog and on disk and the second unchanged. With os.rename made to raise for the .xmp only, the original and its row are renamed and the sidecar keeps its old name. Not run on Windows.
+
 ### routers/library.py import_orphans · one file that cannot be imported no longer ends the job
 - refers-to: library import_orphans run (counts gain "failed"); routers/importer.py run_import (the same per-file guard); tests/test_import_orphans.py
 - kind: fix

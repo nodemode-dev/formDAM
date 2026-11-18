@@ -53,14 +53,21 @@ def rename(ids: List[int], template: str, start: int = 1, custom: str = "") -> L
         if os.path.exists(dest):
             entry.update(ok=False, reason="Name taken")
             continue
-        os.rename(src, dest)
+        try:
+            os.rename(src, dest)
+        except OSError:
+            entry.update(ok=False, reason="The file could not be renamed")
+            continue
         stem = os.path.splitext(src)[0]
         paired = [p for p in glob.glob(glob.escape(stem) + ".*") if not p.lower().endswith(".xmp")]
         for side in (src + ".xmp", stem + ".xmp"):
             if os.path.isfile(side):
                 target = os.path.splitext(dest)[0] + ".xmp"
                 if not os.path.exists(target) and (side == src + ".xmp" or not paired):
-                    os.rename(side, target)
+                    try:
+                        os.rename(side, target)
+                    except OSError:
+                        pass
                 break
         rel = dest if row["referenced"] else os.path.relpath(dest, libraryfs.originals_dir())
         ex("UPDATE media SET rel_path=?, name=? WHERE id=?", (rel, entry["new"], entry["id"]))
