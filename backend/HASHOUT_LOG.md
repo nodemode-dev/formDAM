@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### app/ffmpeg_fetch.py · the download tries formai-binaries first and formcut-binaries second
+- refers-to: ffmpeg_fetch SOURCES, sources (was source), fetch; tests/test_ffmpeg_fetch.py
+- kind: rationale
+- logged: v1.30.0 · 2026-11-18
+
+The binaries repository `nodemode-dev/formcut-binaries` is being renamed `nodemode-dev/formai-binaries`. Until the owner renames it the new address does not exist, and afterwards the old address redirects, so `fetch` now walks `sources()` in order: the formai-binaries address first, the formcut-binaries address second, moving on when an address fails to answer or hands back files that do not match their SHA-256 in `ffmpeg_record.py`. Every address is held to the same record, so the order never relaxes the check; when every address fails nothing is installed and the error lists each address with its reason. `FORMCUT_FFMPEG_RELEASE` is unchanged: when it is set it is the only source and the built-in addresses are never asked. The release tag, the asset names and the shared install folder `formcut-binaries/ffmpeg-<RELEASE>` do not change, so a PC that already has the folder does not download again. Checked here: a scratch script (outside the repo) served the archive from two local HTTP servers and set `SOURCES` to them at run time, since the module has no setting for it. First address answering: one request. First address 404: the second installs. First address wrong bytes: the second installs. Both wrong: nothing placed, ValueError naming both. Override pointed at a 404 server or a wrong-hash server: only that address asked, nothing placed. A real run on Linux with the built-in addresses got a 404 from formai-binaries (not renamed yet), then downloaded, verified and installed from formcut-binaries. The history entry for v1.28.4 below is left as written. Not run on Windows or macOS.
+
 ### routers/render.py render, mediaapi.py media_file, people.py face_thumb (new routers/revalidate.py) · every media byte route is revalidated, and nothing hidden is stored
 - refers-to: revalidate REVALIDATE, NO_STORE, must_not_store, file_tag, tag_matches, revalidated_headers, revalidated_file; render.render (cached and fresh paths); mediaapi media_thumb (THUMB_CACHE folded into revalidate), media_file (ETag, 304 on a full GET, no-store when sealed); people.face_thumb (Request, row of the face's item)
 - kind: fix
