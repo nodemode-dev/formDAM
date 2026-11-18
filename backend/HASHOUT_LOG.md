@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### routers/library.py import_orphans · one file that cannot be imported no longer ends the job
+- refers-to: library import_orphans run (counts gain "failed"); routers/importer.py run_import (the same per-file guard); tests/test_import_orphans.py
+- kind: fix
+- logged: v1.30.0 · 2026-11-18
+
+The folder import wraps each import_one call and counts a failure; the repair report's "Import unknown files" loop did not, so a file that raised (a read error, a file gone since the report, a database error) ended the whole job in the error phase and left every later orphan unimported. It now catches the exception per file, counts it under "failed" and goes on, the same as the folder import. The window only reads "imported" from the job, so it is unchanged. Checked here with an orphan list of three real JPEGs in the originals folder: all three import; with import_one made to raise PermissionError for the middle one, before the job ended in the error phase with 1 imported and the third never tried, after it finishes with 2 imported and 1 failed. A truly corrupt file does not raise here (image_meta and video_meta tolerate it), so the failing file in the check is a fault injected into import_one. Not changed: a byte-identical orphan is counted as a duplicate and stays on disk, so it is listed again by the next repair, and a file of a kind that is not a photo or video is counted as a duplicate too.
+
 ### routers/trash.py _purge_row, delete_forever, empty_trash, purge_expired · a file that cannot be removed stays in the Trash and the rest carry on
 - refers-to: trash _purge_row (now returns True or False, and removes the file before it touches vault data or rows), delete_forever (409), empty_trash and purge_expired (count the rows actually purged); main.py lifespan (purge_expired at start, unchanged); tests/test_trash_locked.py
 - kind: fix
