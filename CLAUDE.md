@@ -1,6 +1,6 @@
 # formDAM
 
-Rules for agents working in this repository. Planning documents (DEV_PLAN, BUILD_NOTES, TEST_PLAN, HASHOUT_LOG) ship in the planning sidecar zip, not in this tree. Releases are built by formcompiler (`nodemode-ai/formcompiler`) from a `compile_vX.Y.Z` branch; this repository's GitHub workflow only runs checks.
+Rules for agents working in this repository. `BUILD_NOTES.md` and the `HASHOUT_LOG.md` files in `backend/`, `frontend/` and `src-tauri/` are in this tree; the other planning documents (DEV_PLAN, TEST_PLAN) ship in the planning sidecar zip, not in this tree. Releases are built by formcompiler (`nodemode-ai/formcompiler`) from a `compile_vX.Y.Z` branch; this repository's GitHub workflow only runs checks.
 
 ## Trademarks, copyright and licences
 
