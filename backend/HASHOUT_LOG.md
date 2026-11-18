@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### services/filesvc.py open_with · only an application from the window's own list is opened
+- refers-to: filesvc open_with, editor_apps; routers/files.py open_with (POST /media/{id}/open); routers/edit.py edit_with and services/extedit.py start (the other callers); tests/test_open_with.py
+- kind: fix
+- logged: v1.30.0 · 2026-11-18
+
+open_with now accepts an application name only when it is one of editor_apps(), the list the window itself offers in Edit With (the .app names in /Applications and ~/Applications on macOS, and nothing on Windows and Linux). Anything else is refused before a process is started: POST /media/{id}/open answers {"ok": false} and POST /media/{id}/edit-with answers 422 "The application could not be opened". The window is unchanged: it fills its list from GET /system/editors and sends an application only from that list, and on Windows and Linux it sends none, so those platforms open the file in the default application (xdg-open, os.startfile) as before. The window does not call /media/{id}/open at all today; only Edit With reaches open_with. Checked here on Linux with a fake xdg-open on PATH and a marker script: before the change both routes started the program named in the request; after, neither does, and an empty request still opens the default application on both routes. The macOS branch was run with sys.platform set to darwin and the launcher stubbed: a listed name gives `open -a <name> <file>`, an unlisted name or a path is refused, no name gives `open <file>`. Not run on a Mac, a Windows PC or with a real application.
+
 ### app/ffmpeg_fetch.py · the download tries formai-binaries first and formcut-binaries second
 - refers-to: ffmpeg_fetch SOURCES, sources (was source), fetch; tests/test_ffmpeg_fetch.py
 - kind: rationale

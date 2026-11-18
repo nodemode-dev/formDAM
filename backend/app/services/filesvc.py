@@ -104,6 +104,8 @@ def reveal(path: str) -> bool:
 
 
 def open_with(path: str, app: Optional[str] = None) -> bool:
+    if app and app not in editor_apps():
+        return False
     if sys.platform == "darwin":
         return _run(["open", "-a", app, path] if app else ["open", path])
     if os.name == "nt":
