@@ -106,7 +106,7 @@
 ## Under the hood
 
 - **Engine:** FastAPI and a SQLite catalog (`dam.db`) in a library folder you choose; originals are copied, moved or referenced in place, SHA-256 fingerprinted.
-- **Interface:** vanilla TypeScript and Vite with inline `currentColor` icons; the engine can serve the built UI itself.
+- **Interface:** vanilla TypeScript and Vite with inline `currentColor` icons; the engine can serve the built UI itself. Settings > Appearance has one checkbox, AMOLED Black (off by default), that makes the page, panels, menus and dialogs true black for OLED screens.
 - **Desktop:** a Tauri shell over the engine frozen with PyInstaller; the bundle is built by `./build_app` or by FormCompiler.
 - **Local only:** a per-launch key is traded for an HttpOnly session cookie, and automation access for scripts is off until Settings > Privacy turns it on.
 
@@ -124,7 +124,7 @@ All FormDAM builds are compiled and released from [FormCompiler](https://github.
 
 Prefer it in your browser, or want to contribute? Run the web UI straight from this repo.
 
-**Requires:** Python 3.10+, Node 20.19 or 22.12+. `ffmpeg` on PATH is optional and adds video thumbnails and video scanning.
+**Requires:** Python 3.10+, Node 20.19 or 22.12+. `ffmpeg` on PATH is optional and adds video thumbnails and video scanning. The desktop app, when no ffmpeg is installed, downloads its own LGPL build on first run, from the `formai-binaries` release first and the older `formcut-binaries` address second, and installs nothing that does not match the recorded SHA-256; a source run does not download it unless `FORM_FFMPEG_AUTO=1` is set.
 
 ```sh
 git clone git@github.com:nodemode-dev/formDAM.git
