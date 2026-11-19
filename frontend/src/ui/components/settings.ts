@@ -242,6 +242,12 @@ export function openSettings(): void {
 
   const sideNote = h("p", { class: "settings-hint" }, "These controls shape the side panel ON THE COLLECTIONS PAGE ONLY, where carousels slide beneath it: Panel opacity sets how solid its smoke is there (0% clear glass, 100% nearly solid) & Panel blur sets how strongly photos, videos & text passing under it defocus. Everywhere else the panel simply follows the Glass sliders. Content is SUPPOSED to blur under this panel on Collections; the no-blur rule protects content from the window fade only.");
 
+  const oledCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
+  oledCheck.checked = prefs.amoled;
+  oledCheck.addEventListener("change", () => {
+    prefs.amoled = oledCheck.checked;
+    commit();
+  });
   const bgCheck = h("input", { type: "checkbox" }) as HTMLInputElement;
   bgCheck.checked = prefs.background;
 
@@ -284,7 +290,7 @@ export function openSettings(): void {
 
   const resetBtn = h("button", { class: "btn", type: "button" }, "Reset theme");
   resetBtn.addEventListener("click", () => {
-    Object.assign(prefs, { accent: DEFAULT_THEME.accent, background: true, vibrancy: true, vibTint: DEFAULT_THEME.vibTint, winFrost: DEFAULT_THEME.winFrost, winBlur: DEFAULT_THEME.winBlur, fade: 0, tileRadius: DEFAULT_THEME.tileRadius });
+    Object.assign(prefs, { accent: DEFAULT_THEME.accent, amoled: false, background: true, vibrancy: true, vibTint: DEFAULT_THEME.vibTint, winFrost: DEFAULT_THEME.winFrost, winBlur: DEFAULT_THEME.winBlur, fade: 0, tileRadius: DEFAULT_THEME.tileRadius });
     winFade.value = "0";
     winFadeVal.textContent = "0%";
     pushWindow();
@@ -316,6 +322,7 @@ export function openSettings(): void {
     backgroundControl?.update(prefs.bg);
     Object.assign(prefs.glass, DEFAULT_THEME.glass);
     customInput.value = prefs.accent;
+    oledCheck.checked = false;
     bgCheck.checked = true;
     backgroundControl?.enable();
     sliderRows.forEach((row, index) => {
@@ -394,6 +401,7 @@ export function openSettings(): void {
     { key: "appearance", label: "Appearance", icon: "glass", nodes: [
       h("p", { class: "settings-section" }, "Accent color"),
       swatchRow,
+      h("label", { class: "field-check" }, oledCheck, "AMOLED Black (true black for OLED screens)"),
       h("p", { class: "settings-section" }, "Glass"),
       presetRow,
       ...sliderRows,

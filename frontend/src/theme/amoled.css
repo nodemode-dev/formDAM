@@ -1,0 +1,26 @@
+:root[data-oled] {
+  --bg: #000000;
+  --bg-elev: #000000;
+  --tile-bg: #141414;
+  --text: #ededed;
+  --text-muted: #a6a6a6;
+  --text-faint: #858585;
+  --border: #262626;
+  --border-strong: #3a3a3a;
+  --glass-bg-2: rgba(255, 255, 255, 0.078);
+  --glass-hover: rgba(255, 255, 255, 0.1);
+  --glass-border: #262626;
+}
+
+:root[data-oled] .pop-surface {
+  background: #000000;
+  border-color: #262626;
+}
+
+:root[data-oled] .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+:root[data-oled] .viewer {
+  background: #000000;
+}

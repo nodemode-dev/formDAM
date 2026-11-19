@@ -12,6 +12,7 @@ export interface GlassPrefs {
 
 export interface ThemePrefs {
   accent: string;
+  amoled: boolean;
   glass: GlassPrefs;
   background: boolean;
   vibrancy: boolean;
@@ -29,6 +30,7 @@ export const ACCENT_SWATCHES = ["#f0a84b", "#f15a29", "#7ee262", "#4dd7f2", "#a7
 
 export const DEFAULT_THEME: ThemePrefs = {
   accent: "#f0a84b",
+  amoled: false,
   glass: { strength: 1, blur: 36, frost: 1.9, tint: 0.12, gradient: 1, opacity: 0.38, ver: 2 },
   background: true,
   vibrancy: true,
@@ -43,6 +45,16 @@ export const DEFAULT_THEME: ThemePrefs = {
 };
 
 const KEY = "theme";
+export const OLED_MIRROR = "dam-oled";
+
+function mirrorOled(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(OLED_MIRROR, "1");
+    else localStorage.removeItem(OLED_MIRROR);
+  } catch {
+    return;
+  }
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const clean = hex.replace("#", "");
@@ -79,6 +91,7 @@ export function loadTheme(): ThemePrefs {
     : 0;
   return {
     accent: parsed.accent ?? DEFAULT_THEME.accent,
+    amoled: parsed.amoled === true,
     glass: { ...DEFAULT_THEME.glass, ...(parsed.glass?.ver === DEFAULT_THEME.glass.ver ? parsed.glass : {}) },
     background: parsed.background ?? DEFAULT_THEME.background,
     vibrancy: true,
@@ -118,18 +131,22 @@ export function applyTheme(prefs: ThemePrefs): void {
   root.setProperty("--glass-blur", `${blur}px`);
   root.setProperty("--glass-saturate", `${Math.round(glass.frost * 100)}%`);
   root.setProperty("--glass-brightness", `${(0.9 + glass.frost * 0.095).toFixed(2)}`);
-  root.setProperty("--glass-bg", `rgba(${18 + r * tintAlpha * 0.3}, ${16 + g * tintAlpha * 0.3}, ${14 + b * tintAlpha * 0.3}, ${alpha.toFixed(3)})`);
+  const tint = prefs.amoled ? "0, 0, 0" : `${18 + r * tintAlpha * 0.3}, ${16 + g * tintAlpha * 0.3}, ${14 + b * tintAlpha * 0.3}`;
+  root.setProperty("--glass-bg", `rgba(${tint}, ${alpha.toFixed(3)})`);
   const sideAlpha = Math.min(0.98, Math.max(0, prefs.side.opacity) / 100);
-  root.setProperty("--glass-bg-side", `rgba(${18 + r * tintAlpha * 0.3}, ${16 + g * tintAlpha * 0.3}, ${14 + b * tintAlpha * 0.3}, ${sideAlpha.toFixed(3)})`);
+  root.setProperty("--glass-bg-side", `rgba(${tint}, ${sideAlpha.toFixed(3)})`);
   root.setProperty("--glass-blur-side", `${Math.max(0, Math.min(64, prefs.side.blur))}px`);
   const topAlpha = Math.min(0.98, Math.max(0, prefs.top.opacity) / 100);
-  root.setProperty("--glass-bg-top", `rgba(${18 + r * tintAlpha * 0.3}, ${16 + g * tintAlpha * 0.3}, ${14 + b * tintAlpha * 0.3}, ${topAlpha.toFixed(3)})`);
+  root.setProperty("--glass-bg-top", `rgba(${tint}, ${topAlpha.toFixed(3)})`);
   root.setProperty("--glass-blur-top", `${Math.max(0, Math.min(64, prefs.top.blur))}px`);
   root.setProperty("--glass-sheen", `rgba(255, 255, 255, ${(0.075 * glass.gradient).toFixed(3)})`);
   root.setProperty("--glass-rim-top", `rgba(255, 255, 255, ${(0.32 * glass.gradient).toFixed(3)})`);
   root.setProperty("--glass-rim-mid", `rgba(255, 255, 255, ${(0.07 * glass.gradient).toFixed(3)})`);
   root.setProperty("--glass-rim-bottom", `rgba(255, 255, 255, ${(0.02 * glass.gradient).toFixed(3)})`);
   document.documentElement.classList.toggle("vibrancy", prefs.vibrancy);
+  const html = document.documentElement;
+  if (html.hasAttribute("data-oled") !== prefs.amoled) html.toggleAttribute("data-oled", prefs.amoled);
+  mirrorOled(prefs.amoled);
   // Window fade, background-only: the webview backdrop is transparent (shell
   // clears it), so the app background is THIS paint & its alpha is 1 - fade.
   // Photos, text, icons & panels never carry the alpha, so they stay solid at
@@ -141,7 +158,7 @@ export function applyTheme(prefs: ThemePrefs): void {
     t >= 0 ? Math.round(c * (1 - t)) : Math.round(c + (light[i] - c) * -t),
   );
   const f = Math.max(0, Math.min(100, prefs.winFrost)) / 100;
-  const rgb = base.map((c) => Math.round(c + (255 - c) * f * 0.9));
+  const rgb = prefs.amoled ? [0, 0, 0] : base.map((c) => Math.round(c + (255 - c) * f * 0.9));
   const fadeAlpha = 1 - Math.max(0, Math.min(100, prefs.fade)) / 100;
   const shade = (mult: number) =>
     `rgba(${rgb.map((c) => Math.min(255, Math.round(c * mult))).join(", ")}, ${fadeAlpha.toFixed(3)})`;
