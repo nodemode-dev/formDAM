@@ -187,10 +187,14 @@ def import_orphans():
     orphans = [p for p in report.get("orphans") or [] if os.path.isfile(p)]
 
     def run(state: Dict[str, Any]) -> None:
-        counts = {"imported": 0, "duplicates": 0}
+        counts = {"imported": 0, "duplicates": 0, "failed": 0}
         state["counts"] = counts
         for path in orphans:
-            result = libraryfs.import_one(path, move=True)
+            try:
+                result = libraryfs.import_one(path, move=True)
+            except Exception:
+                counts["failed"] += 1
+                continue
             counts["imported" if result.get("status") == "imported" else "duplicates"] += 1
 
     return {"job_id": jobs.start("import", run)}
