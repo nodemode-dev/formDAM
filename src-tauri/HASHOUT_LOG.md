@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### src/main.rs backend_command · the engine is told which process is its app
+- refers-to: src/main.rs backend_command (one .env line: FORMDAM_SHELL_PID); ../backend/app/startup.py shell_pid, alone, watch; ../backend/desktop_entry.py serve
+- kind: feature
+- logged: v1.31.0 · 2026-11-19
+
+The engine now leaves when its app is gone and holds a lock that records its app, and for both it needs the app's process id. backend_command sets FORMDAM_SHELL_PID to std::process::id(). The line is required, not optional: a frozen engine with no such variable takes itself for started alone, opens the app and stops (see the backend log entry of the same date). This is the only shell change in this release. Not done here, and listed as held: the job object that ends the engine with the shell on Windows however the shell ends (win_job.rs), the start failure text with the engine's last lines and the log's path (engine_start.rs), and limits on the wait for the address. Today a failed start still shows "The formDAM engine failed to start. Please relaunch the app." before the app closes, including when a second copy's engine was refused. The shell was not compiled here; the change is one more .env call with a String value on the std::process::Command that already has two.
+
 ### ../setup/formDAM_boot(.bat) · the launchers wait on and open http://localhost:5173
 - refers-to: formDAM_boot UI=, formDAM_boot.bat UI=; the closing hint in formDAM_oc_install(.bat); README Getting started and the services table
 - kind: fix
