@@ -1,5 +1,12 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### desktop_entry.py top of file · the engine starts when it is given no input or output stream
+- refers-to: desktop_entry.py (the three checks under the imports, before any other code); tests/test_entry_streams.py
+- kind: fix
+- logged: v1.30.1 · 2026-11-19
+
+desktop_entry.py is the script every build freezes as the engine (PyInstaller, formdam-backend). A Python process started with no console and no pipes has sys.stdin, sys.stdout and sys.stderr set to None, and the first thing that asks such a stream a question (the server's log setup asks whether it is a terminal) raises, so the engine stops before it serves. A tester's Windows build of another family engine stopped this way. FormDAM's shell gives its engine pipes, so the shipped app was not hit, but the entry itself could not start without them: run here with both output streams closed it exited with code 1 before answering. Each stream that is None is now replaced with one opened on os.devnull, at the top of the file before anything else runs, the way FormWeb's entry does it. The log file that a frozen build keeps (_open_log, _Tee) is unchanged and still receives everything, since _Tee writes to the log first and then to the replaced stream. Seen on Linux with Python 3.13: with stdout and stderr closed the entry answers /api/health, and started normally it prints its log as before. Not run on Windows or macOS, and not as a frozen build.
+
 ### services/filesvc.py rename · a file that cannot be renamed is reported and the batch goes on
 - refers-to: filesvc rename (the os.rename of the original and of its sidecar); routers/files.py rename; tests/test_rename_failure.py
 - kind: fix
