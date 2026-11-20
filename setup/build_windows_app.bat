@@ -53,7 +53,9 @@ if exist models\bioclip_species_int8.npy goto :species_done
 python -m app.services.species prepare models\txt_emb_species.npy models\txt_emb_species.json models || exit /b 1
 del /q models\txt_emb_species.npy models\txt_emb_species.json
 :species_done
-pyinstaller --clean --noconfirm --onedir --name formdam-backend ^
+set "WINDOWED=--noconsole"
+if "%FORMDAM_ENGINE_WINDOWED%"=="0" set "WINDOWED="
+pyinstaller --clean --noconfirm --onedir %WINDOWED% --name formdam-backend ^
   --collect-all uvicorn --collect-all PIL --collect-all pi_heif --exclude-module pillow_heif ^
   --collect-all cv2 --collect-all numpy --collect-all rawpy --collect-all exifread ^
   --collect-all onnxruntime --collect-all cryptography ^

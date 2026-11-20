@@ -14,6 +14,10 @@ use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_dialog::FilePath;
 use tauri_plugin_dialog::DialogExt;
 
+mod engine_start;
+#[cfg(windows)]
+mod win_job;
+
 struct Backend(Mutex<Option<Child>>);
 struct Tray(Mutex<Option<TrayIcon>>);
 static TRAY_ENABLED: AtomicBool = AtomicBool::new(false);
@@ -142,6 +146,8 @@ const AIR_FALLBACK: (f64, f64) = (1323.0, 860.0);
 
 fn kill_backend(handle: &tauri::AppHandle) {
     if let Some(mut child) = handle.state::<Backend>().0.lock().unwrap().take() {
+        #[cfg(windows)]
+        win_job::end();
         let _ = child.kill();
         let _ = child.wait();
     }
@@ -537,18 +543,21 @@ fn handle_ctrl_line(port: u16, line: &str) {
     }
 }
 
-fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
+fn backend_command(handle: &tauri::AppHandle) -> Result<Command, engine_start::Failure> {
     let resources = handle
         .path()
         .resource_dir()
-        .map_err(|e| format!("no resource dir: {e}"))?;
+        .map_err(|e| engine_start::Failure::NotStarted(format!("no resource dir: {e}")))?;
     let dir = resources.join("formdam-backend");
     let bin = dir.join(format!("formdam-backend{}", std::env::consts::EXE_SUFFIX));
+    if !bin.is_file() {
+        return Err(engine_start::Failure::Missing);
+    }
     let mut cmd = Command::new(&bin);
     cmd.current_dir(&dir)
         .env("FORMDAM_PORT", "0")
         .env("FORMDAM_SHELL_KEY", shell_key())
-        .env("FORMDAM_SHELL_PID", std::process::id().to_string())
+        .env(engine_start::SHELL_ENV, std::process::id().to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     #[cfg(windows)]
@@ -558,6 +567,88 @@ fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
     Ok(cmd)
+}
+
+fn forward_lines<R: std::io::Read + Send + 'static>(stream: R, tx: mpsc::Sender<String>) {
+    std::thread::spawn(move || {
+        for line in BufReader::new(stream).split(b'\n') {
+            let Ok(bytes) = line else { break };
+            if tx.send(String::from_utf8_lossy(&bytes).trim_end_matches('\r').to_string()).is_err() {
+                break;
+            }
+        }
+    });
+}
+
+fn start_engine(handle: &tauri::AppHandle) -> Result<mpsc::Receiver<String>, engine_start::Failure> {
+    let mut child = backend_command(handle)?
+        .spawn()
+        .map_err(|e| engine_start::Failure::NotStarted(e.to_string()))?;
+    #[cfg(windows)]
+    win_job::hold(&child);
+    let (tx, rx) = mpsc::channel::<String>();
+    if let Some(stdout) = child.stdout.take() {
+        forward_lines(stdout, tx.clone());
+    }
+    if let Some(stderr) = child.stderr.take() {
+        forward_lines(stderr, tx);
+    }
+    handle.state::<Backend>().0.lock().unwrap().replace(child);
+    Ok(rx)
+}
+
+fn read_port(rx: &mpsc::Receiver<String>, tail: &mut engine_start::Tail, secret: &str) -> Result<u16, engine_start::Failure> {
+    let pattern = regex::Regex::new(r"http://127\.0\.0\.1:(\d+)").unwrap();
+    let until = std::time::Instant::now() + engine_start::Wait::Address.limit();
+    loop {
+        let left = until.saturating_duration_since(std::time::Instant::now());
+        if left.is_zero() {
+            return Err(engine_start::Failure::TimedOut(engine_start::Wait::Address));
+        }
+        let line = match rx.recv_timeout(left) {
+            Ok(line) => line,
+            Err(mpsc::RecvTimeoutError::Timeout) => return Err(engine_start::Failure::TimedOut(engine_start::Wait::Address)),
+            Err(mpsc::RecvTimeoutError::Disconnected) => return Err(engine_start::Failure::Stopped(None)),
+        };
+        tail.push(&line, secret);
+        if let Some(found) = pattern.captures(&line).and_then(|captures| captures[1].parse::<u16>().ok()) {
+            return Ok(found);
+        }
+    }
+}
+
+fn engine_exit_code(handle: &tauri::AppHandle) -> Option<i32> {
+    let state = handle.state::<Backend>();
+    let mut waited = std::time::Duration::ZERO;
+    while waited < engine_start::EXIT_WAIT {
+        if let Ok(mut slot) = state.0.lock() {
+            let seen = slot.as_mut().map(|child| child.try_wait());
+            match seen {
+                Some(Ok(Some(status))) => return status.code(),
+                Some(Ok(None)) => {}
+                _ => return None,
+            };
+        }
+        std::thread::sleep(engine_start::EXIT_STEP);
+        waited += engine_start::EXIT_STEP;
+    }
+    None
+}
+
+fn engine_failed(handle: &tauri::AppHandle, failure: engine_start::Failure, tail: &engine_start::Tail) {
+    let failure = match failure {
+        engine_start::Failure::Stopped(None) => engine_start::Failure::Stopped(engine_exit_code(handle)),
+        other => other,
+    };
+    let text = engine_start::message(&failure, &tail.lines(), engine_start::engine_log().as_deref());
+    let _ = handle
+        .dialog()
+        .message(text)
+        .title(engine_start::APP)
+        .kind(tauri_plugin_dialog::MessageDialogKind::Error)
+        .blocking_show();
+    kill_backend(handle);
+    std::process::exit(1);
 }
 
 static HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
@@ -657,43 +748,23 @@ fn main() {
             .inner_size(width, height)
             .min_inner_size(980.0, 640.0)
             .center();
-            let window = builder.build()?;
+            let window = match builder.build() {
+                Ok(window) => window,
+                Err(_) => {
+                    std::thread::spawn(move || engine_failed(&handle, engine_start::Failure::Window, &engine_start::Tail::default()));
+                    return Ok(());
+                }
+            };
             clear_webview_backdrop(&handle);
 
-            let mut child = backend_command(&handle)?
-                .spawn()
-                .map_err(|e| format!("the formDAM engine failed to spawn: {e}"))?;
-            let stdout = child.stdout.take();
-            let stderr = child.stderr.take();
-            handle.state::<Backend>().0.lock().unwrap().replace(child);
-
-            let (tx, rx) = mpsc::channel::<String>();
-            for stream in [stdout.map(|s| Box::new(s) as Box<dyn std::io::Read + Send>), stderr.map(|s| Box::new(s) as Box<dyn std::io::Read + Send>)].into_iter().flatten() {
-                let tx = tx.clone();
-                std::thread::spawn(move || {
-                    for line in BufReader::new(stream).lines().map_while(Result::ok) {
-                        if tx.send(line).is_err() {
-                            break;
-                        }
-                    }
-                });
-            }
-            drop(tx);
+            let spawned = start_engine(&handle);
 
             let handle2 = handle.clone();
             std::thread::spawn(move || {
-                let pattern = regex::Regex::new(r"http://127\.0\.0\.1:(\d+)").unwrap();
-                let mut port: Option<u16> = None;
-                for line in rx.iter() {
-                    if let Some(captures) = pattern.captures(&line) {
-                        port = captures[1].parse().ok();
-                        if port.is_some() {
-                            break;
-                        }
-                    }
-                }
-                match port {
-                    Some(found) => {
+                let mut tail = engine_start::Tail::default();
+                let started = spawned.and_then(|rx| read_port(&rx, &mut tail, shell_key()).map(|found| (found, rx)));
+                match started {
+                    Ok((found, rx)) => {
                         let url: tauri::Url = format!("http://127.0.0.1:{found}/#dam-key={}", shell_key())
                             .parse()
                             .expect("loopback url");
@@ -743,14 +814,7 @@ fn main() {
                             }
                         }
                     }
-                    None => {
-                        handle2
-                            .dialog()
-                            .message("The formDAM engine failed to start. Please relaunch the app.")
-                            .blocking_show();
-                        kill_backend(&handle2);
-                        std::process::exit(1);
-                    }
+                    Err(failure) => engine_failed(&handle2, failure, &tail),
                 }
             });
             Ok(())

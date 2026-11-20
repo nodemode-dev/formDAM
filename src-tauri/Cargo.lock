@@ -1099,7 +1099,7 @@ dependencies = [
 
 [[package]]
 name = "formdam-desktop"
-version = "1.31.0"
+version = "1.32.0"
 dependencies = [
  "block2",
  "keyring",
@@ -1117,6 +1117,7 @@ dependencies = [
  "ureq",
  "windows",
  "windows-future",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

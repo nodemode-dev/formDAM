@@ -1,6 +1,13 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### src/engine_start.rs, src/win_job.rs, src/main.rs start_engine · the engine ends with the app, and a failed start says why
+- refers-to: engine_start.rs (Failure, Tail, sentence, message, log_path, ADDRESS_WAIT); win_job.rs (hold, end); main.rs backend_command, forward_lines, start_engine, read_port, engine_exit_code, engine_failed, kill_backend
+- kind: feature
+- logged: unreleased · 2026-11-20
+
+The FormTools pattern, taken the std::process::Command way because this shell already started its engine that way (no tauri-plugin-shell). On Windows the engine is put in a job object that ends it when the app ends however it ends (win_job.rs, FormTools's file unchanged; windows-sys 0.61.2, the version already in Cargo.lock, one hand line in the lock proved by cargo update --workspace in a scratch copy, diff empty). The wait for the address is limited to 90 seconds (the owner's decision D1). A failed start shows one dialog with the sentence, the engine's last twelve lines (never a line that holds the window key), its exit code (2 means another engine holds the settings folder) and the path of engine.log, which is where desktop_entry.py log_folder writes it: ~/Library/Logs/formDAM on macOS, %APPDATA%\DAM on Windows, ~/.local/share/DAM elsewhere. A missing engine program is said as such. Lines are now read as bytes and a trailing CR is removed, so a line that is not UTF-8 no longer ends the reading. Proved here: a scratch crate holding these two files and the four functions copied from main.rs, 7 tests against real sh children. Not compiled as the real shell, not run on Windows or macOS.
+
 ### src/main.rs backend_command · the engine is told which process is its app
 - refers-to: src/main.rs backend_command (one .env line: FORMDAM_SHELL_PID); ../backend/app/startup.py shell_pid, alone, watch; ../backend/desktop_entry.py serve
 - kind: feature

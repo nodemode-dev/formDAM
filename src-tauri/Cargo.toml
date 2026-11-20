@@ -1,6 +1,6 @@
 [package]
 name = "formdam-desktop"
-version = "1.31.0"
+version = "1.32.0"
 description = "formDAM: local-first digital asset manager for photos & video"
 edition = "2021"
 
@@ -26,6 +26,7 @@ libloading = "0.8"
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = ["Foundation", "Security_Credentials_UI", "Win32_Foundation", "Win32_System_WinRT"] }
 windows-future = "0.2"
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
 keyring = { version = "3", features = ["windows-native"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

@@ -1,5 +1,20 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### ../setup/build_windows_app.bat WINDOWED · the Windows engine is frozen with no console of its own
+- refers-to: setup/build_windows_app.bat WINDOWED, FORMDAM_ENGINE_WINDOWED; desktop_entry.py the stream guard at the top, _Tee, _open_log; src-tauri/src/main.rs backend_command, forward_lines, read_port; tests/test_entry_streams.py (three new tests)
+- kind: decision
+- logged: after v1.31.0 · 2026-11-20
+
+The owner decided that every app's Windows engine has no console, as FormWeb's has. PyInstaller now gets `--noconsole` unless `FORMDAM_ENGINE_WINDOWED=0`. A window program still writes to the pipes its parent hands it; it only lacks a console of its own. The shell starts the engine with both output streams piped and reads both for the first `http://127.0.0.1:<port>` line, which is uvicorn's "Uvicorn running on" line on standard error. desktop_entry.py replaces a stream only when it is None and leaves a pipe as it is; the frozen log wraps the real stream, so the line reaches the pipe and the log. Checked here with a stand-in parent that pipes both streams the way the shell does, plain and with `sys.frozen` set: the address came on stderr in 4 to 7 seconds, health answered 200, the key never appeared, the frozen run's line was in engine.log. With all three streams closed, `--selfcheck` exits 0 and the engine serves. The macOS and Linux build scripts need nothing: they have no console to drop. `--selfcheck` in this script still runs and sets the exit code; with no console its line may not show in the build window. Not run on Windows.
+### app/startup.py finished, gone_by · a process that has ended but was not yet collected counts as gone where there is no /proc
+- refers-to: app/startup.py finished (new), gone_by; tests/test_startup.py (two new tests)
+- kind: fix
+- logged: after v1.31.0 · 2026-11-20
+
+Ending a leftover engine waits until it is gone. On macOS a process that has ended and that its parent has not collected still answers a signal, and there is no /proc to tell it apart, so the wait ran out and the start was refused with "could not stop an engine that was left running". FormCut's macOS check found it (three tests of its start-up file); the same file is in FormDAM, so the same fault was here. finished(pid) asks `ps -o stat= -p <pid>` where there is no /proc (never on Windows, never on Linux) and answers true for a state that starts with Z. gone_by stops waiting when the process is not alive or is finished. alive itself is unchanged, so the two second watch on the app starts no program.
+
+Seen on Linux with PROC pointed at a folder that does not exist: before the change claim refused with the macOS sentence after ten seconds; after it the leftover holder is replaced at once. With the real /proc finished answers false and nothing else changes. Not run on macOS.
+
 ### app/startup.py, desktop_entry.py serve · one engine per settings folder, and an engine never outlives its app
 - refers-to: app/startup.py (new; copied from FormTools's backend/app/core/startup.py, only the six names at its top changed); desktop_entry.py log_folder, _open_log, serve, _watch_shell, _release; ../src-tauri/src/main.rs backend_command (sets FORMDAM_SHELL_PID); tests/test_startup.py
 - kind: feature
