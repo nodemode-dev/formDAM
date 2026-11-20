@@ -1,5 +1,14 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### app/startup.py finished, gone_by · a process that has ended but was not yet collected counts as gone where there is no /proc
+- refers-to: app/startup.py finished (new), gone_by; tests/test_startup.py (two new tests)
+- kind: fix
+- logged: after v1.31.0 · 2026-11-20
+
+Ending a leftover engine waits until it is gone. On macOS a process that has ended and that its parent has not collected still answers a signal, and there is no /proc to tell it apart, so the wait ran out and the start was refused with "could not stop an engine that was left running". FormCut's macOS check found it (three tests of its start-up file); the same file is in FormDAM, so the same fault was here. finished(pid) asks `ps -o stat= -p <pid>` where there is no /proc (never on Windows, never on Linux) and answers true for a state that starts with Z. gone_by stops waiting when the process is not alive or is finished. alive itself is unchanged, so the two second watch on the app starts no program.
+
+Seen on Linux with PROC pointed at a folder that does not exist: before the change claim refused with the macOS sentence after ten seconds; after it the leftover holder is replaced at once. With the real /proc finished answers false and nothing else changes. Not run on macOS.
+
 ### app/startup.py, desktop_entry.py serve · one engine per settings folder, and an engine never outlives its app
 - refers-to: app/startup.py (new; copied from FormTools's backend/app/core/startup.py, only the six names at its top changed); desktop_entry.py log_folder, _open_log, serve, _watch_shell, _release; ../src-tauri/src/main.rs backend_command (sets FORMDAM_SHELL_PID); tests/test_startup.py
 - kind: feature

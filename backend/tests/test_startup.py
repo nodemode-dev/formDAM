@@ -143,6 +143,41 @@ def test_the_two_ways_of_reading_a_start_time_agree(monkeypatch):
     assert startup.created(4_000_000) == 0.0
 
 
+def test_an_ended_process_that_was_not_collected_is_finished_only_where_there_is_no_proc(tmp_path, monkeypatch):
+    from app import startup
+
+    ended, running = stand_in(), stand_in()
+    try:
+        there = os.path.isdir(startup.PROC)
+        ended.kill()
+        assert wait_for(lambda: startup.finished(ended.pid) or not startup.alive(ended.pid), 10)
+        assert startup.finished(ended.pid) is not there
+        monkeypatch.setattr(startup, "PROC", str(tmp_path / "no-proc"))
+        assert startup.alive(ended.pid)
+        assert startup.finished(ended.pid)
+        assert not startup.finished(running.pid)
+        assert startup.gone_by(ended.pid, 1.0)
+        assert not startup.gone_by(running.pid, 0.3)
+    finally:
+        stop(ended, running)
+
+
+def test_a_holder_that_ended_and_was_not_collected_is_replaced_where_there_is_no_proc(tmp_path, monkeypatch):
+    from app import startup
+
+    monkeypatch.setattr(startup, "PROC", str(tmp_path / "no-proc"))
+    engine, shell, mine = stand_in(), stand_in(), stand_in()
+    try:
+        (tmp_path / startup.LOCK_NAME).write_text(json.dumps(record(startup, engine, shell)))
+        stop(shell)
+        path, replaced = startup.claim(tmp_path, mine.pid)
+        assert replaced == engine.pid
+        assert engine.wait(timeout=10) is not None
+        assert json.loads(path.read_text())["pid"] == os.getpid()
+    finally:
+        stop(engine, shell, mine)
+
+
 def test_the_engine_serves_and_keeps_its_errors_with_its_three_streams_closed(tmp_path):
     proc = subprocess.Popen(["sh", "-c", 'exec "$0" desktop_entry.py <&- >&- 2>&-', sys.executable], cwd=BACKEND, env=engine_env(tmp_path))
     kept = log_folder(tmp_path) / "formdam-engine-errors.log"
