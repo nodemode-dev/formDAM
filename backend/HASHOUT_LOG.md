@@ -1,5 +1,11 @@
 # backend HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
+### ../setup/build_windows_app.bat WINDOWED · the Windows engine is frozen with no console of its own
+- refers-to: setup/build_windows_app.bat WINDOWED, FORMDAM_ENGINE_WINDOWED; desktop_entry.py the stream guard at the top, _Tee, _open_log; src-tauri/src/main.rs backend_command, forward_lines, read_port; tests/test_entry_streams.py (three new tests)
+- kind: decision
+- logged: after v1.31.0 · 2026-11-20
+
+The owner decided that every app's Windows engine has no console, as FormWeb's has. PyInstaller now gets `--noconsole` unless `FORMDAM_ENGINE_WINDOWED=0`. A window program still writes to the pipes its parent hands it; it only lacks a console of its own. The shell starts the engine with both output streams piped and reads both for the first `http://127.0.0.1:<port>` line, which is uvicorn's "Uvicorn running on" line on standard error. desktop_entry.py replaces a stream only when it is None and leaves a pipe as it is; the frozen log wraps the real stream, so the line reaches the pipe and the log. Checked here with a stand-in parent that pipes both streams the way the shell does, plain and with `sys.frozen` set: the address came on stderr in 4 to 7 seconds, health answered 200, the key never appeared, the frozen run's line was in engine.log. With all three streams closed, `--selfcheck` exits 0 and the engine serves. The macOS and Linux build scripts need nothing: they have no console to drop. `--selfcheck` in this script still runs and sets the exit code; with no console its line may not show in the build window. Not run on Windows.
 ### app/startup.py finished, gone_by · a process that has ended but was not yet collected counts as gone where there is no /proc
 - refers-to: app/startup.py finished (new), gone_by; tests/test_startup.py (two new tests)
 - kind: fix
