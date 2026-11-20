@@ -548,6 +548,7 @@ fn backend_command(handle: &tauri::AppHandle) -> Result<Command, String> {
     cmd.current_dir(&dir)
         .env("FORMDAM_PORT", "0")
         .env("FORMDAM_SHELL_KEY", shell_key())
+        .env("FORMDAM_SHELL_PID", std::process::id().to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     #[cfg(windows)]

@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from pathlib import Path
 
 if sys.stdin is None:
     sys.stdin = open(os.devnull, encoding="utf-8")
@@ -77,13 +78,26 @@ class _Tee:
         return getattr(self._stream, name)
 
 
-def _open_log():
-    if not getattr(sys, "frozen", False):
-        return None
+def log_folder() -> str:
     home = os.path.expanduser("~")
-    folder = os.path.join(home, "Library", "Logs", "formDAM") if sys.platform == "darwin" else os.path.dirname(default_library())
+    return os.path.join(home, "Library", "Logs", "formDAM") if sys.platform == "darwin" else os.path.dirname(default_library())
+
+
+def _open_log():
+    from app import startup
+
+    frozen = getattr(sys, "frozen", False)
+    if not frozen and getattr(sys.stderr, "name", None) != os.devnull:
+        return None
+    folder = log_folder()
     try:
         os.makedirs(folder, exist_ok=True)
+    except OSError:
+        return None
+    startup.keep_errors(Path(folder))
+    if not frozen:
+        return None
+    try:
         log = open(os.path.join(folder, "engine.log"), "a", encoding="utf-8", buffering=1)
     except OSError:
         return None
@@ -103,20 +117,87 @@ def main() -> int:
         from app import macshare
 
         return macshare.run(sys.argv[2:])
+    return serve()
+
+
+def _release(lock) -> None:
+    from app import startup
+
+    if startup.number(startup.read_lock(lock).get("pid")) == os.getpid():
+        try:
+            lock.unlink()
+        except OSError:
+            pass
+
+
+def _watch_shell(lock) -> None:
+    from app import startup
+
+    shell = startup.shell_pid()
+    if shell <= 1:
+        return
+
+    def leave() -> None:
+        try:
+            print(f"formDAM engine: the app that started this engine is gone (process {shell}), stopping", flush=True)
+        except (OSError, ValueError):
+            pass
+        _release(lock)
+        os._exit(0)
+
+    startup.watch(shell, leave)
+
+
+def serve() -> int:
+    from app import libraries, startup
+
     _open_log()
+    if startup.alone():
+        beside = startup.app_beside(Path(sys.executable))
+        if beside is not None and startup.open_app(beside):
+            print(f"formDAM engine: started without its app, so it opened {beside} and stopped", flush=True)
+            return 0
+        print(f"formDAM engine: started without its app, and no app program was found near {sys.executable}", flush=True)
+        print("formdam-backend is a part of FormDAM and serves nothing on its own. Open FormDAM instead.", file=sys.stderr, flush=True)
+        return 4
+    data = Path(os.path.abspath(libraries.config_dir()))
+    try:
+        data.mkdir(parents=True, exist_ok=True)
+        lock, replaced = startup.claim(data, startup.shell_pid())
+    except startup.Busy as err:
+        print(err, file=sys.stderr, flush=True)
+        return 2
+    except OSError as err:
+        print(f"formDAM cannot use its data folder: {err}", file=sys.stderr, flush=True)
+        return 5
+    if replaced:
+        print(f"formDAM engine: an engine left running without its app was stopped (process {replaced})", flush=True)
+    _watch_shell(lock)
     os.environ.setdefault("FORMDAM_DIST", os.path.join(resource_dir(), "frontend_dist"))
     os.environ.setdefault("FORMDAM_MODELS", os.path.join(resource_dir(), "models"))
-    from app import libraries
-
     os.environ.setdefault("FORMDAM_LIBRARY", libraries.current() or default_library())
     port = int(os.environ.get("FORMDAM_PORT", "0") or 0)
+    import signal
+
+    def ended(_signum, _frame) -> None:
+        _release(lock)
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, ended)
+
+    def run() -> None:
+        try:
+            _serve(port)
+        finally:
+            _release(lock)
+
     if sys.platform == "darwin":
         from app.services import iccsvc
 
         if iccsvc.available():
             import threading
 
-            server = threading.Thread(target=_serve, args=(port,), name="formDAM-engine", daemon=True)
+            server = threading.Thread(target=run, name="formDAM-engine", daemon=True)
             server.start()
 
             def _exit_with_server() -> None:
@@ -129,7 +210,7 @@ def main() -> int:
 
             AppHelper.runConsoleEventLoop()
             return 0
-    _serve(port)
+    run()
     return 0
 
 
