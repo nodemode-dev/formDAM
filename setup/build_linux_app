@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Builds the formDAM Linux desktop app: the Tauri shell over the engine frozen with PyInstaller (onedir, bundled as a
-# resource), packaged as a .deb. Run it on Linux (Debian or Ubuntu) from anywhere: setup/build_linux_app
+# resource), packaged as a .deb and then as an AppImage. Run it on Linux (Debian or Ubuntu) from anywhere:
+# setup/build_linux_app   (APPIMAGE=no skips the AppImage; APPIMAGE=required stops the build when it cannot be made)
 # It mirrors build_macos_app step for step, without the macOS-only parts (device import, signing, icns, DMG).
 set -e
 cd "$(dirname "$0")/.."
 say() { printf '\n== %s ==\n' "$1"; }
 BUNDLES=${BUNDLES:-deb}
+APPIMAGE=${APPIMAGE:-try}
 
 say "Checking prerequisites"
 command -v python3 >/dev/null || { echo "python3 is required: sudo apt install python3 python3-venv"; exit 1; }
@@ -116,6 +118,18 @@ fi
 say "Building the app bundle (this compiles Rust; first run takes a while)"
 cd src-tauri
 npx --yes @tauri-apps/cli@2.12.3 build --bundles "$BUNDLES" -- --locked
+if [ "$APPIMAGE" != no ]; then
+  say "Building the AppImage (the same program and engine in one file that needs no install)"
+  if NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --bundles appimage -- --locked; then
+    echo "AppImage: built"
+  elif [ "$APPIMAGE" = required ]; then
+    echo "AppImage: NOT BUILT (above is why), and APPIMAGE=required, so the build stops here"
+    exit 1
+  else
+    rm -f target/release/bundle/appimage/*.AppImage
+    echo "AppImage: NOT BUILT (above is why). The package built before it is complete and unaffected."
+  fi
+fi
 cd ..
 
 say "Done"

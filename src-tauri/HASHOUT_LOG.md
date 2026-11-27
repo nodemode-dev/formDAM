@@ -1,6 +1,21 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_linux_app · Linux gets an AppImage beside the deb
+- refers-to: ../setup/build_linux_app (APPIMAGE, the second `tauri build --bundles appimage`, NO_STRIP); tauri.conf.json bundle.resources (the engine tree), bundle.linux.deb.files (the polkit policy)
+- kind: feature
+- logged: v1.32.1 · 2026-11-26
+
+FormDAM was the one app in the family whose Linux build was a deb only. FormPortal on Linux prefers an AppImage and a person can choose to always get one, so FormDAM now builds one too. The deb is built first, exactly as before; the AppImage is a second `tauri build` over the same compiled program and the same engine tree, so it costs no second compile.
+
+`APPIMAGE` is `try` by default: if the AppImage cannot be made, the script says so in capitals, removes any half-written file and carries on, so a release still ships the deb it always shipped. `required` makes that failure stop the build; `no` skips the step. The default is `try` because this step has not been run anywhere yet: this is the first app in the family that puts a one-folder frozen engine (about 220 shared libraries under `usr/lib/FormDAM/formdam-backend`) through Tauri's AppImage tool, which walks the libraries it finds. Once a release build has made a working AppImage, `required` is the right default.
+
+`NO_STRIP=true` is set for that step only, as a precaution and not from a failure seen: the tool's own `strip` is old and is known to stop on libraries built by newer toolchains, and the engine's libraries are already as their wheels shipped them.
+
+What an AppImage cannot carry: the polkit policy file the deb installs under `/usr/share/polkit-1`. `bio_available()` is then false, so the system's unlock prompt is not offered, the same as when FormPortal unpacks the deb without installing it.
+
+Seen: the changed lines of the script were run with a stand-in for the Tauri command in four cases (step succeeds; fails with `try`; fails with `required`; `APPIMAGE=no`), and the published 1.32.0 deb's engine passes `--selfcheck` when unpacked without being installed. Not built here: the AppImage itself.
+
 ### src/engine_start.rs, src/win_job.rs, src/main.rs start_engine · the engine ends with the app, and a failed start says why
 - refers-to: engine_start.rs (Failure, Tail, sentence, message, log_path, ADDRESS_WAIT); win_job.rs (hold, end); main.rs backend_command, forward_lines, start_engine, read_port, engine_exit_code, engine_failed, kill_backend
 - kind: feature
