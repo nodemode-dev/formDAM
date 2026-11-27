@@ -1,6 +1,21 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_linux_app · the AppImage tool is shown where the engine keeps its own libraries, and the engine inside the AppImage is checked
+- refers-to: ../setup/build_linux_app (`appimage()`: the folders put on `LD_LIBRARY_PATH`, the two checks after the build)
+- kind: fix
+- logged: v1.32.3 · 2026-11-27
+
+**The cause, from the 1.32.2 build log.** `ERROR: Could not find dependency: liblcms2-ff8c4a65.so.2.0.10`, then `Failed to deploy dependencies for existing files`. The AppImage tool (linuxdeploy) asks `ldd` what every library under `usr/lib` needs and stops at the first one that is not found. The frozen engine holds two libraries that `ldd` cannot resolve where they lie: `_internal/libraw_r.so.25`, a second copy PyInstaller places beside the one in `rawpy/`, whose search path `$ORIGIN/../rawpy.libs` is only right from `rawpy/`; and `libheif`, which carries no search path at all and needs `libde265`. Neither matters when the engine runs: its start program puts `_internal` on the library path, and everything is found. It matters only to a tool that walks the files.
+
+**The fix.** Before the AppImage step the script asks `ldd` the same question over the engine, takes each library that is not found, finds the engine folder that holds it (a `*.libs` folder first), and puts those folders on `LD_LIBRARY_PATH` for that step only. Today that is `pi_heif.libs` and `rawpy.libs`; the list is worked out at build time, so a new wheel with the same habit needs no edit here. Those folders hold only hash-named libraries, so nothing else in the step picks up a different system library because of them.
+
+**The check after it.** The AppImage tool rewrites search paths in the libraries it walks, so a file that builds is not yet an engine that runs. After the build the script looks at the engine in the AppImage's own folder (`target/release/bundle/appimage/FormDAM.AppDir`): every library must find what it needs with only the engine's `_internal` on the path, as at run time, and the engine must pass `--selfcheck` from there. If either fails, the AppImage counts as not built and is removed, so an AppImage with a broken engine is never a release file.
+
+**Still `try`.** Shown here: with the engine from the published 1.32.1 deb, the 1.32.2 step fails on a stand-in for the tool with the build log's error (it names `libde265` first, the other of the two), the new step passes it with the two folders, the engine passes its self-check from the AppImage folder, and an engine with libraries taken out is caught and the file removed. Not shown: the real tool's run. That it reads `LD_LIBRARY_PATH` is its documented way to find libraries in unusual places and is not confirmed here, and it may stop later on something else. One more build decides whether the step becomes `required`.
+
+Also: the block of problem lines no longer lists the tool's "Could not find copyright files" warnings, which buried the error in the 1.32.2 log.
+
 ### ../setup/build_linux_app · when the AppImage is not built, the build log says why
 - refers-to: ../setup/build_linux_app (the AppImage step: `--verbose`, `target/appimage-step.log`, the two printed blocks)
 - kind: fix

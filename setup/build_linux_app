@@ -118,14 +118,33 @@ fi
 say "Building the app bundle (this compiles Rust; first run takes a while)"
 cd src-tauri
 npx --yes @tauri-apps/cli@2.12.3 build --bundles "$BUNDLES" -- --locked
+appimage() {
+  engine=binaries/formdam-backend
+  folders=""
+  for lib in $(find "$engine" -type f -name '*.so*' -exec ldd {} + 2>/dev/null | awk '/not found/ {print $1}' | sort -u); do
+    folder=$(find "$PWD/$engine" -type f -name "$lib" -path '*.libs/*' -printf '%h\n' -quit)
+    [ -n "$folder" ] || folder=$(find "$PWD/$engine" -type f -name "$lib" -printf '%h\n' -quit)
+    [ -n "$folder" ] || { echo "AppImage: the engine needs $lib and no folder of the engine holds it"; continue; }
+    case ":$folders:" in *":$folder:"*) ;; *) folders="${folders:+$folders:}$folder" ;; esac
+  done
+  [ -z "$folders" ] || echo "AppImage: engine folders put on the library path for this step: $folders"
+  ( [ -z "$folders" ] || export LD_LIBRARY_PATH="$folders${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --verbose --bundles appimage -- --locked ) || return 1
+  inside=target/release/bundle/appimage/FormDAM.AppDir/usr/lib/FormDAM/formdam-backend
+  [ -x "$inside/formdam-backend" ] || { echo "ERROR: the AppImage's app folder is not on disk, so the engine inside it cannot be checked"; return 1; }
+  lost=$(find "$inside" -type f -name '*.so*' -exec env LD_LIBRARY_PATH="$PWD/$inside/_internal" ldd {} + 2>/dev/null | awk '/not found/ {print $1}' | sort -u | tr '\n' ' ')
+  [ -z "$lost" ] || { echo "ERROR: inside the AppImage the engine's libraries cannot find: $lost"; return 1; }
+  "$inside/formdam-backend" --selfcheck || { echo "ERROR: inside the AppImage the engine fails its self-check"; return 1; }
+}
 if [ "$APPIMAGE" != no ]; then
   say "Building the AppImage (the same program and engine in one file that needs no install)"
   step=target/appimage-step.log
-  if NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --verbose --bundles appimage -- --locked > "$step" 2>&1; then
-    echo "AppImage: built"
+  if appimage > "$step" 2>&1; then
+    grep '^AppImage: ' "$step" || true
+    echo "AppImage: built, and the engine inside it passes its self-check"
   else
     echo "---- AppImage step: the lines that name a problem ----"
-    grep -n -iE 'error|could not|cannot|not found|no such|failed|denied' "$step" | tail -n 40 || true
+    grep -n -iE 'error|could not|cannot|not found|no such|failed|denied' "$step" | grep -v 'copyright files' | tail -n 40 || true
     echo "---- AppImage step: its last 60 lines (all of it is in $PWD/$step) ----"
     tail -n 60 "$step" || true
     echo "---- AppImage step: end ----"
