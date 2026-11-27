@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.32.2 (2026-11-27) · replaces 1.32.1; the build log now says why an AppImage was not built
+
+1.32.1 was published with the deb and without the AppImage it was meant to add, and was then taken back. 1.32.2 replaces it. The AppImage step in `setup/build_linux_app` now runs verbosely and, when it fails, prints the lines that name the problem into the build log; in 1.32.1 the log could not say why. The step is still `try`, so the deb ships either way. Nothing in the app, the engine or the macOS and Windows builds changed from 1.32.0. Detail in `src-tauri/HASHOUT_LOG.md`.
+
 ## v1.32.1 (2026-11-26) · Linux gets an AppImage beside the deb
 
 FormDAM's Linux build was a deb only, the one app in the family without an AppImage. `setup/build_linux_app` now builds the deb as before and then an AppImage from the same compiled program and engine. The AppImage step is set to `try`: if it cannot be made, the script says so, the deb is still complete, and the build goes on (`APPIMAGE=required` stops instead; `APPIMAGE=no` skips it). It is `try` because the step has not run anywhere yet; the first release build is its first run. In an AppImage the polkit policy file cannot be installed, so the system's unlock prompt for private items is not offered there, the same as when FormPortal unpacks the deb without installing it. Nothing in the app, the engine or the macOS and Windows builds changed. Detail in `src-tauri/HASHOUT_LOG.md`.

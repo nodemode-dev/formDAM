@@ -1,6 +1,19 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_linux_app · when the AppImage is not built, the build log says why
+- refers-to: ../setup/build_linux_app (the AppImage step: `--verbose`, `target/appimage-step.log`, the two printed blocks)
+- kind: fix
+- logged: v1.32.2 · 2026-11-27
+
+The first release build with the AppImage step (1.32.1) made the deb and no AppImage, as `APPIMAGE=try` allows, and the log could not say why: Tauri hides the output of the tool that assembles an AppImage unless it is asked to be verbose. The step now runs with `--verbose`, writes everything to `target/appimage-step.log`, and on failure prints the lines that name a problem (up to 40) and the last 60 lines, between marked lines, before `AppImage: NOT BUILT`. On success it prints `AppImage: built` and nothing else, so a normal log stays short.
+
+The step is still `try`. The cause of the 1.32.1 failure is not known yet, and `required` would cost the release its deb as well. It becomes `required` in the release that fixes the cause.
+
+1.32.1 itself was taken back after it was published without the AppImage; 1.32.2 replaces it.
+
+Seen: the changed lines run with a stand-in for the Tauri command in five cases (succeeds; fails with a named error; fails with no output; fails with `required`; `APPIMAGE=no`). Not built here: the AppImage.
+
 ### ../setup/build_linux_app · Linux gets an AppImage beside the deb
 - refers-to: ../setup/build_linux_app (APPIMAGE, the second `tauri build --bundles appimage`, NO_STRIP); tauri.conf.json bundle.resources (the engine tree), bundle.linux.deb.files (the polkit policy)
 - kind: feature
