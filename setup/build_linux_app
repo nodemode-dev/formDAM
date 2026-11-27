@@ -120,12 +120,19 @@ cd src-tauri
 npx --yes @tauri-apps/cli@2.12.3 build --bundles "$BUNDLES" -- --locked
 if [ "$APPIMAGE" != no ]; then
   say "Building the AppImage (the same program and engine in one file that needs no install)"
-  if NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --bundles appimage -- --locked; then
+  step=target/appimage-step.log
+  if NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --verbose --bundles appimage -- --locked > "$step" 2>&1; then
     echo "AppImage: built"
-  elif [ "$APPIMAGE" = required ]; then
-    echo "AppImage: NOT BUILT (above is why), and APPIMAGE=required, so the build stops here"
-    exit 1
   else
+    echo "---- AppImage step: the lines that name a problem ----"
+    grep -n -iE 'error|could not|cannot|not found|no such|failed|denied' "$step" | tail -n 40 || true
+    echo "---- AppImage step: its last 60 lines (all of it is in $PWD/$step) ----"
+    tail -n 60 "$step" || true
+    echo "---- AppImage step: end ----"
+    if [ "$APPIMAGE" = required ]; then
+      echo "AppImage: NOT BUILT (above is why), and APPIMAGE=required, so the build stops here"
+      exit 1
+    fi
     rm -f target/release/bundle/appimage/*.AppImage
     echo "AppImage: NOT BUILT (above is why). The package built before it is complete and unaffected."
   fi
