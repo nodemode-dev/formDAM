@@ -1,5 +1,9 @@
 # formDAM build notes
 
+## v1.32.4 (2026-11-27) · the Linux AppImage is built
+
+1.32.3 still shipped the deb alone. Its AppImage step looked for the engine's missing libraries before the step ran, found none, and so changed nothing; the library only goes missing once the AppImage tool has moved a file that needs it. `setup/build_linux_app` now shows the tool every library folder of the engine. A full Linux build of this script made the AppImage, and the engine inside it passes its self-check. Nothing in the app, the engine or the macOS and Windows builds changed from 1.32.0. Detail in `src-tauri/HASHOUT_LOG.md`.
+
 ## v1.32.3 (2026-11-27) · the AppImage step's cause is fixed, and the engine inside an AppImage is checked before it ships
 
 The 1.32.2 build log gave the cause: the AppImage tool could not find `liblcms2-ff8c4a65.so.2.0.10`, a library the frozen engine keeps in its own `rawpy.libs` folder, and stopped. `setup/build_linux_app` now works out which engine folders hold such libraries and shows them to the tool for that step. After the build it checks the engine inside the AppImage's folder: every library must find what it needs as at run time, and the engine must pass its self-check there, or the AppImage counts as not built. The step is still `try` until one release build has made a working AppImage. Nothing in the app, the engine or the macOS and Windows builds changed from 1.32.0. Detail in `src-tauri/HASHOUT_LOG.md`.
