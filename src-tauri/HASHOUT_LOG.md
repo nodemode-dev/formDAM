@@ -1,6 +1,17 @@
 # src-tauri HASHOUT_LOG · formDAM
 current: v1.27.2 · 2026-10-22
 
+### ../setup/build_linux_app · the AppImage tool is shown every library folder of the engine
+- refers-to: ../setup/build_linux_app (`appimage()`: the folders put on `LD_LIBRARY_PATH`)
+- kind: fix
+- logged: v1.32.4 · 2026-11-27
+
+**Why 1.32.3 still made no AppImage.** Its step asked `ldd` which of the engine's libraries find nothing, and put only the folders of those on the library path. On the release runner that list is empty: where the engine lies before the step, every library finds what it needs, so no folder was added and the tool stopped on `liblcms2-ff8c4a65.so.2.0.10` exactly as in 1.32.2. The library goes missing only inside the step, once the tool has copied a library that needs it (from `rawpy.libs`) to `usr/lib`, away from its neighbours.
+
+**The fix.** The step no longer asks what is missing beforehand. It puts every `*.libs` folder of the engine on `LD_LIBRARY_PATH` for that step only: today `numpy.libs`, `opencv_python_headless.libs`, `pi_heif.libs`, `pillow.libs` and `rawpy.libs`. They hold only hash-named libraries, so nothing else in the step picks up a different system library because of them. The two checks after the build are unchanged.
+
+**Shown.** A build of this script on `ubuntu-22.04` with the release recipe's packages and `APPIMAGE=required` (formDAM Actions run 46003254877, branch `diag/appimage-linux-build`): the real tool finished, `FormDAM_1.32.3_amd64.AppImage` (758 MB) lies beside the deb, every library of the engine inside the AppImage's folder finds what it needs, and the engine passes `--selfcheck` from there. Not shown: the AppImage started on a desktop. The step stays `try` for this release, so the deb ships either way.
+
 ### ../setup/build_linux_app · the AppImage tool is shown where the engine keeps its own libraries, and the engine inside the AppImage is checked
 - refers-to: ../setup/build_linux_app (`appimage()`: the folders put on `LD_LIBRARY_PATH`, the two checks after the build)
 - kind: fix

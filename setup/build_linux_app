@@ -120,13 +120,8 @@ cd src-tauri
 npx --yes @tauri-apps/cli@2.12.3 build --bundles "$BUNDLES" -- --locked
 appimage() {
   engine=binaries/formdam-backend
-  folders=""
-  for lib in $(find "$engine" -type f -name '*.so*' -exec ldd {} + 2>/dev/null | awk '/not found/ {print $1}' | sort -u); do
-    folder=$(find "$PWD/$engine" -type f -name "$lib" -path '*.libs/*' -printf '%h\n' -quit)
-    [ -n "$folder" ] || folder=$(find "$PWD/$engine" -type f -name "$lib" -printf '%h\n' -quit)
-    [ -n "$folder" ] || { echo "AppImage: the engine needs $lib and no folder of the engine holds it"; continue; }
-    case ":$folders:" in *":$folder:"*) ;; *) folders="${folders:+$folders:}$folder" ;; esac
-  done
+  folders=$(find "$PWD/$engine" -type d -name '*.libs' | sort | tr '\n' ':')
+  folders=${folders%:}
   [ -z "$folders" ] || echo "AppImage: engine folders put on the library path for this step: $folders"
   ( [ -z "$folders" ] || export LD_LIBRARY_PATH="$folders${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     NO_STRIP=true npx --yes @tauri-apps/cli@2.12.3 build --verbose --bundles appimage -- --locked ) || return 1
